@@ -207,15 +207,45 @@ calc_dist <- \(
   }
 }
 
+# function to calculate log-Euclidean SPD distance between two distance matrices
+# log_euclid <- \(M1, M2, sigma = 1) {
+log_euclid <- \(M1, M2, sigma = NULL, eps = 1e-6) {
+  if (is.null(sigma)) {
+    # estimate sigma as median of upper triangular values of M1 and M2
+    vals <- c(M1[upper.tri(M1)], M2[upper.tri(M2)])
+    sigma <- median(vals[vals > 0])
+  }
+
+  # apply Gaussian kernel to convert to similarity matrices
+  K1 <- exp(-M1 / sigma)
+  K2 <- exp(-M2 / sigma)
+
+  # add small value to diagonal to ensure positive definiteness
+  K1 <- K1 + diag(eps, nrow(K1))
+  K2 <- K2 + diag(eps, nrow(K2))
+
+  # compute matrix logarithm and then Frobenius norm of difference
+  L1 <- expm::logm(K1)
+  L2 <- expm::logm(K2)
+
+  norm(L1 - L2, type = "F")
+}
+
 # Function to calculate norm or clustering diff
 compare_blocks <- \(dist, type = c("norm", "clustering"), norm_type = "F") {
   if (type == "norm") {
     # norm of difference
-    return(norm(
-      as.matrix(dist[[2]]$dist_mat -
-        dist[[1]]$dist_mat),
-      type = norm_type
-    ))
+    if (norm_type == "log SPD") {
+      return(
+        log_euclid(as.matrix(dist[[1]]$dist_mat), as.matrix(dist[[2]]$dist_mat))
+      )
+    } else {
+      mat <- as.matrix(dist[[2]]$dist_mat - dist[[1]]$dist_mat)
+      return(norm(
+        mat,
+        type = norm_type
+      ))
+    }
   } else if (type == "clustering") {
     # clustering solution
     clust <- lapply(
@@ -265,26 +295,49 @@ single_run_explore <- \(data, i, laplace_trans = FALSE, ...) {
   # ggplot(dist[[1]], which = "image")
   # ggplot(dist[[2]], which = "image")
 
+  mat1 <- dist[[1]]$dist_mat
+
   norm_val_frob <- compare_blocks(dist, type = "norm", norm_type = "F")
-  norm_val_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
-  norm_val_spec <- compare_blocks(dist, type = "norm", norm_type = "2")
+  # for 2 x 2 matrix, norms are all the same, so just check values
+  dim_cond <- dim(mat1)[[1]] > 2
+  if (dim_cond) {
+    norm_val_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
+    norm_val_spec <- compare_blocks(dist, type = "norm", norm_type = "2")
+    norm_val_ln_spd <- compare_blocks(dist, type = "norm", norm_type = "log SPD")
+  }
 
   if (cond) {
-    return(list(
+    ret <- list(
       frob = norm_val_frob,
-      inf = norm_val_inf,
-      spec = norm_val_spec,
+      # inf = norm_val_inf,
+      # spec = norm_val_spec,
+      # ln_spd = norm_val_ln_spd,
       dep = dist_obj$dep
-    ))
+    )
+
+    if (dim_cond) {
+      ret <- list(
+        frob = norm_val_frob,
+        inf = norm_val_inf,
+        spec = norm_val_spec,
+        ln_spd = norm_val_ln_spd,
+        dep = dist_obj$dep
+      )
+    }
+    return(ret)
   } else {
-    return(list(
-      frob = norm_val_frob,
-      inf = norm_val_inf,
-      spec = norm_val_spec
-    ))
+    ret <- list(frob = norm_val_frob)
+    if (dim_cond) {
+      ret <- list(
+        frob = norm_val_frob,
+        inf = norm_val_inf,
+        spec = norm_val_spec,
+        ln_spd = norm_val_ln_spd
+      )
+    }
+    return(ret)
   }
 }
-
 
 # plot norms
 plot_norm <- \(block_vec, norm_vals_frob, norm_vals_inf) {
@@ -586,6 +639,7 @@ perm_test_fun <- \(
   use_start = FALSE,
   ret_dep = FALSE,
   use_dth = FALSE,
+  verbose = FALSE,
   ...
 ) {
   # initial parameter values for CE
@@ -704,7 +758,9 @@ perm_test_fun <- \(
     }
 
     norm_orig_frob <- compare_blocks(dist, type = "norm", norm_type = "F")
-    norm_orig_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
+    # norm_orig_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
+    # norm_orig_spec <- compare_blocks(dist, type = "norm", norm_type = "2")
+    norm_orig_ln_spd <- compare_blocks(dist, type = "norm", norm_type = "log SPD")
 
     # compute permutation distances for original data
     norm_vals <- lapply(seq_len(n_perm), \(j) {
@@ -720,18 +776,24 @@ perm_test_fun <- \(
       )
       list(
         "frob" = compare_blocks(dist, type = "norm", norm_type = "F"),
-        "inf"  = compare_blocks(dist, type = "norm", norm_type = "M")
+        # "inf"  = compare_blocks(dist, type = "norm", norm_type = "M"),
+        # "spec" = compare_blocks(dist, type = "norm", norm_type = "2")
+        "ln_spd" = compare_blocks(dist, type = "norm", norm_type = "log SPD")
       )
     })
 
     # extract frobenius and infinity norms
     perm_norms_frob <- sapply(norm_vals, \(x) x$frob)
-    perm_norms_inf <- sapply(norm_vals, \(x) x$inf)
+    # perm_norms_inf <- sapply(norm_vals, \(x) x$inf)
+    # perm_norms_spec <- sapply(norm_vals, \(x) x$spec)
+    perm_norms_ln_spd <- sapply(norm_vals, \(x) x$ln_spd)
 
     # compute p-values
     # TODO Are these p-values for one-sided or two-sided tests?
     (p_value_frob <- mean(perm_norms_frob >= norm_orig_frob))
-    (p_value_inf <- mean(perm_norms_inf >= norm_orig_inf))
+    # (p_value_inf <- mean(perm_norms_inf >= norm_orig_inf))
+    # (p_value_spec <- mean(perm_norms_spec >= norm_orig_spec))
+    (p_value_ln_spd <- mean(perm_norms_ln_spd >= norm_orig_ln_spd))
 
     # print how many iterations completed (as a percentage)
     # print(paste0(
@@ -741,18 +803,26 @@ perm_test_fun <- \(
     #   "%s%% complete\n",
     #   round(which(grid_vals == i) / length(grid_vals) * 100, 2)
     # ))
-    system(sprintf(
-      'echo "\n%s\n"',
-      paste0(round(which(grid_vals == i) / length(grid_vals), 3) * 100, "% completed", collapse = "")
-    ))
+    if (verbose) {
+      system(sprintf(
+        'echo "\n%s\n"',
+        paste0(round(which(grid_vals == i) / length(grid_vals), 3) * 100, "% completed", collapse = "")
+      ))
+    }
 
     ret_list <- list(
-      p_value_frob    = p_value_frob,
-      p_value_inf     = p_value_inf,
-      norm_orig_frob  = norm_orig_frob,
-      norm_orig_inf   = norm_orig_inf,
+      p_value_frob = p_value_frob,
+      # p_value_inf = p_value_inf,
+      # p_value_spec = p_value_spec,
+      p_value_ln_spd = p_value_ln_spd,
+      norm_orig_frob = norm_orig_frob,
+      # norm_orig_inf = norm_orig_inf,
+      # norm_orig_spec = norm_orig_spec,
+      norm_orig_ln_spd = norm_orig_ln_spd,
       perm_norms_frob = perm_norms_frob,
-      perm_norms_inf  = perm_norms_inf
+      # perm_norms_inf = perm_norms_inf,
+      # perm_norms_spec = perm_norms_spec,
+      perm_norms_ln_spd = perm_norms_ln_spd
     )
     if (ret_dep == TRUE) {
       dep_vals_df <- lapply(dep, coef) |>
