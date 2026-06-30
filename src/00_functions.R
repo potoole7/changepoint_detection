@@ -1,5 +1,336 @@
 #### Functions ####
 
+# function for plotting alpha, beta estimates
+plot_ab_map <- \(
+  ab_df, data, areas, n_breaks = 8, range = c(1, 6), elev_df = NULL
+) {
+  ab_df_long <- ab_df
+  if (!"parameter" %in% names(ab_df)) {
+    ab_df_long <- ab_df |>
+      tidyr::pivot_longer(a:dth, names_to = "parameter")
+  }
+
+  ab_sf <- ab_df_long |>
+    left_join(distinct(data, name, lon, lat)) |>
+    # st_to_sf()
+    st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas))
+
+  # check that b values aren't exceptionally negative (<-1)
+  # also check that all values are equal to fixed value for b, if applying
+  # sort(ab_sf[ab_sf$parameter == "b", ]$value)[1:10]
+
+  # plot parameter values for each parameter and variable
+  names <- c("a", "b")
+  p_lst <- lapply(seq_along(names), \(i) {
+    # browser()
+    p <- ggplot()
+    # add elevation raster
+    if (!is.null(elev_df)) {
+      # plot bins if available, if not plot directly (less distinct colours)
+      if ("elev_bin" %in% names(elev_df)) {
+        p <- p +
+          geom_tile(
+            data = elev_df,
+            aes(x = x, y = y, fill = elev_bin),
+            width = diff(range(elev_df$x)) / length(unique(elev_df$x)),
+            height = diff(range(elev_df$y)) / length(unique(elev_df$y)),
+            show.legend = FALSE
+          ) +
+          labs(x = "", y = "") +
+          # scale_fill_viridis_d(
+          #   name = "Elevation",
+          #   option = "D",
+          #   direction = 1
+          # )
+          scico::scale_fill_scico_d(
+            palette = "bilbao",
+            name = "Elevation\n(m)",
+            direction = -1
+          )
+      } else {
+        p <- p +
+          geom_tile(
+            data = elev_df,
+            aes(x = x, y = y, fill = elevation),
+            show.legend = FALSE
+          ) +
+          labs(x = "", y = "") +
+          scale_fill_viridis(
+            name = "Elevation\n(m)",
+            option = "D",
+            limits = c(0, 1500)
+          )
+      }
+      p <- p + geom_sf(data = areas, fill = NA, colour = "black")
+    } else {
+      p <- p + geom_sf(data = areas, fill = NA, colour = "black")
+    }
+    p +
+      # geom_sf(data = areas, fill = NA, colour = "white") +
+      coord_sf(expand = FALSE) + # remove padding around plot
+      ggnewscale::new_scale_fill() +
+      geom_sf(
+        data = ab_sf %>%
+          filter(parameter == names[i]) %>%
+          # mutate(vars = paste0(parameter, " - ", vars)),
+          mutate(vars = paste0(parameter, " - ", cond_var)),
+        aes(fill = value, size = value),
+        colour = "black",
+        stroke = 1,
+        pch = 21
+      ) +
+      scale_size_continuous(
+        breaks = scales::extended_breaks(n = n_breaks),
+        range = range,
+        guide = "legend"
+      ) +
+      scale_fill_gradient2(
+        low = "blue3",
+        high = "red3",
+        na.value = "grey",
+        breaks = scales::extended_breaks(n = n_breaks),
+        guide = "legend"
+      ) +
+      guides(fill = guide_legend(), size = guide_legend()) +
+      labs(fill = "", size = "") +
+      facet_wrap(
+        ~vars,
+        ncol = 2,
+        # labeller = as_labeller(c(
+        #   "a - rain"       = "alpha ~ ' - ' ~ 'Precipitation | Wind Speed'",
+        #   "a - wind_speed" = "alpha ~ ' - ' ~ 'Wind Speed | Precipitation'",
+        #   "a - wind_speed" = "alpha ~ ' - ' ~ 'Wind Speed | Precipitation'",
+        #   "b - rain"       = "beta ~ ' - ' ~ 'Precipitation | Wind Speed'",
+        #   "b - wind_speed" = "beta ~ ' - ' ~ 'Wind Speed | Precipitation'"
+        # ), default = label_parsed)
+      ) +
+      cecl_theme(nejm_pal = FALSE)
+  })
+  return(p_lst)
+}
+
+
+#' @title Plot clustering solution on map
+#' @description Plot clustering solution on map
+#' @param pts Spatial points object
+#' @param areas Spatial polygons object
+#' @param clust_obj Clustering object
+#' @return ggplot object
+#' @rdname plt_clust_map
+#' @export
+# TODO: Could make this plot/ggplot method for object
+plt_clust_map <- \(
+  pts,
+  areas,
+  clust_obj,
+  plot_medoids = TRUE,
+  elev_df = NULL,
+  rm_elev_leg = TRUE,
+  pt_size = 4
+) {
+  name <- clust <- medoid <- NULL
+
+  if (inherits(clust_obj, "kmeans")) {
+    clust_element <- "cluster"
+    medoid_locs <- NA
+  } else if (inherits(clust_obj, "pam")) {
+    clust_element <- "clustering"
+    medoids <- clust_obj$medoids
+    medoid_locs <- NA
+    if (inherits(clust_obj$medoids, "character")) {
+      medoid_locs <- medoids
+    } else if (!is.null(rownames(medoids))) {
+      medoid_locs <- rownames(medoids)
+    }
+  } else {
+    stop("Clustering class not currently supported")
+  }
+
+  # reorder alphabetically
+  # TODO: Look into this, required??
+  # clust_names <- names(clust_obj[[clust_element]])
+  # if (!is.null(clust_names)) {
+  #   clust_obj[[clust_element]] <- clust_obj[[clust_element]][order(clust_names)]
+  # }
+
+  # TODO: Medoids doesn#t work as rows are named, fix!
+  # pts_plt <- cbind(pts, data.frame("clust" = clust_obj[[clust_elementement]])) |>
+  #   dplyr::mutate(
+  #     medoid = ifelse(name %in% medoid_locs, TRUE, FALSE),
+  #     medoid = factor(medoid, levels = c(FALSE, TRUE))
+  #   )
+
+  # extract cluster membership for each site
+  clust_df <- dplyr::tibble(
+    "name" = names(clust_obj[[clust_element]]),
+    "clust" = clust_obj[[clust_element]]
+  )
+  # join to location data
+  pts_plt <- pts |>
+    dplyr::left_join(clust_df, by = "name") |>
+    dplyr::mutate(
+      medoid = ifelse(name %in% medoid_locs, TRUE, FALSE),
+      medoid = factor(medoid, levels = c(FALSE, TRUE))
+    )
+
+  point_cols <- ggsci::pal_nejm()(sum(!is.na(unique(pts_plt$clust))))
+  any_na <- FALSE
+  if (any(is.na(pts_plt$clust))) {
+    any_na <- TRUE
+    #   pts_plt <- pts_plt |>
+    #     dplyr::mutate(
+    #       clust = ifelse(is.na(clust), 4, clust)
+    #     )
+    #
+    #   point_cols <- c(point_cols, "white")
+    pts_plt_na <- pts_plt |>
+      dplyr::filter(is.na(clust))
+    pts_plt <- pts_plt |>
+      dplyr::filter(!is.na(clust))
+  }
+
+  # plot locations on map, colouring by cluster
+  p <- ggplot2::ggplot()
+
+  if (!is.null(elev_df)) {
+    # plot bins if available, if not plot directly (less distinct colours)
+    if ("elev_bin" %in% names(elev_df)) {
+      p <- p + geom_tile(
+        data = elev_df,
+        aes(x = x, y = y, fill = elev_bin),
+        width = diff(range(elev_df$x)) / length(unique(elev_df$x)),
+        height = diff(range(elev_df$y)) / length(unique(elev_df$y))
+      ) +
+        # scale_fill_viridis_d(
+        #   name = "Elevation",
+        #   option = "D",
+        #   direction = 1
+        # )
+        scico::scale_fill_scico_d(
+          name = "Elevation",
+          # palette = "lajolla",
+          palette = "bilbao",
+          direction = -1
+        )
+      # scale_fill_manual(
+      #   values = c(
+      #     "#FFFFFF", "#C5C2B2", "#B19E68",
+      #     "#A6785B", "#9B5352", "#6D1F23"
+      #     # "#FFFFFF", "#CBC9C0", "#BBB287",
+      #     # "#AC8F60", "#A4745A", "#914249"
+      #   ),
+      #   name = "Elevation"
+      # )
+    } else {
+      p <- p +
+        geom_tile(
+          data = elev_df,
+          aes(x = x, y = y, fill = elevation)
+        ) +
+        scale_fill_viridis(
+          name = "Elevation\n(m)",
+          option = "D",
+          limits = c(0, 1500)
+        )
+    }
+
+    # remove legend for elevation; handy if joining plots with patchwork!
+    if (rm_elev_leg) {
+      p <- p +
+        guides(fill = "none")
+    }
+
+    # p <- p + geom_sf(data = areas, fill = NA, colour = "white")
+    # } else {
+    #   p <- p + geom_sf(data = areas, fill = NA, colour = "black")
+  }
+  p <- p +
+    geom_sf(data = areas, fill = NA, colour = "black") +
+    coord_sf(expand = FALSE) + # remove padding around plot
+    ggnewscale::new_scale_fill() +
+    # ggnewscale::new_scale_colour() +
+    NULL
+  # p <- ggplot2::ggplot(areas) +
+  # p <- p +
+  # ggplot2::geom_sf(colour = "black", fill = NA) +
+  # ggplot2::geom_sf(areas, colour = "black", fill = NA)
+  # ggplot2::geom_sf(
+  #   data = pts_plt,
+  #   ggplot2::aes(
+  #     colour = factor(clust), shape = medoid, size = as.numeric(medoid)
+  #   ),
+  #   alpha = 0.8
+  # ) +
+
+  if (plot_medoids == TRUE) {
+    p <- p +
+      ggplot2::geom_sf(
+        data = pts_plt,
+        ggplot2::aes(
+          # colour = factor(clust),
+          fill = factor(clust),
+          shape = medoid,
+          size = as.numeric(medoid)
+        ),
+        alpha = 0.8,
+        # alpha = 0.9,
+        stroke = 1,
+        pch = 21
+      ) +
+      ggplot2::scale_shape_discrete(breaks = c(1, 15)) +
+      # ggplot2::scale_size_continuous(range = c(4, 8)) +
+      ggplot2::scale_size_continuous(range = c(pt_size, pt_size * 2)) +
+      ggplot2::guides(shape = "none", size = "none")
+  } else {
+    p <- p +
+      ggplot2::geom_sf(
+        data = pts_plt,
+        # ggplot2::aes(colour = factor(clust)),
+        ggplot2::aes(fill = factor(clust)),
+        alpha = 0.8,
+        # alpha = 0.9,
+        # size = 4,
+        size = pt_size,
+        stroke = 1,
+        pch = 21
+      )
+  }
+
+  # Add white (i.e. missing) pts on top, to make sure they're visible
+  if (any_na) {
+    p <- p +
+      ggplot2::geom_sf(
+        data = pts_plt_na |>
+          dplyr::mutate(clust = 1),
+        # ggplot2::aes(colour = factor(clust)),
+        # ggplot2::aes(fill = factor(clust)),
+        fill = "white",
+        alpha = 0.8,
+        # alpha = 0.9,
+        # size = 4,
+        size = pt_size,
+        stroke = 1,
+        pch = 21
+      )
+  }
+
+  p <- p +
+    # ggplot2::labs(colour = "Cluster") +
+    # ggplot2::labs(fill = "Cluster") +
+    guides(fill = "none") +
+    coord_sf(expand = FALSE) + # remove padding around plot
+    # evc_theme(nejm_pal = FALSE) +
+    cecl_theme(nejm_pal = FALSE) +
+    # ggsci::scale_colour_nejm()
+    # ggsci::scale_fill_nejm() +
+    scale_fill_manual(
+      values = point_cols
+    ) +
+    labs(x = "", y = "")
+
+  return(p)
+}
+
 # Function to generate multivariate t data with specified correlation
 gen_t <- \(cor_t, n, n_vars = 2, df_t = 3, laplace_trans = FALSE) {
   # generate data
