@@ -1,5 +1,6 @@
 #### Data Exploration ####
 
+# TODO Why are some chi values possibly < 0? (Recheck kf this is still the case!!)
 
 # TODO Look at extreme drought (i.e. lack of precipitation!)
 
@@ -97,8 +98,10 @@ calc_diff <- \(x, cols, decade = 1960) {
 # Function to plot, for both Seasons, ordinary and differenced values
 plot_pdf <- \(x, x_diff, areas, var, col_lab = NULL) {
   # plot for both seasons
-  season <- list("Summer", "Winter", NULL)
-  season_lab <- c(unlist(season[1:2]), "Year")
+  # season <- list("Summer", "Winter", NULL)
+  season <- list("Winter", "Spring", "Summer", "Autumn")
+  # season_lab <- c(unlist(season[1:2]), "Year")
+  season_lab <- c(unlist(season), "Year")
   p_lst <- lapply(seq_along(season), \(i) {
     map_plot(x, areas, var, season[[i]], col_lab, season_lab[[i]])
   })
@@ -299,21 +302,16 @@ diff_fill_fun <- \(...) {
 data <- readr::read_csv("data/02_app/ecad_clean.csv.gz")
 
 # load map of continental Spain to use as background in plots
-areas <- mapSpain::esp_get_munic_siane(moveCAN = TRUE) |>
+# areas <- mapSpain::esp_get_munic_siane(moveCAN = TRUE) |>
+areas <- sf::read_sf("data/02_app/spain_shapefile.geojson") |> 
   filter(!ine.ccaa.name %in% c("Canarias", "Balears, Illes", "Ceuta", "Melilla"))
 
 
 #### Initial Calculations ####
 
-# add decade and season labels
+# add decade labels
 data <- data %>%
-  mutate(
-    decade = floor(year(date) / 10) * 10,
-    season = case_when(
-      month(date) %in% c(1:3, 10:12) ~ "Winter",
-      TRUE ~ "Summer"
-    )
-  ) |>
+  mutate(decade = floor(year(date) / 10) * 10) |>
   filter(decade %in% decades)
 
 # simplify areas into autonomous communities/provinces
@@ -337,13 +335,14 @@ readr::write_csv(
 #### Means ####
 
 # calculate means
+# TODO How to ignore 0s in rain? 
 data_mean <- data_sf |>
   group_by(station_id, station_name, decade, season) |>
   summarise(
-    across(c(temp, rain, wind_speed, contains("drought")), \(x) mean(x, na.rm = TRUE)),
+    rain = mean(rain[rain > 0]),
+    across(c(temp, wind_speed, contains("drought")), \(x) mean(x, na.rm = TRUE)),
     .groups = "drop"
   )
-
 
 # calculate differences from first decade (1960s)
 data_mean_diff <- calc_diff(
@@ -380,7 +379,8 @@ dev.off()
 data_q <- data_sf |>
   group_by(station_id, station_name, decade, season) |>
   summarise(
-    across(c(temp, rain, wind_speed, contains("drought")), \(x) quantile(x, q, na.rm = TRUE)),
+    rain = quantile(rain[rain > 0], q, na.rm = TRUE),
+    across(c(temp, wind_speed, contains("drought")), \(x) quantile(x, q, na.rm = TRUE)),
     .groups = "drop"
   )
 
@@ -414,6 +414,8 @@ dev.off()
 
 #### Chi ####
 
+# TODO Allow for 0s in rain
+
 # Plot chi and chi-squared in Summer for one location
 spec_loc <- "Valencia"
 chi_spec <- data %>%
@@ -423,7 +425,8 @@ chi_spec <- data %>%
     season == "Summer"
   ) |>
   # dplyr::select(temp, rain) %>%
-  dplyr::select(temp, drought_global) %>%
+  # dplyr::select(temp, drought_global) %>%
+  dplyr::select(temp, drought_local) %>%
   # texmex::chi(qlim = c(0.1, 0.82)) # highest and lowest quantiles available
   texmex::chi()
 
@@ -443,15 +446,16 @@ chi_spec <- data %>%
 # In Summer, for temperature and rain
 chi_95_sf <- calc_chi(
   filter(data, season == "Winter"),
-  var1 = "temp", var2 = "drought_global", chi_q = chi_q
+  var1 = "temp", var2 = "drought_local", chi_q = chi_q
 )
 
 # plot for every setting
 join_chi_plots(chi_95_sf, areas_ccaa, diff_fill_fun, diff_fill_fun) +
-  plot_annotation(title = "Temperature vs Global Drought Index, Winter")
+  plot_annotation(title = "Temperature vs Local Drought Index, Winter")
 
 chi_settings_df <- tidyr::crossing(
-  "season" = c("Winter", "Summer", NA),
+  # "season" = c("Winter", "Summer", NA),
+  "season" = c("Winter", "Spring", "Summer", "Autumn", NA),
   # "combo"  = c("temp - rain", "rain - wind_speed"),
   "combo"  = c("temp - drought_global", "temp - drought_local", "rain - wind_speed"),
   "decade" = c(NA, decades)
@@ -677,7 +681,8 @@ pdf(
 
 for (st in sort(unique(data$station_name))) {
   roll_df <- purrr::map_dfr(
-    c("Winter", "Summer"),
+    # c("Winter", "Summer"),
+    c("Winter", "Spring", "Summer", "Autumn"),
     \(ss) {
       d <- data |>
         filter(
@@ -741,7 +746,8 @@ pdf(
 
 for (st in sort(unique(data$station_name))) {
   roll_df <- purrr::map_dfr(
-    c("Winter", "Summer"),
+    # c("Winter", "Summer"),
+    c("Winter", "Spring", "Summer", "Autumn"),
     \(ss) {
       d <- data |>
         filter(

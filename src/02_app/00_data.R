@@ -1,5 +1,11 @@
 #### Collate ECAD climate data ####
 
+# Update to group by other seasons (Spring/Summer/Autumn/Winter) (done)
+# Calculate SPI over these as well (done)
+# TODO Investigate whether we should remove 0s before calculating SPI or not
+# TODO Investigate NAs in `frank` due to season year being 1959! Should we
+# allow this?
+
 # TODO Write why we prefer non-airport/urban areas
 # - airports and urban areas are more susceptible to increased building
 # congestion over itme.
@@ -94,7 +100,8 @@ load_data <- \(files, spec_col, min_date = NULL, max_date = NULL) {
 #### Metadata & Shapefile ####
 
 # load map of Spain to use as background in plots
-areas <- mapSpain::esp_get_munic_siane(moveCAN = TRUE) |>
+# areas <- mapSpain::esp_get_munic_siane(moveCAN = TRUE) |>
+areas <- sf::read_sf("data/02_app/spain_shapefile.geojson") |>
   filter(!ine.ccaa.name %in% c("Canarias", "Balears, Illes", "Ceuta", "Melilla"))
 
 # simplify areas into autonomous communities/provinces
@@ -268,25 +275,53 @@ ecad_weekly_complete <- ecad_weekly[
   on = .(station_id, station_name)
 ]
 
+# remove days with no rain, as they will mess up SPI estimates below
+# TODO Only do when interested in modelling rain!
+# ecad_weekly_complete <- ecad_weekly_complete |>
+#   filter(rain > 0)
+
 
 #### Calculate SPI ####
+
+# ecad_weekly_complete[
+#   ,
+#   season := fifelse(
+#     month(date) %in% c(10:12, 1:3),
+#     "Winter",
+#     "Summer"
+#   )
+# ]
 
 # add season
 ecad_weekly_complete[
   ,
-  season := fifelse(
-    month(date) %in% c(10:12, 1:3),
-    "Winter",
-    "Summer"
-  )
+  month := month(date)
 ]
+
+# TODO Rewrite in data.table
+ecad_weekly_complete <- ecad_weekly_complete |>
+  mutate(season = case_when(
+    month %in% c(12, 1:2) ~ "Winter",
+    month %in% 3:5 ~ "Spring",
+    month %in% 6:8 ~ "Summer",
+    TRUE ~ "Autumn"
+  ))
 
 # assign season-year:
 # Jan-Mar belong to the winter that started in the previous calendar year
+# ecad_weekly_complete[
+#   ,
+#   season_year := fifelse(
+#     season == "Winter" & month(date) %in% c(1, 2, 3),
+#     year(date) - 1L,
+#     year(date)
+#   )
+# ]
+# Jan-Feb belong to the winter that started in the previous calendar year
 ecad_weekly_complete[
   ,
   season_year := fifelse(
-    season == "Winter" & month(date) %in% c(1, 2, 3),
+    season == "Winter" & month(date) %in% c(1, 2),
     year(date) - 1L,
     year(date)
   )
@@ -322,6 +357,7 @@ seasonal_rain <- seasonal_rain[
 # ]
 
 # empirical drought indexes:
+# # Calculate empirical/non-parametric seasonal SPI
 # Local: relative to each station's own seasonal climatology
 seasonal_rain[
   ,
@@ -336,7 +372,13 @@ seasonal_rain[
   by = .(season, season_year)
 ]
 
-# # Calculate empirical/non-parametric seasonal SPI
+# standardise to normal distribution (allows for fitting normal GAM later)
+seasonal_rain <- seasonal_rain |>
+  mutate(
+    drought_local_norm = qnorm(drought_local),
+    drought_global_norm = qnorm(drought_global)
+  )
+
 # seasonal_rain[
 #   ,
 #   spi_emp := qnorm(rain_u)
@@ -436,7 +478,9 @@ ecad_selected <- ecad_selected |>
     season_year,
     rain_season,
     drought_local,
-    drought_global
+    drought_global,
+    drought_local_norm,
+    drought_global_norm
   )
 
 # save
@@ -472,17 +516,23 @@ ecad_sf <- st_as_sf(
 )
 
 # plot a week of data (for week starting ???)
-# TODO Plot for both complete and non-complete cases
+# ecad_sf |>
+#   filter(date == "1998-09-13") |>
 ecad_sf |>
-  filter(date == "1998-09-06") |>
+  group_by(station_id) |>
+  filter(if_all(everything(), ~ !is.na(.))) |>
+  ungroup() |>
+  filter(date == .data$date[1]) |>
   # pivot_longer(cols = c(temp, rain, wind_speed), names_to = "variable", values_to = "value") |>
   ggplot() +
   geom_sf(data = areas_ccaa, fill = NA, colour = "black") +
-  geom_sf(aes(fill = temp), shape = 21, size = 8, colour = "black") +
+  # geom_sf(aes(fill = temp), shape = 21, size = 8, colour = "black") +
+  geom_sf(aes(fill = drought_local), shape = 21, size = 8, colour = "black") +
   # facet_wrap(~variable) +
   scale_colour_viridis_c() +
   # temperature in tenths of celcius
-  labs(fill = "°C") +
+  # labs(fill = "°C") +
+  labs(fill = "SPI") +
   scale_fill_viridis_c() +
   theme_bw()
 

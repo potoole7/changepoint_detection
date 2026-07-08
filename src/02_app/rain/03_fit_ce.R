@@ -1,7 +1,5 @@
 ### Fit CE and Cluster ####
 
-# TODO Why does plot_resid have values > 1 on the x-axis??
-
 # TODO Pulling in this data properly???
 
 # TODO Investigate in heatmaps if the "total" heatmap is correct; in some
@@ -70,53 +68,23 @@ source("src/00_functions.R")
 #### Metadata ####
 
 # dep_vars <- c("rain", "drought_local", "drought_global")
-# dep_vars <- c("rain")
-dep_vars <- c("drought_local_norm")
+dep_vars <- c("rain")
 # k_vals <- 1:5
 k_vals <- 1:8
 decades <- seq(1960, 2010, by = 10)
 # seasons <- c("Summer", "Winter", "Year")
-# seasons <- c("Summer", "Winter")
-seasons <- c("Winter", "Spring", "Summer", "Autumn")
+seasons <- c("Summer", "Winter")
 cond_prob <- 0.85 # default dependence threshold quantile
 # cond_prob <- 0.9 # try higher, CE diagnostics aren't good here!
 # cond_prob <- 0.95
 
-# save_dir <- "plots/02_app/"
+save_dir <- "plots/02_app/"
 # save_dir <- "plots/02_app/evgam/"
 # save_dir <- "plots/02_app/roll_emp/"
-save_dir <- "plots/02_app/mgcv/"
+# save_dir <- "plots/02_app/mgcv/"
 # save_dir <- "plots/02_app/mgcv/gpd/"
 # save_dir <- "plots/02_app/mgcv_spat/"
 # save_dir <- "plots/02_app/mgcv_spat/gpd/"
-
-if (!dir.exists(save_dir)) {
-  dir.create(save_dir, recursive = TRUE)
-}
-
-# file <- "data/02_app/marg_season_emp.rds"
-# file <- "data/02_app/marg_season_evgam.rds"
-# file <- "data/02_app/marg_season_roll_emp.rds"
-file <- "data/02_app/marg_season_mgcv.rds"
-# file <- "data/02_app/marg_season_mgcv_gpd.rds"
-# file <- "data/02_app/marg_season_mgcv_spat.rds"
-# file <- "data/02_app/marg_season_mgcv_gpd_spat.rds"
-
-# marg_season_decade <- readRDS("data/02_app/marg_season_decade_emp.rds")
-
-# marg_season <- readRDS("data/02_app/marg_season_emp.rds")
-# marg_season <- readRDS("data/02_app/marg_season_evgam.rds")
-# marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_spat.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd_spat.rds")
-marg_season <- readRDS(file)
-if (!is.null(names(marg_season))) {
-  seasons <- names(marg_season)
-}
-# marg_season_decade <- readRDS("data/02_app/marg_season_decade_emp.rds")
-
 
 #### Functions ####
 
@@ -600,22 +568,17 @@ plot_boot_quant <- \(
 data <- readr::read_csv(
   "data/02_app/ecad_clean.csv.gz"
 ) |>
-  mutate(decade = factor(floor(year(date) / 10) * 10, levels = decades))
-
-if (dep_vars == "rain") {
-  data <- data |>
-    filter(rain > 0)
-}
+  mutate(decade = factor(floor(year(date) / 10) * 10, levels = decades)) |>
+  filter(rain > 0)
 
 # marginal fits
-# marg_season <- readRDS("data/02_app/marg_season_emp.rds")
+marg_season <- readRDS("data/02_app/marg_season_emp.rds")
 # marg_season <- readRDS("data/02_app/marg_season_evgam.rds")
 # marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
 # marg_season <- readRDS("data/02_app/marg_season_mgcv.rds")
 # marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd.rds")
 # marg_season <- readRDS("data/02_app/marg_season_mgcv_spat.rds")
 # marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd_spat.rds")
-marg_season <- readRDS(file)
 if (!is.null(names(marg_season))) {
   seasons <- names(marg_season)
 }
@@ -668,7 +631,7 @@ station_names <- unique(data$station_name)
 # })
 
 data_lst_season <- data |>
-  mutate(season = factor(season, levels = seasons)) |>
+  mutate(season = as.factor(season)) |>
   group_split(season, .keep = FALSE) |>
   lapply(\(x) {
     y <- x |>
@@ -773,15 +736,16 @@ dep_var_season[[1]] <- lapply(seq_along(dep_var_season[[1]]), \(i) {
 })
 names(dep_var_season[[1]]) <- seasons
 
+
 # Function to plot CE diagnostics for each location and season
-ce_plot <- \(obj, loc, season, dep_var) {
+ce_plot <- \(obj, loc, season) {
   p <- (
-    plot_resid(obj[[season]], type = "ggplot", loc = loc, var = dep_var, cond_var = "temp") +
-      plot_resid(obj[[season]], type = "ggplot", loc = loc, var = "temp", cond_var = dep_var)
+    plot_resid(obj[[season]], type = "ggplot", loc = loc, var = "rain", cond_var = "temp") +
+      plot_resid(obj[[season]], type = "ggplot", loc = loc, var = "temp", cond_var = "rain")
   ) /
     (
-      plot_quantile(obj[[season]], type = "ggplot", loc = loc, var = "temp", cond_var = dep_var) +
-        plot_quantile(obj[[season]], type = "ggplot", loc = loc, var = "temp", cond_var = dep_var)
+      plot_quantile(obj[[season]], type = "ggplot", loc = loc, var = "temp", cond_var = "rain") +
+        plot_quantile(obj[[season]], type = "ggplot", loc = loc, var = "temp", cond_var = "rain")
     ) +
     plot_layout() +
     plot_annotation(
@@ -797,19 +761,15 @@ ce_plot <- \(obj, loc, season, dep_var) {
   suppressWarnings(p)
 }
 
-dep_var_season_orig <- dep_var_season
-
-# test out
 # debugonce(plot_resid)
-# debugonce(ce_plot)
-ce_plot(dep_var_season_orig[[1]], "A Coruna", "Summer", dep_var = dep_vars[[1]])
-ce_plot(dep_var_season_orig[[1]], "Valencia", "Winter", dep_var = dep_vars[[1]])
+# ce_plot(dep_var_season[[1]], "A Coruna", "Summer")
+ce_plot(dep_var_season[[1]], "Santander", "Winter")
 
 ce_plots <- lapply(seasons, \(season) {
   lapply(station_names, \(name) {
     tryCatch(
       {
-        ce_plot(dep_var_season[[1]], name, season, dep_var = dep_vars[[1]])
+        ce_plot(dep_var_season[[1]], name, season)
       },
       error = \(e) {
         return(NA) # TODO Investigate failed fits!
@@ -820,22 +780,14 @@ ce_plots <- lapply(seasons, \(season) {
 names(ce_plots) <- seasons
 
 # save
-# TODO Change to loop, really ugly
 pdf(paste0(save_dir, "ce_diagnostics_winter.pdf"), width = 10, height = 8)
 ce_plots$Winter
-dev.off()
-pdf(paste0(save_dir, "ce_diagnostics_spring.pdf"), width = 10, height = 8)
-ce_plots$Spring
 dev.off()
 pdf(paste0(save_dir, "ce_diagnostics_summer.pdf"), width = 10, height = 8)
 ce_plots$Summer
 dev.off()
-pdf(paste0(save_dir, "ce_diagnostics_autumn.pdf"), width = 10, height = 8)
-ce_plots$Autumn
-dev.off()
 
 # flatten
-dep_var_season_orig <- dep_var_season
 dep_var_season <- purrr::list_flatten(
   dep_var_season,
   name_spec = "{outer}_{inner}"
@@ -879,8 +831,7 @@ ab_plots_season[[2]]
 pdf(paste0(save_dir, "04_ab_map.pdf"), width = 12, height = 8)
 ab_plots_season[[1]]
 ab_plots_season[[2]]
-ab_plots_season[[3]]
-ab_plots_season[[4]]
+# ab_plots_season[[3]]
 dev.off()
 
 
@@ -1044,7 +995,7 @@ clust_var <- \(var = "rain") {
   })
 }
 
-clust_var_season_k_rain <- clust_var(dep_vars[[1]])
+clust_var_season_k_rain <- clust_var("rain")
 clust_var_season_k_temp <- clust_var("temp")
 
 names(clust_var_season_k_rain) <- names(clust_var_season_k_temp) <- k_vec
@@ -1111,14 +1062,14 @@ plot_one_heatmap <- \(clust_sets, dist_type, k, season, var = "rain", title = NU
   p
 }
 
-make_season_page <- \(season, k, type = c("map", "heatmap"), title = NULL, var = "rain") {
+make_season_page <- \(season, k, type = c("map", "heatmap"), title = NULL) {
   type <- match.arg(type)
 
   plots <- lapply(names(clust_sets), \(dist_type) {
     if (type == "map") {
-      plot_one_map(clust_sets, dist_type, k, season, title, var = var)
+      plot_one_map(clust_sets, dist_type, k, season, title, var = "rain")
     } else {
-      plot_one_heatmap(clust_sets, dist_type, k, season, title, var = var)
+      plot_one_heatmap(clust_sets, dist_type, k, season, title, var = "rain")
     }
   })
 
@@ -1127,14 +1078,13 @@ make_season_page <- \(season, k, type = c("map", "heatmap"), title = NULL, var =
 }
 
 # debugonce(plot_one_map)
-# debugonce(plot_one_heatmap)
 for (k in k_vec) {
   pdf(glue("{out_dir}/cluster_maps_k{k}.pdf"), width = 14, height = 5)
 
   for (season in seasons) {
     print(k)
     print(season)
-    print(make_season_page(season, k, type = "map", var = dep_vars[[1]]))
+    print(make_season_page(season, k, type = "map"))
   }
 
   dev.off()
@@ -1142,7 +1092,7 @@ for (k in k_vec) {
   pdf(glue("{out_dir}/cluster_heatmaps_k{k}.pdf"), width = 18, height = 8)
 
   for (season in seasons) {
-    print(make_season_page(season, k, type = "heatmap", var = dep_vars[[1]]))
+    print(make_season_page(season, k, type = "heatmap"))
   }
 
   dev.off()
@@ -1291,8 +1241,6 @@ rm(dep_var_season, dist_var_season, clust_var_season_k, clust_var_season_k_rain,
 gc()
 
 # dqu_vals <- c(0.8, 0.85, 0.88, 0.9, 0.92, 0.95)
-# TODO Very memory intensive, find way to make it not so bad!
-# Code may just be badly written??
 dqu_vals <- c(0.8, 0.85, 0.88, 0.9)
 clust_dqu_plots_total <- lapply(dqu_vals, \(dqu) {
   print(paste0("dqu = ", dqu))
