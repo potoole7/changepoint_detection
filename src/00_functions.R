@@ -405,6 +405,7 @@ trans_fun <- \(data, n_vars, laplace_trans = FALSE) {
   } else {
     # data already
     data_laplace_loc <- data |>
+      mutate(block = factor(block, levels = unique(block))) |>
       group_split(block, .keep = FALSE)
   }
   names(data_laplace_loc) <- unique(data$block)
@@ -1484,9 +1485,25 @@ test_norm_diff <- \(data, block_vec, n_mc = 500, cond_val = 0, ret_all = TRUE, u
   }
 }
 
-# Function to generate data for a single permutation test
+# Generate divergence matrices for one permutation.
+#
+# `permutation_groups` should be either:
+#
+#   NULL:
+#     Each observation/date is permuted separately, but the same
+#     permutation is applied at every location.
+#
+#   A list of length two:
+#     One vector for each original block. Each vector must have one
+#     value per observation/date in that block. Repeated values identify
+#     observations that must remain together, e.g. season_year.
+#
+# When season-year vectors are supplied, whole seasonal years are
+# assigned to pseudo-blocks.
+
 perm_test_prep <- \(
   data_laplace_loc,
+  permutation_groups = NULL,
   cond_prob = 0.9,
   cond_val = NULL,
   cond_var = NULL,
@@ -1495,169 +1512,577 @@ perm_test_prep <- \(
   data_loc = NULL,
   aLow = -1,
   nruns = 1,
-  start = list(c(a = 0.01, b = 0.01), c(a = 0.01, b = 0.01)),
-  # type = c("norm", "clustering"),
-  # norm_type = "F"
+  n_mc = 500,
+  start = list(
+    c(a = 0.01, b = 0.01),
+    c(a = 0.01, b = 0.01)
+  ),
   ...
 ) {
+  #### Validate input ####
+  
+  if (length(data_laplace_loc) != 2L) {
+    stop(
+      "`data_laplace_loc` must contain exactly two blocks."
+    )
+  }
+  
+  if (use_evgam) {
+    stop(
+      "The rewritten permutation function does not currently ",
+      "support `use_evgam = TRUE`, because the spatial metadata ",
+      "must also be reassigned to the permuted blocks."
+    )
+  }
+  
   if (!is.null(cond_val)) {
     cond_prob <- NULL
   }
-
-  # combine data into single data.frame with block indicator
-  data_laplace_combined <- bind_rows(lapply(seq_along(data_laplace_loc), \(i) {
-    bind_rows(lapply(data_laplace_loc[[i]]$transformed, as.data.frame), .id = "name") %>%
-      mutate(block = i)
-  })) |>
-    select(X1, X2, name, block)
-
-  # permute rows within each location
-  data_perm <- data_laplace_combined %>%
-    group_by(name) %>%
-    group_modify(\(df, key) {
-      # original block sizes for this location
-      n1 <- sum(df$block == levels(factor(df$block))[1])
-      n2 <- sum(df$block == levels(factor(df$block))[2])
-
-      # pool rows and randomly split
-      idx <- sample.int(nrow(df))
-      idx1 <- idx[seq_len(n1)]
-      idx2 <- idx[-seq_len(n1)]
-
-      df |>
-        mutate(
-          row = row_number(),
-          block = case_when(
-            row %in% idx1 ~ levels(factor(df$block))[1],
-            row %in% idx2 ~ levels(factor(df$block))[2]
+  
+  transformed_blocks <- lapply(
+    data_laplace_loc,
+    \(x) x$transformed
+  )
+  
+  location_names <- names(
+    transformed_blocks[[1]]
+  )
+  
+  if (is.null(location_names)) {
+    stop(
+      "The transformed matrices in block 1 are not named by location."
+    )
+  }
+  
+  if (
+    !setequal(
+      location_names,
+      names(transformed_blocks[[2]])
+    )
+  ) {
+    stop(
+      "The two blocks contain different locations."
+    )
+  }
+  
+  # Put locations into identical order in both blocks.
+  transformed_blocks <- lapply(
+    transformed_blocks,
+    \(x) x[location_names]
+  )
+  
+  #### Check row counts within each block ####
+  
+  block_sizes <- vapply(
+    transformed_blocks,
+    \(block) {
+      sizes <- vapply(
+        block,
+        nrow,
+        integer(1)
+      )
+      
+      if (length(unique(sizes)) != 1L) {
+        stop(
+          "Locations have different numbers of observations ",
+          "within the same block."
+        )
+      }
+      
+      sizes[[1]]
+    },
+    integer(1)
+  )
+  
+  n_blocks <- length(transformed_blocks)
+  
+  #### Construct permutation groups ####
+  
+  if (is.null(permutation_groups)) {
+    # Each observation is its own group. Prefixing by the original
+    # block makes the identifiers unique after pooling.
+    permutation_groups <- lapply(
+      seq_len(n_blocks),
+      \(block_index) {
+        paste0(
+          "block_",
+          block_index,
+          "_observation_",
+          seq_len(block_sizes[[block_index]])
+        )
+      }
+    )
+    
+    permutation_unit <- "observation"
+  } else {
+    if (
+      !is.list(permutation_groups) ||
+      length(permutation_groups) != n_blocks
+    ) {
+      stop(
+        "`permutation_groups` must be NULL or a list of length two."
+      )
+    }
+    
+    group_lengths <- lengths(
+      permutation_groups
+    )
+    
+    if (!identical(
+      as.integer(group_lengths),
+      as.integer(block_sizes)
+    )) {
+      stop(
+        "Each `permutation_groups` vector must have one value ",
+        "per observation in its corresponding block. Expected ",
+        paste(block_sizes, collapse = " and "),
+        " values, but received ",
+        paste(group_lengths, collapse = " and "),
+        "."
+      )
+    }
+    
+    if (
+      any(
+        vapply(
+          permutation_groups,
+          anyNA,
+          logical(1)
+        )
+      )
+    ) {
+      stop(
+        "`permutation_groups` cannot contain missing values."
+      )
+    }
+    
+    # Prefix groups by the original block. This prevents accidental
+    # collisions if the same label appears in both blocks.
+    permutation_groups <- Map(
+      \(groups, block_index) {
+        paste0(
+          "block_",
+          block_index,
+          "_group_",
+          as.character(groups)
+        )
+      },
+      permutation_groups,
+      seq_len(n_blocks)
+    )
+    
+    permutation_unit <- "group"
+  }
+  
+  #### Convert both blocks to one long data frame ####
+  
+  data_laplace_combined <- bind_rows(
+    lapply(
+      seq_len(n_blocks),
+      \(block_index) {
+        block <- transformed_blocks[
+          [block_index]
+        ]
+        
+        bind_rows(
+          Map(
+            \(matrix_data, location) {
+              matrix_data <- as.data.frame(
+                matrix_data
+              )
+              
+              if (
+                !all(
+                  c("X1", "X2") %in%
+                  names(matrix_data)
+                )
+              ) {
+                stop(
+                  "Each transformed matrix must contain ",
+                  "columns `X1` and `X2`."
+                )
+              }
+              
+              matrix_data |>
+                transmute(
+                  X1,
+                  X2,
+                  name = location,
+                  original_block = block_index,
+                  observation_index = row_number(),
+                  permutation_group =
+                    permutation_groups[
+                      [block_index]
+                    ]
+                )
+            },
+            block,
+            names(block)
           )
         )
-    }) %>%
-    ungroup() |>
-    select(-row)
-
-  locs <- unique(data_perm$name)
-
-  # convert to cecl_marg objects (UNCHANGED)
-  data_laplace_perm <- data_perm %>%
-    mutate(block = factor(block, levels = unique(block))) %>%
-    group_split(block) %>%
-    lapply(\(x) {
-      ret <- lapply(locs, \(loc) {
-        subset(x, name == loc) %>%
-          select(X1, X2)
-      })
-      names(ret) <- locs
-      ret
-    })
-  names(data_laplace_perm) <- levels(data_perm$block)
-
-  marg_perm <- lapply(data_laplace_perm, as_cecl_marg)
-
-  # fit CE
-  # TODO Change!!
-  # dep_perm <- lapply(
-  #   marg_perm,
-  #   cecl_dep,
-  #   cond_prob = cond_prob,
-  #   cond_val = cond_val,
-  #   fit_no_keef = TRUE
-  # )
-  # fit CE models
-  if (use_evgam == FALSE) {
-    # dep_perm <- lapply(
-    #   marg_perm,
-    #   cecl_dep,
-    #   cond_prob   = cond_prob,
-    #   cond_val    = cond_val,
-    #   fit_no_keef = TRUE,
-    #   aLow        = aLow,
-    #   nruns       = nruns
-    # )
-    dep_perm <- lapply(seq_along(marg_perm), \(i) {
-      cecl_dep(
-        obj         = marg_perm[[i]],
-        cond_prob   = cond_prob,
-        cond_val    = cond_val,
-        cond_var    = cond_var,
-        aLow        = aLow,
-        nruns       = nruns,
-        fit_no_keef = TRUE,
-        start       = start[[i]]
-      )
-    })
-    # skip bad permutations
-    if (any(sapply(dep_perm, \(x) any(is.na(unlist(x$dependence)))))) {
-      return(NA)
-    }
-  } else if (use_evgam) {
-    if (is.null(data_loc)) {
-      stop("data_loc must be provided when use_evgam = TRUE")
-    }
-
-    # first, put marginal data into form for evgam fitting
-    marg_join_lst <- lapply(seq_along(marg_perm), \(k) {
-      x <- marg_perm[[k]]
-      bind_rows(lapply(seq_along(x$transformed), \(j) {
-        data.frame(x$transformed[[j]]) |>
-          mutate(name = paste0("loc_", j))
-      })) |>
-        left_join(
-          data_loc |>
-            filter(block == k) |>
-            distinct(name, x_loc, y_loc),
-          by = "name"
-        ) |>
-        rename(x = x_loc, y = y_loc) |>
-        select(-name)
-    })
-
-    dep_perm <- lapply(marg_join_lst, \(x) {
-      x1_cond <- fit_evgam(
-        df = x,
-        dep_val = cond_val,
-        var = "X2",
-        cond_var = "X1"
-      )
-
-      x2_cond <- fit_evgam(
-        df = x,
-        dep_val = cond_val,
-        var = "X1",
-        cond_var = "X2"
-      )
-
-      # join and change to `cecl_dep` format
-      coef_evgam <- bind_rows(x1_cond$predictions, x2_cond$predictions) |>
-        arrange(name, var, cond_var)
-      rownames(coef_evgam) <- NULL
-      as_cecl_dep(coef_evgam)
-    })
-  } else {
-    stop("Invalid value for use_evgam")
-  }
-
-
-  thresh_max <- NULL
-  if (use_dth == TRUE) {
-    thresh <- lapply(dep_perm, \(x) {
-      lapply(x$dependence, CeCl:::pull_thresh_trans)
-    })
-    # take max
-    thresh_max <- max(unlist(thresh))
-  }
-
-  # compute distances
-
-  dist_perm <- lapply(seq_along(dep_perm), \(i) {
-    cecl_dist(
-      dep_perm[[i]],
-      marg_perm[[i]],
-      dth = thresh_max,
-      ...
+      }
     )
-  })
+  )
+  
+  #### Generate one common permutation ####
+  
+  group_table <- data_laplace_combined |>
+    distinct(
+      permutation_group,
+      original_block
+    )
+  
+  n_groups_block_1 <- group_table |>
+    filter(original_block == 1L) |>
+    nrow()
+  
+  n_groups_block_2 <- group_table |>
+    filter(original_block == 2L) |>
+    nrow()
+  
+  pooled_groups <- sample(
+    group_table$permutation_group
+  )
+  
+  block_assignment <- tibble(
+    permutation_group = pooled_groups,
+    block = c(
+      rep(
+        "1",
+        n_groups_block_1
+      ),
+      rep(
+        "2",
+        n_groups_block_2
+      )
+    )
+  )
+  
+  # Apply the same group assignment to every location.
+  data_perm <- data_laplace_combined |>
+    select(
+      X1,
+      X2,
+      name,
+      original_block,
+      observation_index,
+      permutation_group
+    ) |>
+    left_join(
+      block_assignment,
+      by = "permutation_group",
+      relationship = "many-to-one"
+    )
+  
+  if (anyNA(data_perm$block)) {
+    stop(
+      "At least one permutation group was not assigned to a block."
+    )
+  }
+  
+  #### Validate common assignment across locations ####
+  
+  assignment_check <- data_perm |>
+    distinct(
+      permutation_group,
+      name,
+      block
+    ) |>
+    count(
+      permutation_group,
+      name = "n_assignments"
+    )
+  
+  if (any(
+    assignment_check$n_assignments !=
+    length(location_names)
+  )) {
+    stop(
+      "A permutation group was not represented at every location."
+    )
+  }
+  
+  block_check <- data_perm |>
+    distinct(
+      permutation_group,
+      block
+    ) |>
+    count(
+      permutation_group,
+      name = "n_blocks"
+    )
+  
+  if (any(block_check$n_blocks != 1L)) {
+    stop(
+      "A permutation group was assigned to multiple blocks."
+    )
+  }
+  
+  #### Reconstruct cecl_marg objects ####
+  
+  permuted_blocks <- lapply(
+    c("1", "2"),
+    \(new_block) {
+      block_data <- data_perm |>
+        filter(block == new_block)
+      
+      location_data <- lapply(
+        location_names,
+        \(location) {
+          block_data |>
+            filter(name == location) |>
+            # Ordering is not important for CE likelihood fitting, but
+            # deterministic ordering makes debugging easier.
+            arrange(
+              original_block,
+              observation_index
+            ) |>
+            select(
+              X1,
+              X2
+            ) |>
+            as.data.frame()
+        }
+      )
+      
+      names(location_data) <- location_names
+      
+      # Every location must have the same number of rows.
+      location_sizes <- vapply(
+        location_data,
+        nrow,
+        integer(1)
+      )
+      
+      if (length(unique(location_sizes)) != 1L) {
+        stop(
+          "The common permutation produced unequal location ",
+          "sample sizes within pseudo-block ", new_block, "."
+        )
+      }
+      
+      as_cecl_marg(location_data)
+    }
+  )
+  
+  names(permuted_blocks) <- c("1", "2")
+  
+  #### Fit CE models and calculate divergence matrices ####
+  
+  dist_perm <- calc_dist(
+    marg = permuted_blocks,
+    n_mc = n_mc,
+    cond_prob = cond_prob,
+    cond_val = cond_val,
+    use_dth = use_dth,
+    cond_var = cond_var,
+    use_evgam = FALSE,
+    aLow = aLow,
+    nruns = nruns,
+    ret_dep = FALSE,
+    start = start,
+    ...
+  )
+  
+  # Preserve the existing convention that a failed CE fit returns NA.
+  if (
+    is.atomic(dist_perm) &&
+    length(dist_perm) == 1L &&
+    is.na(dist_perm)
+  ) {
+    return(NA)
+  }
+  
+  attr(
+    dist_perm,
+    "permutation_unit"
+  ) <- permutation_unit
+  
+  attr(
+    dist_perm,
+    "n_groups"
+  ) <- c(
+    block_1 = n_groups_block_1,
+    block_2 = n_groups_block_2
+  )
+  
+  dist_perm
 }
+
+# # Function to generate data for a single permutation test
+# perm_test_prep <- \(
+#   data_laplace_loc,
+#   cond_prob = 0.9,
+#   cond_val = NULL,
+#   cond_var = NULL,
+#   use_dth = FALSE,
+#   use_evgam = FALSE,
+#   data_loc = NULL,
+#   aLow = -1,
+#   nruns = 1,
+#   start = list(c(a = 0.01, b = 0.01), c(a = 0.01, b = 0.01)),
+#   # type = c("norm", "clustering"),
+#   # norm_type = "F"
+#   ...
+# ) {
+#   if (!is.null(cond_val)) {
+#     cond_prob <- NULL
+#   }
+# 
+#   # combine data into single data.frame with block indicator
+#   data_laplace_combined <- bind_rows(lapply(seq_along(data_laplace_loc), \(i) {
+#     bind_rows(lapply(data_laplace_loc[[i]]$transformed, as.data.frame), .id = "name") %>%
+#       mutate(block = i)
+#   })) |>
+#     select(X1, X2, name, block)
+# 
+#   # permute rows within each location
+#   data_perm <- data_laplace_combined %>%
+#     group_by(name) %>%
+#     group_modify(\(df, key) {
+#       # original block sizes for this location
+#       n1 <- sum(df$block == levels(factor(df$block))[1])
+#       n2 <- sum(df$block == levels(factor(df$block))[2])
+# 
+#       # pool rows and randomly split
+#       idx <- sample.int(nrow(df))
+#       idx1 <- idx[seq_len(n1)]
+#       idx2 <- idx[-seq_len(n1)]
+# 
+#       df |>
+#         mutate(
+#           row = row_number(),
+#           block = case_when(
+#             row %in% idx1 ~ levels(factor(df$block))[1],
+#             row %in% idx2 ~ levels(factor(df$block))[2]
+#           )
+#         )
+#     }) %>%
+#     ungroup() |>
+#     select(-row)
+# 
+#   locs <- unique(data_perm$name)
+# 
+#   # convert to cecl_marg objects (UNCHANGED)
+#   data_laplace_perm <- data_perm %>%
+#     mutate(block = factor(block, levels = unique(block))) %>%
+#     group_split(block) %>%
+#     lapply(\(x) {
+#       ret <- lapply(locs, \(loc) {
+#         subset(x, name == loc) %>%
+#           select(X1, X2)
+#       })
+#       names(ret) <- locs
+#       ret
+#     })
+#   names(data_laplace_perm) <- levels(data_perm$block)
+# 
+#   marg_perm <- lapply(data_laplace_perm, as_cecl_marg)
+# 
+#   # fit CE
+#   # TODO Change!!
+#   # dep_perm <- lapply(
+#   #   marg_perm,
+#   #   cecl_dep,
+#   #   cond_prob = cond_prob,
+#   #   cond_val = cond_val,
+#   #   fit_no_keef = TRUE
+#   # )
+#   # fit CE models
+#   if (use_evgam == FALSE) {
+#     # dep_perm <- lapply(
+#     #   marg_perm,
+#     #   cecl_dep,
+#     #   cond_prob   = cond_prob,
+#     #   cond_val    = cond_val,
+#     #   fit_no_keef = TRUE,
+#     #   aLow        = aLow,
+#     #   nruns       = nruns
+#     # )
+#     dep_perm <- lapply(seq_along(marg_perm), \(i) {
+#       cecl_dep(
+#         obj         = marg_perm[[i]],
+#         cond_prob   = cond_prob,
+#         cond_val    = cond_val,
+#         cond_var    = cond_var,
+#         aLow        = aLow,
+#         nruns       = nruns,
+#         fit_no_keef = TRUE,
+#         start       = start[[i]]
+#       )
+#     })
+#     # skip bad permutations
+#     if (any(sapply(dep_perm, \(x) any(is.na(unlist(x$dependence)))))) {
+#       return(NA)
+#     }
+#   } else if (use_evgam) {
+#     if (is.null(data_loc)) {
+#       stop("data_loc must be provided when use_evgam = TRUE")
+#     }
+# 
+#     # first, put marginal data into form for evgam fitting
+#     marg_join_lst <- lapply(seq_along(marg_perm), \(k) {
+#       x <- marg_perm[[k]]
+#       bind_rows(lapply(seq_along(x$transformed), \(j) {
+#         data.frame(x$transformed[[j]]) |>
+#           mutate(name = paste0("loc_", j))
+#       })) |>
+#         left_join(
+#           data_loc |>
+#             filter(block == k) |>
+#             distinct(name, x_loc, y_loc),
+#           by = "name"
+#         ) |>
+#         rename(x = x_loc, y = y_loc) |>
+#         select(-name)
+#     })
+# 
+#     dep_perm <- lapply(marg_join_lst, \(x) {
+#       x1_cond <- fit_evgam(
+#         df = x,
+#         dep_val = cond_val,
+#         var = "X2",
+#         cond_var = "X1"
+#       )
+# 
+#       x2_cond <- fit_evgam(
+#         df = x,
+#         dep_val = cond_val,
+#         var = "X1",
+#         cond_var = "X2"
+#       )
+# 
+#       # join and change to `cecl_dep` format
+#       coef_evgam <- bind_rows(x1_cond$predictions, x2_cond$predictions) |>
+#         arrange(name, var, cond_var)
+#       rownames(coef_evgam) <- NULL
+#       as_cecl_dep(coef_evgam)
+#     })
+#   } else {
+#     stop("Invalid value for use_evgam")
+#   }
+# 
+# 
+#   thresh_max <- NULL
+#   if (use_dth == TRUE) {
+#     thresh <- lapply(dep_perm, \(x) {
+#       lapply(x$dependence, CeCl:::pull_thresh_trans)
+#     })
+#     # take max
+#     thresh_max <- max(unlist(thresh))
+#   }
+# 
+#   # compute distances
+# 
+#   dist_perm <- lapply(seq_along(dep_perm), \(i) {
+#     cecl_dist(
+#       dep_perm[[i]],
+#       marg_perm[[i]],
+#       dth = thresh_max,
+#       ...
+#     )
+#   })
+# }
 #
 #   # fit CE, compute distances and calculate norm or clustering diff
 #   compare_blocks(marg_perm, type, norm_type)
@@ -2113,8 +2538,6 @@ perm_test_fun <- \(
       -1
     }
 
-    rp
-
     dep_start <- lapply(
       seq_along(data_laplace_start),
       \(k) {
@@ -2364,14 +2787,14 @@ perm_test_fun <- \(
     }
 
     #### Transform and fit observed blocks ####
-
+    
     data_laplace_block <- trans_fun(
       # data_block,
       select(data_block, X1, X2, name, block),
       n_vars,
       laplace_trans
     )
-
+    
     dist <- suppressMessages(
       calc_dist(
         data_laplace_block,
@@ -2381,7 +2804,7 @@ perm_test_fun <- \(
         ...
       )
     )
-
+    
     if (ret_dep) {
       dep <- dist$dep
       dist <- dist$dist
@@ -2429,10 +2852,18 @@ perm_test_fun <- \(
           system(sprintf("echo Permutation %s", j))
         }
 
+        # dist_perm <- perm_test_prep(
+        #   data_laplace_block,
+        #   start = start,
+        #   use_dth = use_dth,
+        #   ...
+        # )
         dist_perm <- perm_test_prep(
           data_laplace_block,
           start = start,
           use_dth = use_dth,
+          cond_val = dep_val,
+          laplace_sample = laplace_sample,
           ...
         )
 
