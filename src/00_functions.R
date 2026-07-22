@@ -546,49 +546,49 @@ calc_dist <- \(
 #     vals <- c(M1[upper.tri(M1)], M2[upper.tri(M2)])
 #     sigma <- median(vals[vals > 0])
 #   }
-# 
+#
 #   # apply Gaussian kernel to convert to similarity matrices
 #   K1 <- exp(-M1 / sigma)
 #   K2 <- exp(-M2 / sigma)
-# 
+#
 #   # add small value to diagonal to ensure positive definiteness
 #   K1 <- K1 + diag(eps, nrow(K1))
 #   K2 <- K2 + diag(eps, nrow(K2))
-# 
+#
 #   # compute matrix logarithm and then Frobenius norm of difference
 #   L1 <- expm::logm(K1)
 #   L2 <- expm::logm(K2)
-# 
+#
 #   norm(L1 - L2, type = "F")
 # }
 log_euclid <- \(M1, M2, sigma, tol = 1e-10) {
   M1 <- (M1 + t(M1)) / 2
   M2 <- (M2 + t(M2)) / 2
-  
+
   K1 <- exp(-(M1 / sigma)^2 / 2)
   K2 <- exp(-(M2 / sigma)^2 / 2)
-  
+
   K1 <- (K1 + t(K1)) / 2
   K2 <- (K2 + t(K2)) / 2
-  
+
   eig1 <- eigen(K1, symmetric = TRUE)
   eig2 <- eigen(K2, symmetric = TRUE)
-  
+
   if (
     min(eig1$values) <= tol ||
-    min(eig2$values) <= tol
+      min(eig2$values) <= tol
   ) {
     stop("Kernel matrix is not strictly positive definite.")
   }
-  
+
   L1 <- eig1$vectors %*%
     diag(log(eig1$values)) %*%
     t(eig1$vectors)
-  
+
   L2 <- eig2$vectors %*%
     diag(log(eig2$values)) %*%
     t(eig2$vectors)
-  
+
   norm(L1 - L2, type = "F")
 }
 
@@ -1092,7 +1092,7 @@ single_run_explore <- \(
       frob = NA_real_,
       inf = NA_real_,
       spec = NA_real_,
-      ln_spd = NA_real_,
+      # ln_spd = NA_real_,
       dep = NULL,
       error_stage = stage,
       error_message = message
@@ -1319,8 +1319,8 @@ single_run_explore <- \(
           norm_type = "F"
         ),
         inf = NA_real_,
-        spec = NA_real_,
-        ln_spd = NA_real_
+        spec = NA_real_# ,
+        # ln_spd = NA_real_
       )
 
       if (nrow(mat1) > 2L) {
@@ -1336,11 +1336,11 @@ single_run_explore <- \(
           norm_type = "2"
         )
 
-        norm_results$ln_spd <- compare_blocks(
-          dist,
-          type = "norm",
-          norm_type = "log SPD"
-        )
+        # norm_results$ln_spd <- compare_blocks(
+        #   dist,
+        #   type = "norm",
+        #   norm_type = "log SPD"
+        # )
       }
 
       norm_results
@@ -1385,7 +1385,7 @@ single_run_explore <- \(
     frob = norm_attempt$frob,
     inf = norm_attempt$inf,
     spec = norm_attempt$spec,
-    ln_spd = norm_attempt$ln_spd,
+    # ln_spd = norm_attempt$ln_spd,
     dep = if (has_dep) {
       dist_obj$dep
     } else {
@@ -2407,11 +2407,11 @@ perm_test_fun <- \(
       norm_type = "2"
     )
 
-    norm_orig_ln_spd <- compare_blocks(
-      dist,
-      type = "norm",
-      norm_type = "log SPD"
-    )
+    # norm_orig_ln_spd <- compare_blocks(
+    #   dist,
+    #   type = "norm",
+    #   norm_type = "log SPD"
+    # )
 
     #### Permutation statistics ####
 
@@ -2451,12 +2451,12 @@ perm_test_fun <- \(
             dist_perm,
             type = "norm",
             norm_type = "2"
-          ),
-          ln_spd = compare_blocks(
-            dist_perm,
-            type = "norm",
-            norm_type = "log SPD"
-          )
+          )# ,
+          # ln_spd = compare_blocks(
+          #   dist_perm,
+          #   type = "norm",
+          #   norm_type = "log SPD"
+          # )
         )
       }
     )
@@ -2479,29 +2479,38 @@ perm_test_fun <- \(
       numeric(1)
     )
 
-    perm_norms_ln_spd <- vapply(
-      norm_vals,
-      \(x) x$ln_spd,
-      numeric(1)
-    )
+    # perm_norms_ln_spd <- vapply(
+    #   norm_vals,
+    #   \(x) x$ln_spd,
+    #   numeric(1)
+    # )
 
     #### P-values ####
 
-    p_value_frob <- mean(
-      perm_norms_frob >= norm_orig_frob
-    )
+    # p_value_frob <- mean(
+    #   perm_norms_frob >= norm_orig_frob
+    # )
+    p_value_frob <- (
+      1 + sum(perm_norms_frob >= norm_orig_frob)
+    ) / (length(perm_norms_frob) + 1)
 
-    p_value_inf <- mean(
-      perm_norms_inf >= norm_orig_inf
-    )
+    # p_value_inf <- mean(
+    #   perm_norms_inf >= norm_orig_inf
+    # )
+    p_value_inf <- (
+      1 + sum(perm_norms_inf >= norm_orig_inf)
+    ) / (length(perm_norms_inf) + 1)
 
-    p_value_spec <- mean(
-      perm_norms_spec >= norm_orig_spec
-    )
+    # p_value_spec <- mean(
+    #   perm_norms_spec >= norm_orig_spec
+    # )
+    p_value_spec <- (
+      1 + sum(perm_norms_spec >= norm_orig_spec)
+    ) / (length(perm_norms_spec) + 1)
 
-    p_value_ln_spd <- mean(
-      perm_norms_ln_spd >= norm_orig_ln_spd
-    )
+    # p_value_ln_spd <- mean(
+    #   perm_norms_ln_spd >= norm_orig_ln_spd
+    # )
 
     if (verbose) {
       message(
@@ -2520,15 +2529,15 @@ perm_test_fun <- \(
       p_value_frob = p_value_frob,
       p_value_inf = p_value_inf,
       p_value_spec = p_value_spec,
-      p_value_ln_spd = p_value_ln_spd,
+      # p_value_ln_spd = p_value_ln_spd,
       norm_orig_frob = norm_orig_frob,
       norm_orig_inf = norm_orig_inf,
       norm_orig_spec = norm_orig_spec,
-      norm_orig_ln_spd = norm_orig_ln_spd,
+      # norm_orig_ln_spd = norm_orig_ln_spd,
       perm_norms_frob = perm_norms_frob,
       perm_norms_inf = perm_norms_inf,
-      perm_norms_spec = perm_norms_spec,
-      perm_norms_ln_spd = perm_norms_ln_spd
+      perm_norms_spec = perm_norms_spec # ,
+      # perm_norms_ln_spd = perm_norms_ln_spd
     )
 
     if (ret_dep) {
