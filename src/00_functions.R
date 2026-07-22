@@ -594,80 +594,699 @@ compare_blocks <- \(dist, type = c("norm", "clustering"), norm_type = "F") {
   }
 }
 
-# Function to run single iteration of exploration for a given block position i
-single_run_explore <- \(data, i, laplace_trans = FALSE, ...) {
-  data_block <- data %>%
-    group_by(name) |>
-    mutate(block = ifelse(row_number() <= i, "1", "2")) |>
-    ungroup()
+# # Function to run single iteration of exploration for a given block position i
+# single_run_explore <- \(data, i, laplace_trans = FALSE, ...) {
+#   data_block <- data %>%
+#     group_by(name) |>
+#     mutate(block = ifelse(row_number() <= i, "1", "2")) |>
+#     ungroup()
+#
+#   # check blocking is correct
+#   # table(data_block$block, data_block$name)
+#
+#   # convert to Laplace and store marginals
+#   # TODO Do before blocking? Think I do with laplace_trans = TRUE!
+#   data_laplace_block <- trans_fun(data_block, n_vars, laplace_trans)
+#
+#   # check you've transformed correctly
+#   # par(mfrow = c(1, 2))
+#   # plot(data_laplace_block[[1]][[1]][[1]])
+#   # plot(data_laplace_block[[2]][[1]][[1]])
+#   # par(mfrow = c(1, 1))
+#
+#   dist_obj <- suppressMessages(calc_dist(data_laplace_block, ...))
+#   dist <- dist_obj
+#   # cond <- length(dist_obj) == 2
+#   cond <- !is.null(names(dist_obj)) && all(names(dist_obj) == c("dist", "dep"))
+#   if (cond) {
+#     dist <- dist$dist
+#   }
+#
+#   # plot distance matrices
+#   # ggplot(dist[[1]], which = "image")
+#   # ggplot(dist[[2]], which = "image")
+#
+#   mat1 <- dist[[1]]$dist_mat
+#
+#   norm_val_frob <- compare_blocks(dist, type = "norm", norm_type = "F")
+#   # for 2 x 2 matrix, norms are all the same, so just check values
+#   dim_cond <- dim(mat1)[[1]] > 2
+#   if (dim_cond) {
+#     norm_val_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
+#     norm_val_spec <- compare_blocks(dist, type = "norm", norm_type = "2")
+#     norm_val_ln_spd <- compare_blocks(dist, type = "norm", norm_type = "log SPD")
+#   }
+#
+#   if (cond) {
+#     ret <- list(
+#       frob = norm_val_frob,
+#       # inf = norm_val_inf,
+#       # spec = norm_val_spec,
+#       # ln_spd = norm_val_ln_spd,
+#       dep = dist_obj$dep
+#     )
+#
+#     if (dim_cond) {
+#       ret <- list(
+#         frob = norm_val_frob,
+#         inf = norm_val_inf,
+#         spec = norm_val_spec,
+#         ln_spd = norm_val_ln_spd,
+#         dep = dist_obj$dep
+#       )
+#     }
+#     return(ret)
+#   } else {
+#     ret <- list(frob = norm_val_frob)
+#     if (dim_cond) {
+#       ret <- list(
+#         frob = norm_val_frob,
+#         inf = norm_val_inf,
+#         spec = norm_val_spec,
+#         ln_spd = norm_val_ln_spd
+#       )
+#     }
+#     return(ret)
+#   }
+# }
 
-  # check blocking is correct
-  # table(data_block$block, data_block$name)
-
-  # convert to Laplace and store marginals
-  # TODO Do before blocking? Think I do with laplace_trans = TRUE!
-  data_laplace_block <- trans_fun(data_block, n_vars, laplace_trans)
-
-  # check you've transformed correctly
-  # par(mfrow = c(1, 2))
-  # plot(data_laplace_block[[1]][[1]][[1]])
-  # plot(data_laplace_block[[2]][[1]][[1]])
-  # par(mfrow = c(1, 1))
-
-  dist_obj <- suppressMessages(calc_dist(data_laplace_block, ...))
-  dist <- dist_obj
-  # cond <- length(dist_obj) == 2
-  cond <- !is.null(names(dist_obj)) && all(names(dist_obj) == c("dist", "dep"))
-  if (cond) {
-    dist <- dist$dist
-  }
-
-  # plot distance matrices
-  # ggplot(dist[[1]], which = "image")
-  # ggplot(dist[[2]], which = "image")
-
-  mat1 <- dist[[1]]$dist_mat
-
-  norm_val_frob <- compare_blocks(dist, type = "norm", norm_type = "F")
-  # for 2 x 2 matrix, norms are all the same, so just check values
-  dim_cond <- dim(mat1)[[1]] > 2
-  if (dim_cond) {
-    norm_val_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
-    norm_val_spec <- compare_blocks(dist, type = "norm", norm_type = "2")
-    norm_val_ln_spd <- compare_blocks(dist, type = "norm", norm_type = "log SPD")
-  }
-
-  if (cond) {
-    ret <- list(
-      frob = norm_val_frob,
-      # inf = norm_val_inf,
-      # spec = norm_val_spec,
-      # ln_spd = norm_val_ln_spd,
-      dep = dist_obj$dep
+# Calculate discrepancy statistics at one candidate boundary without
+# performing permutation tests.
+#
+# Modes:
+#   1. n_per_block supplied:
+#      i is a row position and fixed observation windows are used.
+#
+#   2. n_years_per_block supplied:
+#      i is the season_year immediately before the candidate change.
+#
+#   3. Both NULL:
+#      i is a row position and all observations on either side are used.
+single_run_explore <- \(
+  data,
+  i,
+  n_per_block = NULL,
+  n_years_per_block = NULL,
+  n_vars = 2,
+  laplace_trans = FALSE,
+  skip_failed = TRUE,
+  ...
+) {
+  #### Validate arguments ####
+  
+  if (!is.null(n_per_block) && !is.null(n_years_per_block)) {
+    stop(
+      "Supply only one of `n_per_block` and ",
+      "`n_years_per_block`."
     )
-
-    if (dim_cond) {
-      ret <- list(
-        frob = norm_val_frob,
-        inf = norm_val_inf,
-        spec = norm_val_spec,
-        ln_spd = norm_val_ln_spd,
-        dep = dist_obj$dep
-      )
-    }
-    return(ret)
-  } else {
-    ret <- list(frob = norm_val_frob)
-    if (dim_cond) {
-      ret <- list(
-        frob = norm_val_frob,
-        inf = norm_val_inf,
-        spec = norm_val_spec,
-        ln_spd = norm_val_ln_spd
-      )
-    }
-    return(ret)
   }
+  
+  row_window_mode <- !is.null(n_per_block)
+  year_window_mode <- !is.null(n_years_per_block)
+  
+  if (row_window_mode) {
+    if (
+      length(n_per_block) != 1L ||
+      is.na(n_per_block) ||
+      n_per_block < 1L
+    ) {
+      stop("`n_per_block` must be a positive integer.")
+    }
+    
+    n_per_block <- as.integer(n_per_block)
+  }
+  
+  if (year_window_mode) {
+    required_columns <- c(
+      "name",
+      "date",
+      "season_year"
+    )
+    
+    missing_columns <- setdiff(
+      required_columns,
+      names(data)
+    )
+    
+    if (length(missing_columns) > 0L) {
+      stop(
+        "Year-based windows require the following columns: ",
+        paste(missing_columns, collapse = ", ")
+      )
+    }
+    
+    if (
+      length(n_years_per_block) != 1L ||
+      is.na(n_years_per_block) ||
+      n_years_per_block < 1L
+    ) {
+      stop(
+        "`n_years_per_block` must be a positive integer."
+      )
+    }
+    
+    n_years_per_block <- as.integer(
+      n_years_per_block
+    )
+  }
+  
+  #### Construct blocks ####
+  
+  if (year_window_mode) {
+    all_years <- sort(unique(data$season_year))
+    year_position <- match(i, all_years)
+    
+    if (is.na(year_position)) {
+      stop(
+        "Candidate year ", i,
+        " is not present in `season_year`."
+      )
+    }
+    
+    if (year_position < n_years_per_block) {
+      stop(
+        "Candidate year ", i,
+        " does not have ", n_years_per_block,
+        " years available on the left."
+      )
+    }
+    
+    if (
+      length(all_years) - year_position <
+      n_years_per_block
+    ) {
+      stop(
+        "Candidate year ", i,
+        " does not have ", n_years_per_block,
+        " years available on the right."
+      )
+    }
+    
+    left_years <- all_years[
+      (year_position - n_years_per_block + 1L):
+        year_position
+    ]
+    
+    right_years <- all_years[
+      (year_position + 1L):
+        (year_position + n_years_per_block)
+    ]
+    
+    data_block <- data |>
+      filter(
+        season_year %in% c(
+          left_years,
+          right_years
+        )
+      ) |>
+      mutate(
+        block = if_else(
+          season_year %in% left_years,
+          "1",
+          "2"
+        )
+      ) |>
+      arrange(name, date)
+    
+    # Confirm that no seasonal year has been split.
+    year_check <- data_block |>
+      distinct(season_year, block) |>
+      count(
+        season_year,
+        name = "n_blocks"
+      )
+    
+    if (any(year_check$n_blocks != 1L)) {
+      stop(
+        "At least one seasonal year was assigned to ",
+        "more than one block."
+      )
+    }
+    
+    # Confirm equal date coverage across stations within each block.
+    station_block_sizes <- data_block |>
+      distinct(name, block, date) |>
+      count(
+        name,
+        block,
+        name = "n_dates"
+      )
+    
+    coverage_check <- station_block_sizes |>
+      group_by(block) |>
+      summarise(
+        n_distinct_sizes = n_distinct(n_dates),
+        .groups = "drop"
+      )
+    
+    if (any(coverage_check$n_distinct_sizes != 1L)) {
+      stop(
+        "Stations have different numbers of dates within ",
+        "at least one block."
+      )
+    }
+    
+    n_left <- data_block |>
+      filter(block == "1") |>
+      summarise(n = n_distinct(date)) |>
+      pull(n)
+    
+    n_right <- data_block |>
+      filter(block == "2") |>
+      summarise(n = n_distinct(date)) |>
+      pull(n)
+    
+    block_info <- list(
+      mode = "season_year",
+      split_after = i,
+      split_before = all_years[
+        year_position + 1L
+      ],
+      left_years = left_years,
+      right_years = right_years,
+      n_left = n_left,
+      n_right = n_right
+    )
+    
+  } else {
+    #### Original row-based modes ####
+    
+    data_ordered <- data
+    
+    if ("date" %in% names(data_ordered)) {
+      data_ordered <- data_ordered |>
+        arrange(name, date)
+    }
+    
+    n_by_station <- data_ordered |>
+      count(
+        name,
+        name = "n_observations"
+      )
+    
+    if (i < 1L) {
+      stop(
+        "The candidate row position must be positive."
+      )
+    }
+    
+    if (any(i >= n_by_station$n_observations)) {
+      stop(
+        "Candidate row ", i,
+        " does not leave observations on both sides ",
+        "for every station."
+      )
+    }
+    
+    data_block <- data_ordered |>
+      group_by(name) |>
+      mutate(
+        block = if_else(
+          row_number() <= i,
+          "1",
+          "2"
+        )
+      ) |>
+      ungroup()
+    
+    if (row_window_mode) {
+      if (i < n_per_block) {
+        stop(
+          "Candidate row ", i,
+          " leaves fewer than ", n_per_block,
+          " observations on the left."
+        )
+      }
+      
+      if (
+        any(
+          n_by_station$n_observations - i <
+          n_per_block
+        )
+      ) {
+        stop(
+          "Candidate row ", i,
+          " leaves fewer than ", n_per_block,
+          " observations on the right."
+        )
+      }
+      
+      left_block <- data_block |>
+        filter(block == "1") |>
+        group_by(name) |>
+        slice_tail(n = n_per_block) |>
+        ungroup()
+      
+      right_block <- data_block |>
+        filter(block == "2") |>
+        group_by(name) |>
+        slice_head(n = n_per_block) |>
+        ungroup()
+      
+      data_block <- bind_rows(
+        left_block,
+        right_block
+      )
+      
+      block_info <- list(
+        mode = "fixed_rows",
+        split_after = i,
+        split_before = i + 1L,
+        left_years = NULL,
+        right_years = NULL,
+        n_left = n_per_block,
+        n_right = n_per_block
+      )
+      
+    } else {
+      block_info <- list(
+        mode = "cumulative_rows",
+        split_after = i,
+        split_before = i + 1L,
+        left_years = NULL,
+        right_years = NULL,
+        n_left = i,
+        n_right = min(
+          n_by_station$n_observations - i
+        )
+      )
+    }
+  }
+  
+  #### Helper for failed fits ####
+  
+  failed_result <- \(
+    message,
+    stage = "calc_dist"
+  ) {
+    list(
+      success = FALSE,
+      block_info = block_info,
+      frob = NA_real_,
+      inf = NA_real_,
+      spec = NA_real_,
+      ln_spd = NA_real_,
+      dep = NULL,
+      error_stage = stage,
+      error_message = message
+    )
+  }
+  
+  #### Convert to required CE structure ####
+  
+  data_laplace_block <- trans_fun(
+    data_block |>
+      select(
+        X1,
+        X2,
+        name,
+        block
+      ),
+    n_vars,
+    laplace_trans
+  )
+  
+  #### Calculate divergence matrices ####
+  
+  dist_attempt <- tryCatch(
+    {
+      suppressMessages(
+        calc_dist(
+          data_laplace_block,
+          ...
+        )
+      )
+    },
+    error = \(e) {
+      structure(
+        list(
+          message = conditionMessage(e)
+        ),
+        class = "calc_dist_error"
+      )
+    }
+  )
+  
+  # calc_dist threw an error.
+  if (inherits(dist_attempt, "calc_dist_error")) {
+    error_message <- paste0(
+      "`calc_dist()` failed at candidate ",
+      i,
+      ": ",
+      dist_attempt$message
+    )
+    
+    if (!skip_failed) {
+      stop(error_message, call. = FALSE)
+    }
+    
+    warning(error_message, call. = FALSE)
+    
+    return(
+      failed_result(
+        message = dist_attempt$message,
+        stage = "calc_dist"
+      )
+    )
+  }
+  
+  dist_obj <- dist_attempt
+  
+  # calc_dist returned a bare NA.
+  is_na_result <- (
+    is.atomic(dist_obj) &&
+      length(dist_obj) == 1L &&
+      is.na(dist_obj)
+  )
+  
+  if (is_na_result) {
+    error_message <- paste0(
+      "`calc_dist()` returned NA at candidate ",
+      i,
+      "."
+    )
+    
+    if (!skip_failed) {
+      stop(error_message, call. = FALSE)
+    }
+    
+    warning(error_message, call. = FALSE)
+    
+    return(
+      failed_result(
+        message = error_message,
+        stage = "calc_dist"
+      )
+    )
+  }
+  
+  #### Extract distance matrices ####
+  
+  has_dep <- (
+    !is.null(names(dist_obj)) &&
+      all(
+        c("dist", "dep") %in%
+          names(dist_obj)
+      )
+  )
+  
+  if (has_dep) {
+    dist <- dist_obj$dist
+  } else {
+    dist <- dist_obj
+  }
+  
+  #### Validate distance-matrix structure ####
+  
+  valid_dist_structure <- (
+    is.list(dist) &&
+      length(dist) == 2L &&
+      all(
+        vapply(
+          dist,
+          \(x) {
+            is.list(x) &&
+              !is.null(x$dist_mat) &&
+              # is.matrix(x$dist_mat)
+              inherits(x$dist_mat, "dist")
+          },
+          logical(1)
+        )
+      )
+  )
+  
+  if (!valid_dist_structure) {
+    error_message <- paste0(
+      "Invalid distance-matrix result at candidate ",
+      i,
+      "."
+    )
+    
+    if (!skip_failed) {
+      stop(error_message, call. = FALSE)
+    }
+    
+    warning(error_message, call. = FALSE)
+    
+    return(
+      failed_result(
+        message = error_message,
+        stage = "validate_dist"
+      )
+    )
+  }
+  
+  #### Ensure no location was silently dropped ####
+  
+  expected_n_locations <- n_distinct(
+    data_block$name
+  )
+  
+  correct_dimensions <- all(
+    vapply(
+      dist,
+      \(x) {
+        identical(
+          as.integer(dim(x$dist_mat)),
+          c(
+            expected_n_locations,
+            expected_n_locations
+          )
+        )
+      },
+      logical(1)
+    )
+  )
+  
+  if (!correct_dimensions) {
+    actual_dimensions <- paste(
+      vapply(
+        dist,
+        \(x) {
+          paste(
+            dim(x$dist_mat),
+            collapse = " x "
+          )
+        },
+        character(1)
+      ),
+      collapse = "; "
+    )
+    
+    error_message <- paste0(
+      "At least one location was dropped at candidate ",
+      i,
+      ". Expected two ",
+      expected_n_locations,
+      " x ",
+      expected_n_locations,
+      " matrices; obtained ",
+      actual_dimensions,
+      "."
+    )
+    
+    if (!skip_failed) {
+      stop(error_message, call. = FALSE)
+    }
+    
+    warning(error_message, call. = FALSE)
+    
+    return(
+      failed_result(
+        message = error_message,
+        stage = "validate_dist"
+      )
+    )
+  }
+  
+  #### Calculate discrepancy statistics ####
+  
+  norm_attempt <- tryCatch(
+    {
+      mat1 <- dist[[1]]$dist_mat
+      
+      norm_results <- list(
+        frob = compare_blocks(
+          dist,
+          type = "norm",
+          norm_type = "F"
+        ),
+        inf = NA_real_,
+        spec = NA_real_,
+        ln_spd = NA_real_
+      )
+      
+      if (nrow(mat1) > 2L) {
+        norm_results$inf <- compare_blocks(
+          dist,
+          type = "norm",
+          norm_type = "M"
+        )
+        
+        norm_results$spec <- compare_blocks(
+          dist,
+          type = "norm",
+          norm_type = "2"
+        )
+        
+        norm_results$ln_spd <- compare_blocks(
+          dist,
+          type = "norm",
+          norm_type = "log SPD"
+        )
+      }
+      
+      norm_results
+    },
+    error = \(e) {
+      structure(
+        list(
+          message = conditionMessage(e)
+        ),
+        class = "norm_error"
+      )
+    }
+  )
+  
+  if (inherits(norm_attempt, "norm_error")) {
+    error_message <- paste0(
+      "Norm calculation failed at candidate ",
+      i,
+      ": ",
+      norm_attempt$message
+    )
+    
+    if (!skip_failed) {
+      stop(error_message, call. = FALSE)
+    }
+    
+    warning(error_message, call. = FALSE)
+    
+    return(
+      failed_result(
+        message = norm_attempt$message,
+        stage = "compare_blocks"
+      )
+    )
+  }
+  
+  #### Return successful result ####
+  
+  list(
+    success = TRUE,
+    block_info = block_info,
+    frob = norm_attempt$frob,
+    inf = norm_attempt$inf,
+    spec = norm_attempt$spec,
+    ln_spd = norm_attempt$ln_spd,
+    dep = if (has_dep) {
+      dist_obj$dep
+    } else {
+      NULL
+    },
+    error_stage = NA_character_,
+    error_message = NA_character_
+  )
 }
 
 # plot norms
@@ -959,13 +1578,239 @@ test_fun <- \(perm_test_res, norm_type = c("frob", "inf"), stat = c("mean", "med
   })
 }
 
-# Function to perform permutation test for a given block position i
-# TODO Optimise better to work in parallel, not great at the moment
+# # Function to perform permutation test for a given block position i
+# # TODO Optimise better to work in parallel, not great at the moment
+# perm_test_fun <- \(
+#   data,
+#   grid_vals,
+#   n_perm = 100,
+#   n_per_block = NULL,
+#   n_years_per_block = NULL,
+#   n_vars = 2,
+#   laplace_trans = TRUE,
+#   use_start = FALSE,
+#   ret_dep = FALSE,
+#   use_dth = FALSE,
+#   verbose = FALSE,
+#   ...
+# ) {
+#   # initial parameter values for CE
+#   start <- list(
+#     c(a = 0.01, b = 0.01),
+#     c(a = 0.01, b = 0.01)
+#   )
+#   # if use_start is TRUE, get starting values from fitting CE to original data
+#   if (use_start) {
+#     data_start <- data
+#     if (!"block" %in% names(data)) {
+#       data_start <- data_start |>
+#         # fit CE with half of observations in each block
+#         mutate(block = ifelse(row_number() <= n() / 2, "1", "2"))
+#     }
+#     data_laplace_start <- trans_fun(data_start, n_vars, laplace_trans)
+#
+#     dots <- list(...)
+#     # if (!"cond_val" %in% names(dots)) {
+#     #   cond_val_start <- qlaplace(0.8)
+#     # } else {
+#     #   cond_val_start <- dots$cond_val
+#     # }
+#     if (!"cond_val" %in% names(dots)) {
+#       cond_val_start <- NULL
+#     } else {
+#       cond_val_start <- dots$cond_val
+#     }
+#     if (!"cond_prob" %in% names(dots)) {
+#       cond_prob_start <- NULL
+#     } else {
+#       cond_prob_start <- dots$cond_prob
+#     }
+#
+#     if (!"cond_var" %in% names(dots)) {
+#       cond_var_start <- NULL
+#     } else {
+#       cond_var_start <- dots$cond_var
+#     }
+#     if (!"nruns" %in% names(dots)) {
+#       nruns_start <- 1
+#     } else {
+#       nruns_start <- dots$nruns
+#     }
+#     if (!"aLow" %in% names(dots)) {
+#       aLow_start <- -1
+#     } else {
+#       aLow_start <- dots$aLow
+#     }
+#
+#     dep_start <- lapply(seq_along(data_laplace_start), \(k) {
+#       cecl_dep(
+#         data_laplace_start[[k]],
+#         cond_val = cond_val_start,
+#         cond_prob = cond_prob_start,
+#         fit_no_keef = TRUE,
+#         nruns = nruns_start,
+#         cond_var = cond_var_start,
+#         aLow = aLow_start,
+#         start = start[[k]]
+#       )
+#     })
+#
+#     # start values
+#     start <- lapply(dep_start, coef)
+#   }
+#
+#   # keep mclapply for where it's needed most
+#   i_fun <- j_fun <- lapply
+#   if (length(grid_vals) > n_perm) {
+#     i_fun <- mclapply
+#   } else {
+#     j_fun <- mclapply
+#   }
+#
+#   # fun inside apply
+#   ret_fun <- \(i) {
+#      if (verbose) {
+#       system(sprintf(
+#         'echo "\n%s\n"',
+#         paste("repitition", which(grid_vals == i))
+#       ))
+#     }
+#
+#     # Add block based on i
+#     data_block <- data %>%
+#       group_by(name) |>
+#       mutate(block = ifelse(row_number() <= i, "1", "2")) |>
+#       ungroup()
+#
+#     # if desired, take n_per_block obs for each location and block
+#     if (!is.null(n_per_block)) {
+#       # give error if we want more observations than we can have at point i
+#       stopifnot(i < n_per_block)
+#
+#       data_block <- data_block |>
+#         group_split(block, .keep = TRUE) |>
+#         lapply(\(x) {
+#           y <- x %>%
+#             group_by(name)
+#           # for first block, take last n_per_block obs
+#           if (as.numeric(y$block[1]) == 1) {
+#             y <- y |>
+#               slice_tail(n = n_per_block)
+#             # for second block, take first n_per_block obs
+#           } else if (as.numeric(y$block[1]) == 2) {
+#             y <- y |>
+#               slice_head(n = n_per_block)
+#           }
+#           return(ungroup(y))
+#         }) |>
+#         bind_rows()
+#     }
+#
+#     # convert to Laplace and store marginals
+#     data_laplace_block <- trans_fun(data_block, n_vars, laplace_trans)
+#
+#     # compute distances for original data (before permutation)
+#     dist <- suppressMessages(calc_dist(
+#       data_laplace_block,
+#       start = start, ret_dep = ret_dep, use_dth = use_dth, ...
+#     ))
+#     if (ret_dep == TRUE) {
+#       dep <- dist$dep
+#       dist <- dist$dist
+#     }
+#
+#     # compute different norms
+#     norm_orig_frob <- compare_blocks(dist, type = "norm", norm_type = "F")
+#     norm_orig_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
+#     norm_orig_spec <- compare_blocks(dist, type = "norm", norm_type = "2")
+#     norm_orig_ln_spd <- compare_blocks(dist, type = "norm", norm_type = "log SPD")
+#
+#     # compute permutation distances for original data
+#     norm_vals <- j_fun(seq_len(n_perm), \(j) {
+#       # print progress of permutations
+#       if (verbose) {
+#         system(sprintf("echo Permutation %s", j))
+#       }
+#       dist <- perm_test_prep(
+#         data_laplace_block,
+#         start = start,
+#         use_dth = use_dth,
+#         ...
+#       )
+#       list(
+#         "frob"   = compare_blocks(dist, type = "norm", norm_type = "F"),
+#         "inf"    = compare_blocks(dist, type = "norm", norm_type = "M"),
+#         "spec"   = compare_blocks(dist, type = "norm", norm_type = "2"),
+#         "ln_spd" = compare_blocks(dist, type = "norm", norm_type = "log SPD")
+#       )
+#     })
+#
+#     # extract frobenius and infinity norms
+#     perm_norms_frob <- sapply(norm_vals, \(x) x$frob)
+#     perm_norms_inf <- sapply(norm_vals, \(x) x$inf)
+#     perm_norms_spec <- sapply(norm_vals, \(x) x$spec)
+#     perm_norms_ln_spd <- sapply(norm_vals, \(x) x$ln_spd)
+#
+#     # compute p-values
+#     # TODO Are these p-values for one-sided or two-sided tests?
+#     (p_value_frob <- mean(perm_norms_frob >= norm_orig_frob))
+#     (p_value_inf <- mean(perm_norms_inf >= norm_orig_inf))
+#     (p_value_spec <- mean(perm_norms_spec >= norm_orig_spec))
+#     (p_value_ln_spd <- mean(perm_norms_ln_spd >= norm_orig_ln_spd))
+#
+#     # print how many iterations completed (as a percentage)
+#     if (verbose) {
+#       system(sprintf(
+#         'echo "\n%s\n"',
+#         paste0(round(which(grid_vals == i) / length(grid_vals), 3) * 100, "% completed", collapse = "")
+#       ))
+#     }
+#
+#     ret_list <- list(
+#       p_value_frob = p_value_frob,
+#       p_value_inf = p_value_inf,
+#       p_value_spec = p_value_spec,
+#       p_value_ln_spd = p_value_ln_spd,
+#       norm_orig_frob = norm_orig_frob,
+#       norm_orig_inf = norm_orig_inf,
+#       norm_orig_spec = norm_orig_spec,
+#       norm_orig_ln_spd = norm_orig_ln_spd,
+#       perm_norms_frob = perm_norms_frob,
+#       perm_norms_inf = perm_norms_inf,
+#       perm_norms_spec = perm_norms_spec,
+#       perm_norms_ln_spd = perm_norms_ln_spd
+#     )
+#     if (ret_dep == TRUE) {
+#       dep_vals_df <- lapply(dep, coef) |>
+#         bind_rows(.id = "block")
+#       ret_list <- c(ret_list, list(dep_vals = dep_vals_df))
+#     }
+#     return(ret_list)
+#   }
+#   return(i_fun(grid_vals, ret_fun))
+# }
+
+# Function to perform permutation tests at candidate row or seasonal-year
+# boundaries.
+#
+# Modes:
+#   1. n_per_block supplied:
+#      grid_vals are row positions and fixed-length observation windows are used.
+#
+#   2. n_years_per_block supplied:
+#      grid_vals are seasonal years and fixed-length year windows are used.
+#
+#   3. Both are NULL:
+#      grid_vals are row positions and all observations on either side are used.
+#
+# Do not supply both n_per_block and n_years_per_block.
 perm_test_fun <- \(
   data,
   grid_vals,
   n_perm = 100,
   n_per_block = NULL,
+  n_years_per_block = NULL,
+  n_vars = 2,
   laplace_trans = TRUE,
   use_start = FALSE,
   ret_dep = FALSE,
@@ -973,197 +1818,623 @@ perm_test_fun <- \(
   verbose = FALSE,
   ...
 ) {
-  # initial parameter values for CE
-  start <- list(
+  #### Validate arguments ####
+
+  if (!is.null(n_per_block) && !is.null(n_years_per_block)) {
+    stop(
+      "Supply only one of `n_per_block` and ",
+      "`n_years_per_block`."
+    )
+  }
+
+  if (length(grid_vals) == 0L) {
+    stop("`grid_vals` must contain at least one candidate boundary.")
+  }
+
+  if (
+    length(n_perm) != 1L ||
+      is.na(n_perm) ||
+      n_perm < 1L
+  ) {
+    stop("`n_perm` must be a positive integer.")
+  }
+
+  row_window_mode <- !is.null(n_per_block)
+  year_window_mode <- !is.null(n_years_per_block)
+  cumulative_mode <- is.null(n_per_block) &&
+    is.null(n_years_per_block)
+
+  if (row_window_mode) {
+    if (
+      length(n_per_block) != 1L ||
+        is.na(n_per_block) ||
+        n_per_block < 1L
+    ) {
+      stop("`n_per_block` must be a positive integer.")
+    }
+
+    n_per_block <- as.integer(n_per_block)
+  }
+
+  if (year_window_mode) {
+    required_columns <- c("name", "date", "season_year")
+    missing_columns <- setdiff(required_columns, names(data))
+
+    if (length(missing_columns) > 0L) {
+      stop(
+        "Year-based windows require the following missing columns: ",
+        paste(missing_columns, collapse = ", ")
+      )
+    }
+
+    if (
+      length(n_years_per_block) != 1L ||
+        is.na(n_years_per_block) ||
+        n_years_per_block < 1L
+    ) {
+      stop("`n_years_per_block` must be a positive integer.")
+    }
+
+    n_years_per_block <- as.integer(n_years_per_block)
+
+    all_years <- sort(unique(data$season_year))
+
+    if (length(all_years) < 2L * n_years_per_block) {
+      stop(
+        "There are only ", length(all_years),
+        " seasonal years, but at least ",
+        2L * n_years_per_block,
+        " are needed."
+      )
+    }
+
+    invalid_grid_vals <- setdiff(grid_vals, all_years)
+
+    if (length(invalid_grid_vals) > 0L) {
+      stop(
+        "These year-based `grid_vals` are not present in ",
+        "`season_year`: ",
+        paste(invalid_grid_vals, collapse = ", ")
+      )
+    }
+  }
+
+  #### Initial parameter values ####
+
+  start <- replicate(
+    n_vars,
     c(a = 0.01, b = 0.01),
-    c(a = 0.01, b = 0.01)
+    simplify = FALSE
   )
-  # if use_start is TRUE, get starting values from fitting CE to original data
+
   if (use_start) {
     data_start <- data
-    if (!"block" %in% names(data)) {
-      data_start <- data_start |>
-        mutate(block = ifelse(row_number() <= n() / 2, "1", "2"))
+
+    if (!"block" %in% names(data_start)) {
+      if (year_window_mode) {
+        # Use the middle candidate boundary to construct representative
+        # starting-value blocks containing whole seasonal years.
+        start_grid_val <- grid_vals[
+          ceiling(length(grid_vals) / 2)
+        ]
+
+        start_year_position <- match(
+          start_grid_val,
+          all_years
+        )
+
+        start_left_years <- all_years[
+          (start_year_position - n_years_per_block + 1L):
+          start_year_position
+        ]
+
+        start_right_years <- all_years[
+          (start_year_position + 1L):
+          (start_year_position + n_years_per_block)
+        ]
+
+        data_start <- data_start |>
+          filter(
+            season_year %in% c(
+              start_left_years,
+              start_right_years
+            )
+          ) |>
+          mutate(
+            block = if_else(
+              season_year %in% start_left_years,
+              "1",
+              "2"
+            )
+          ) |>
+          arrange(name, date)
+      } else {
+        # Original observation-based behaviour
+        if ("date" %in% names(data_start)) {
+          data_start <- data_start |>
+            arrange(name, date)
+        }
+
+        data_start <- data_start |>
+          group_by(name) |>
+          mutate(
+            block = if_else(
+              row_number() <= floor(n() / 2),
+              "1",
+              "2"
+            )
+          ) |>
+          ungroup()
+      }
     }
-    data_laplace_start <- trans_fun(data_start, n_vars, laplace_trans)
+
+    data_laplace_start <- trans_fun(
+      data_start,
+      n_vars,
+      laplace_trans
+    )
 
     dots <- list(...)
-    # if (!"cond_val" %in% names(dots)) {
-    #   cond_val_start <- qlaplace(0.8)
-    # } else {
-    #   cond_val_start <- dots$cond_val
-    # }
-    if (!"cond_val" %in% names(dots)) {
-      cond_val_start <- NULL
+
+    cond_val_start <- if ("cond_val" %in% names(dots)) {
+      dots$cond_val
     } else {
-      cond_val_start <- dots$cond_val
-    }
-    if (!"cond_prob" %in% names(dots)) {
-      cond_prob_start <- NULL
-    } else {
-      cond_prob_start <- dots$cond_prob
+      NULL
     }
 
-    if (!"cond_var" %in% names(dots)) {
-      cond_var_start <- NULL
+    cond_prob_start <- if ("cond_prob" %in% names(dots)) {
+      dots$cond_prob
     } else {
-      cond_var_start <- dots$cond_var
-    }
-    if (!"nruns" %in% names(dots)) {
-      nruns_start <- 1
-    } else {
-      nruns_start <- dots$nruns
-    }
-    if (!"aLow" %in% names(dots)) {
-      aLow_start <- -1
-    } else {
-      aLow_start <- dots$aLow
+      NULL
     }
 
-    dep_start <- lapply(seq_along(data_laplace_start), \(k) {
-      cecl_dep(
-        data_laplace_start[[k]],
-        cond_val = cond_val_start,
-        cond_prob = cond_prob_start,
-        fit_no_keef = TRUE,
-        nruns = nruns_start,
-        cond_var = cond_var_start,
-        aLow = aLow_start,
-        start = start[[k]]
-      )
-    })
+    cond_var_start <- if ("cond_var" %in% names(dots)) {
+      dots$cond_var
+    } else {
+      NULL
+    }
 
-    # start values
+    nruns_start <- if ("nruns" %in% names(dots)) {
+      dots$nruns
+    } else {
+      1
+    }
+
+    aLow_start <- if ("aLow" %in% names(dots)) {
+      dots$aLow
+    } else {
+      -1
+    }
+
+    rp
+
+    dep_start <- lapply(
+      seq_along(data_laplace_start),
+      \(k) {
+        cecl_dep(
+          data_laplace_start[[k]],
+          cond_val = cond_val_start,
+          cond_prob = cond_prob_start,
+          fit_no_keef = TRUE,
+          nruns = nruns_start,
+          cond_var = cond_var_start,
+          aLow = aLow_start,
+          start = start[[k]]
+        )
+      }
+    )
+
     start <- lapply(dep_start, coef)
   }
 
-  # fun inside apply
+  #### Choose level of parallelisation ####
+
+  i_fun <- lapply
+  j_fun <- lapply
+
+  if (length(grid_vals) > n_perm) {
+    i_fun <- mclapply
+  } else {
+    j_fun <- mclapply
+  }
+
+  #### Test one candidate boundary ####
+
   ret_fun <- \(i) {
     # browser()
-    # Add block based on i
-    data_block <- data %>%
-      group_by(name) |>
-      mutate(block = ifelse(row_number() <= i, "1", "2")) |>
-      ungroup()
+    grid_position <- match(i, grid_vals)
 
-    # if desired, take n_per_block obs for each location and block
-    if (!is.null(n_per_block)) {
-      # data_block <- data_block %>%
-      #   group_by(name, block) %>%
-      #   slice_tail(n = n_per_block) %>%
-      #   ungroup()
-      data_block <- data_block |>
-        group_split(block, .keep = TRUE) |>
-        lapply(\(x) {
-          y <- x %>%
-            group_by(name)
-          # for first block, take last n_per_block obs
-          if (as.numeric(y$block[1]) == 1) {
-            y <- y |>
-              slice_tail(n = n_per_block)
-            # for second block, take first n_per_block obs
-          } else if (as.numeric(y$block[1]) == 2) {
-            y <- y |>
-              slice_head(n = n_per_block)
-          }
-          return(ungroup(y))
-        }) |>
-        bind_rows()
+    if (verbose) {
+      message(
+        "\nCandidate ",
+        grid_position,
+        " of ",
+        length(grid_vals),
+        ": ",
+        i
+      )
     }
 
-    # check blocking is correct
-    # table(data_block$block, data_block$name)
+    #### Construct observed blocks ####
 
-    # convert to Laplace and store marginals
-    data_laplace_block <- trans_fun(data_block, n_vars, laplace_trans)
+    if (year_window_mode) {
+      # In year mode, i means that the candidate change occurs
+      # between season_year i and the following available season_year.
 
-    # compute distances for original data (before permutation)
-    # debugonce(cecl_dep)
-    dist <- suppressMessages(calc_dist(
-      data_laplace_block,
-      start = start, ret_dep = ret_dep, use_dth = use_dth, ...
-    ))
-    if (ret_dep == TRUE) {
+      year_position <- match(i, all_years)
+
+      if (year_position < n_years_per_block) {
+        stop(
+          "Grid value ", i,
+          " does not have ", n_years_per_block,
+          " seasonal years available on the left."
+        )
+      }
+
+      if (
+        length(all_years) - year_position <
+          n_years_per_block
+      ) {
+        stop(
+          "Grid value ", i,
+          " does not have ", n_years_per_block,
+          " seasonal years available on the right."
+        )
+      }
+
+      left_years <- all_years[
+        (year_position - n_years_per_block + 1L):
+        year_position
+      ]
+
+      right_years <- all_years[
+        (year_position + 1L):
+        (year_position + n_years_per_block)
+      ]
+
+      data_block <- data |>
+        filter(
+          season_year %in% c(left_years, right_years)
+        ) |>
+        mutate(
+          block = if_else(
+            season_year %in% left_years,
+            "1",
+            "2"
+          )
+        ) |>
+        arrange(name, date)
+
+      # Confirm that no seasonal year has been split between blocks.
+      year_check <- data_block |>
+        distinct(season_year, block) |>
+        count(season_year, name = "n_blocks")
+
+      if (any(year_check$n_blocks != 1L)) {
+        stop(
+          "At least one seasonal year was assigned to ",
+          "more than one block."
+        )
+      }
+
+      # Confirm that every station has the same date coverage within
+      # each block.
+      station_block_sizes <- data_block |>
+        distinct(name, block, date) |>
+        count(name, block, name = "n_dates")
+
+      coverage_check <- station_block_sizes |>
+        group_by(block) |>
+        summarise(
+          n_distinct_sizes = n_distinct(n_dates),
+          .groups = "drop"
+        )
+
+      if (any(coverage_check$n_distinct_sizes != 1L)) {
+        stop(
+          "Stations do not have equal date coverage within ",
+          "at least one year-based block."
+        )
+      }
+
+      n_left_dates <- data_block |>
+        filter(block == "1") |>
+        summarise(n = n_distinct(date)) |>
+        pull(n)
+
+      n_right_dates <- data_block |>
+        filter(block == "2") |>
+        summarise(n = n_distinct(date)) |>
+        pull(n)
+
+      block_info <- list(
+        mode = "season_year",
+        split_after = i,
+        split_before = all_years[year_position + 1L],
+        left_years = left_years,
+        right_years = right_years,
+        n_left = n_left_dates,
+        n_right = n_right_dates
+      )
+    } else {
+      # In row mode, i is a row position within each station.
+
+      data_ordered <- data
+
+      if ("date" %in% names(data_ordered)) {
+        data_ordered <- data_ordered |>
+          arrange(name, date)
+      }
+
+      n_by_station <- data_ordered |>
+        count(name, name = "n_observations")
+
+      if (i < 1L) {
+        stop("All row-based `grid_vals` must be positive.")
+      }
+
+      if (any(i >= n_by_station$n_observations)) {
+        stop(
+          "Grid value ", i,
+          " does not leave observations on both sides ",
+          "for every station."
+        )
+      }
+
+      data_block <- data_ordered |>
+        group_by(name) |>
+        mutate(
+          block = if_else(
+            row_number() <= i,
+            "1",
+            "2"
+          )
+        ) |>
+        ungroup()
+
+      if (row_window_mode) {
+        if (i < n_per_block) {
+          stop(
+            "Grid value ", i,
+            " leaves fewer than ", n_per_block,
+            " observations in the left block."
+          )
+        }
+
+        if (
+          any(
+            n_by_station$n_observations - i <
+              n_per_block
+          )
+        ) {
+          stop(
+            "Grid value ", i,
+            " leaves fewer than ", n_per_block,
+            " observations in the right block for ",
+            "at least one station."
+          )
+        }
+
+        left_block <- data_block |>
+          filter(block == "1") |>
+          group_by(name) |>
+          slice_tail(n = n_per_block) |>
+          ungroup()
+
+        right_block <- data_block |>
+          filter(block == "2") |>
+          group_by(name) |>
+          slice_head(n = n_per_block) |>
+          ungroup()
+
+        data_block <- bind_rows(
+          left_block,
+          right_block
+        )
+
+        block_info <- list(
+          mode = "fixed_rows",
+          split_after = i,
+          split_before = i + 1L,
+          left_years = NULL,
+          right_years = NULL,
+          n_left = n_per_block,
+          n_right = n_per_block
+        )
+      } else if (cumulative_mode) {
+        block_info <- list(
+          mode = "cumulative_rows",
+          split_after = i,
+          split_before = i + 1L,
+          left_years = NULL,
+          right_years = NULL,
+          n_left = i,
+          n_right = min(
+            n_by_station$n_observations - i
+          )
+        )
+      }
+    }
+
+    #### Transform and fit observed blocks ####
+
+    data_laplace_block <- trans_fun(
+      # data_block,
+      select(data_block, X1, X2, name, block),
+      n_vars,
+      laplace_trans
+    )
+
+    dist <- suppressMessages(
+      calc_dist(
+        data_laplace_block,
+        start = start,
+        ret_dep = ret_dep,
+        use_dth = use_dth,
+        ...
+      )
+    )
+
+    if (ret_dep) {
       dep <- dist$dep
       dist <- dist$dist
     }
 
-    norm_orig_frob <- compare_blocks(dist, type = "norm", norm_type = "F")
-    # norm_orig_inf <- compare_blocks(dist, type = "norm", norm_type = "M")
-    # norm_orig_spec <- compare_blocks(dist, type = "norm", norm_type = "2")
-    norm_orig_ln_spd <- compare_blocks(dist, type = "norm", norm_type = "log SPD")
+    #### Observed statistics ####
 
-    # compute permutation distances for original data
-    norm_vals <- lapply(seq_len(n_perm), \(j) {
-      # norm_vals <- mclapply(seq_len(n_perm), \(j) {
-      # print progress of permutations
-      # sprintf(system("echo %s", j), "Permutation")
-      dist <- perm_test_prep(
-        data_laplace_block,
-        start = start,
-        use_dth = use_dth,
-        # laplace_sample = laplace_sample,
-        ...
-      )
-      list(
-        "frob" = compare_blocks(dist, type = "norm", norm_type = "F"),
-        # "inf"  = compare_blocks(dist, type = "norm", norm_type = "M"),
-        # "spec" = compare_blocks(dist, type = "norm", norm_type = "2")
-        "ln_spd" = compare_blocks(dist, type = "norm", norm_type = "log SPD")
-      )
-    })
+    norm_orig_frob <- compare_blocks(
+      dist,
+      type = "norm",
+      norm_type = "F"
+    )
 
-    # extract frobenius and infinity norms
-    perm_norms_frob <- sapply(norm_vals, \(x) x$frob)
-    # perm_norms_inf <- sapply(norm_vals, \(x) x$inf)
-    # perm_norms_spec <- sapply(norm_vals, \(x) x$spec)
-    perm_norms_ln_spd <- sapply(norm_vals, \(x) x$ln_spd)
+    norm_orig_inf <- compare_blocks(
+      dist,
+      type = "norm",
+      norm_type = "M"
+    )
 
-    # compute p-values
-    # TODO Are these p-values for one-sided or two-sided tests?
-    (p_value_frob <- mean(perm_norms_frob >= norm_orig_frob))
-    # (p_value_inf <- mean(perm_norms_inf >= norm_orig_inf))
-    # (p_value_spec <- mean(perm_norms_spec >= norm_orig_spec))
-    (p_value_ln_spd <- mean(perm_norms_ln_spd >= norm_orig_ln_spd))
+    norm_orig_spec <- compare_blocks(
+      dist,
+      type = "norm",
+      norm_type = "2"
+    )
 
-    # print how many iterations completed (as a percentage)
-    # print(paste0(
-    #   substr(which(grid_vals == i) / length(grid_vals) * 100, 0, 5), "% complete\n"
-    # ))
-    # system(sprintf(
-    #   "%s%% complete\n",
-    #   round(which(grid_vals == i) / length(grid_vals) * 100, 2)
-    # ))
+    norm_orig_ln_spd <- compare_blocks(
+      dist,
+      type = "norm",
+      norm_type = "log SPD"
+    )
+
+    #### Permutation statistics ####
+
+    norm_vals <- j_fun(
+      seq_len(n_perm),
+      \(j) {
+        if (verbose) {
+          # message(
+          #   "Candidate ", grid_position,
+          #   "/", length(grid_vals),
+          #   "; permutation ", j,
+          #   "/", n_perm
+          # )
+          # print progress of permutations
+          system(sprintf("echo Permutation %s", j))
+        }
+
+        dist_perm <- perm_test_prep(
+          data_laplace_block,
+          start = start,
+          use_dth = use_dth,
+          ...
+        )
+
+        list(
+          frob = compare_blocks(
+            dist_perm,
+            type = "norm",
+            norm_type = "F"
+          ),
+          inf = compare_blocks(
+            dist_perm,
+            type = "norm",
+            norm_type = "M"
+          ),
+          spec = compare_blocks(
+            dist_perm,
+            type = "norm",
+            norm_type = "2"
+          ),
+          ln_spd = compare_blocks(
+            dist_perm,
+            type = "norm",
+            norm_type = "log SPD"
+          )
+        )
+      }
+    )
+
+    perm_norms_frob <- vapply(
+      norm_vals,
+      \(x) x$frob,
+      numeric(1)
+    )
+
+    perm_norms_inf <- vapply(
+      norm_vals,
+      \(x) x$inf,
+      numeric(1)
+    )
+
+    perm_norms_spec <- vapply(
+      norm_vals,
+      \(x) x$spec,
+      numeric(1)
+    )
+
+    perm_norms_ln_spd <- vapply(
+      norm_vals,
+      \(x) x$ln_spd,
+      numeric(1)
+    )
+
+    #### P-values ####
+
+    p_value_frob <- mean(
+      perm_norms_frob >= norm_orig_frob
+    )
+
+    p_value_inf <- mean(
+      perm_norms_inf >= norm_orig_inf
+    )
+
+    p_value_spec <- mean(
+      perm_norms_spec >= norm_orig_spec
+    )
+
+    p_value_ln_spd <- mean(
+      perm_norms_ln_spd >= norm_orig_ln_spd
+    )
+
     if (verbose) {
-      system(sprintf(
-        'echo "\n%s\n"',
-        paste0(round(which(grid_vals == i) / length(grid_vals), 3) * 100, "% completed", collapse = "")
-      ))
+      message(
+        round(
+          grid_position / length(grid_vals) * 100,
+          1
+        ),
+        "% of candidate boundaries completed"
+      )
     }
+
+    #### Return results ####
 
     ret_list <- list(
+      block_info = block_info,
       p_value_frob = p_value_frob,
-      # p_value_inf = p_value_inf,
-      # p_value_spec = p_value_spec,
+      p_value_inf = p_value_inf,
+      p_value_spec = p_value_spec,
       p_value_ln_spd = p_value_ln_spd,
       norm_orig_frob = norm_orig_frob,
-      # norm_orig_inf = norm_orig_inf,
-      # norm_orig_spec = norm_orig_spec,
+      norm_orig_inf = norm_orig_inf,
+      norm_orig_spec = norm_orig_spec,
       norm_orig_ln_spd = norm_orig_ln_spd,
       perm_norms_frob = perm_norms_frob,
-      # perm_norms_inf = perm_norms_inf,
-      # perm_norms_spec = perm_norms_spec,
+      perm_norms_inf = perm_norms_inf,
+      perm_norms_spec = perm_norms_spec,
       perm_norms_ln_spd = perm_norms_ln_spd
     )
-    if (ret_dep == TRUE) {
+
+    if (ret_dep) {
       dep_vals_df <- lapply(dep, coef) |>
         bind_rows(.id = "block")
-      ret_list <- c(ret_list, list(dep_vals = dep_vals_df))
+
+      ret_list$dep_vals <- dep_vals_df
     }
-    return(ret_list)
+
+    ret_list
   }
-  return(mclapply(grid_vals, ret_fun))
-  # return(lapply(grid_vals, ret_fun))
+
+  i_fun(grid_vals, ret_fun)
 }
 
 seed_fun <- \(seed) {
