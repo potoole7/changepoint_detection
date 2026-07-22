@@ -540,25 +540,55 @@ calc_dist <- \(
 
 # function to calculate log-Euclidean SPD distance between two distance matrices
 # log_euclid <- \(M1, M2, sigma = 1) {
-log_euclid <- \(M1, M2, sigma = NULL, eps = 1e-6) {
-  if (is.null(sigma)) {
-    # estimate sigma as median of upper triangular values of M1 and M2
-    vals <- c(M1[upper.tri(M1)], M2[upper.tri(M2)])
-    sigma <- median(vals[vals > 0])
+# log_euclid <- \(M1, M2, sigma = NULL, eps = 1e-6) {
+#   if (is.null(sigma)) {
+#     # estimate sigma as median of upper triangular values of M1 and M2
+#     vals <- c(M1[upper.tri(M1)], M2[upper.tri(M2)])
+#     sigma <- median(vals[vals > 0])
+#   }
+# 
+#   # apply Gaussian kernel to convert to similarity matrices
+#   K1 <- exp(-M1 / sigma)
+#   K2 <- exp(-M2 / sigma)
+# 
+#   # add small value to diagonal to ensure positive definiteness
+#   K1 <- K1 + diag(eps, nrow(K1))
+#   K2 <- K2 + diag(eps, nrow(K2))
+# 
+#   # compute matrix logarithm and then Frobenius norm of difference
+#   L1 <- expm::logm(K1)
+#   L2 <- expm::logm(K2)
+# 
+#   norm(L1 - L2, type = "F")
+# }
+log_euclid <- \(M1, M2, sigma, tol = 1e-10) {
+  M1 <- (M1 + t(M1)) / 2
+  M2 <- (M2 + t(M2)) / 2
+  
+  K1 <- exp(-(M1 / sigma)^2 / 2)
+  K2 <- exp(-(M2 / sigma)^2 / 2)
+  
+  K1 <- (K1 + t(K1)) / 2
+  K2 <- (K2 + t(K2)) / 2
+  
+  eig1 <- eigen(K1, symmetric = TRUE)
+  eig2 <- eigen(K2, symmetric = TRUE)
+  
+  if (
+    min(eig1$values) <= tol ||
+    min(eig2$values) <= tol
+  ) {
+    stop("Kernel matrix is not strictly positive definite.")
   }
-
-  # apply Gaussian kernel to convert to similarity matrices
-  K1 <- exp(-M1 / sigma)
-  K2 <- exp(-M2 / sigma)
-
-  # add small value to diagonal to ensure positive definiteness
-  K1 <- K1 + diag(eps, nrow(K1))
-  K2 <- K2 + diag(eps, nrow(K2))
-
-  # compute matrix logarithm and then Frobenius norm of difference
-  L1 <- expm::logm(K1)
-  L2 <- expm::logm(K2)
-
+  
+  L1 <- eig1$vectors %*%
+    diag(log(eig1$values)) %*%
+    t(eig1$vectors)
+  
+  L2 <- eig2$vectors %*%
+    diag(log(eig2$values)) %*%
+    t(eig2$vectors)
+  
   norm(L1 - L2, type = "F")
 }
 
