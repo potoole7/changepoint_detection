@@ -420,6 +420,444 @@ trans_fun <- \(data, n_vars, laplace_trans = FALSE) {
   marg_loc <- lapply(data_laplace_loc, as_cecl_marg)
 }
 
+#### CE and divergence validation helpers ####
+
+validate_ce_dep <- \(
+  dep,
+  min_scale = 1e-4,
+  max_abs_parameter = 1e4,
+  parameter_tol = 1e-7
+) {
+  problems <- character()
+  
+  coef_list <- lapply(
+    seq_along(dep),
+    \(block_index) {
+      coef_attempt <- tryCatch(
+        coef(dep[[block_index]]),
+        error = \(e) NULL
+      )
+      
+      if (is.null(coef_attempt)) {
+        problems <<- c(
+          problems,
+          paste0(
+            "Could not extract CE coefficients from block ",
+            block_index,
+            "."
+          )
+        )
+        
+        return(NULL)
+      }
+      
+      coef_df <- as.data.frame(
+        coef_attempt
+      )
+      
+      coef_df$block <- block_index
+      coef_df
+    }
+  )
+  
+  if (any(vapply(coef_list, is.null, logical(1)))) {
+    return(
+      list(
+        valid = FALSE,
+        problems = problems,
+        coefficients = NULL
+      )
+    )
+  }
+  
+  coef_df <- bind_rows(coef_list)
+  
+  numeric_columns <- names(coef_df)[
+    vapply(
+      coef_df,
+      is.numeric,
+      logical(1)
+    )
+  ]
+  
+  if (length(numeric_columns) > 0L) {
+    numeric_values <- as.matrix(
+      coef_df[
+        ,
+        numeric_columns,
+        drop = FALSE
+      ]
+    )
+    
+    nonfinite_rows <- apply(
+      !is.finite(numeric_values),
+      1,
+      any
+    )
+    
+    if (any(nonfinite_rows)) {
+      problems <- c(
+        problems,
+        paste0(
+          "Non-finite CE coefficients in ",
+          sum(nonfinite_rows),
+          " fitted model(s)."
+        )
+      )
+    }
+  }
+  
+  if ("a" %in% names(coef_df)) {
+    invalid_a <- (
+      coef_df$a < -1 - parameter_tol |
+        coef_df$a > 1 + parameter_tol
+    )
+    
+    invalid_a[is.na(invalid_a)] <- TRUE
+    
+    if (any(invalid_a)) {
+      problems <- c(
+        problems,
+        paste0(
+          sum(invalid_a),
+          " alpha estimate(s) outside [-1, 1]."
+        )
+      )
+    }
+  }
+  
+  if ("b" %in% names(coef_df)) {
+    invalid_b <- (
+      coef_df$b > 1 + parameter_tol
+    )
+    
+    invalid_b[is.na(invalid_b)] <- TRUE
+    
+    if (any(invalid_b)) {
+      problems <- c(
+        problems,
+        paste0(
+          sum(invalid_b),
+          " beta estimate(s) greater than 1."
+        )
+      )
+    }
+  }
+  
+  if ("s" %in% names(coef_df)) {
+    invalid_scale <- (
+      !is.finite(coef_df$s) |
+        coef_df$s <= min_scale
+    )
+    
+    if (any(invalid_scale)) {
+      problems <- c(
+        problems,
+        paste0(
+          sum(invalid_scale),
+          " residual scale estimate(s) at or below ",
+          format(min_scale, scientific = TRUE),
+          "."
+        )
+      )
+    }
+  }
+  
+  structural_parameters <- intersect(
+    c("a", "b", "m"),
+    names(coef_df)
+  )
+  
+  if (length(structural_parameters) > 0L) {
+    structural_values <- abs(
+      as.matrix(
+        coef_df[
+          ,
+          structural_parameters,
+          drop = FALSE
+        ]
+      )
+    )
+    
+    extreme_rows <- apply(
+      structural_values >
+        max_abs_parameter,
+      1,
+      any
+    )
+    
+    extreme_rows[is.na(extreme_rows)] <- TRUE
+    
+    if (any(extreme_rows)) {
+      problems <- c(
+        problems,
+        paste0(
+          sum(extreme_rows),
+          " CE fit(s) contain parameters larger than ",
+          format(max_abs_parameter, scientific = TRUE),
+          " in absolute value."
+        )
+      )
+    }
+  }
+  
+  list(
+    valid = length(problems) == 0L,
+    problems = problems,
+    coefficients = coef_df
+  )
+}
+
+
+validate_distance_matrix <- \(
+  M,
+  expected_names = NULL,
+  symmetry_tol = 1e-8,
+  diagonal_tol = 1e-8,
+  negative_tol = 1e-10,
+  max_distance = 1e6
+) {
+  problems <- character()
+  
+  M <- tryCatch(
+    as.matrix(M),
+    error = \(e) NULL
+  )
+  
+  if (is.null(M)) {
+    return(
+      list(
+        valid = FALSE,
+        problems = "Could not convert result to a matrix.",
+        max_distance = NA_real_
+      )
+    )
+  }
+  
+  if (nrow(M) != ncol(M)) {
+    problems <- c(
+      problems,
+      "Dissimilarity matrix is not square."
+    )
+  }
+  
+  if (any(!is.finite(M))) {
+    problems <- c(
+      problems,
+      "Dissimilarity matrix contains non-finite values."
+    )
+  }
+  
+  if (
+    nrow(M) == ncol(M) &&
+    all(is.finite(M))
+  ) {
+    matrix_scale <- max(
+      1,
+      max(abs(M))
+    )
+    
+    symmetry_error <- max(
+      abs(M - t(M))
+    )
+    
+    if (
+      symmetry_error >
+      symmetry_tol * matrix_scale
+    ) {
+      problems <- c(
+        problems,
+        paste0(
+          "Dissimilarity matrix is asymmetric; maximum error = ",
+          signif(symmetry_error, 5),
+          "."
+        )
+      )
+    }
+    
+    diagonal_error <- max(
+      abs(diag(M))
+    )
+    
+    if (
+      diagonal_error >
+      diagonal_tol * matrix_scale
+    ) {
+      problems <- c(
+        problems,
+        paste0(
+          "Dissimilarity matrix has a nonzero diagonal; ",
+          "maximum absolute diagonal value = ",
+          signif(diagonal_error, 5),
+          "."
+        )
+      )
+    }
+    
+    minimum_value <- min(M)
+    
+    if (minimum_value < -negative_tol) {
+      problems <- c(
+        problems,
+        paste0(
+          "Dissimilarity matrix contains negative values; ",
+          "minimum = ",
+          signif(minimum_value, 5),
+          "."
+        )
+      )
+    }
+  }
+  
+  observed_max <- if (
+    any(is.finite(M))
+  ) {
+    max(M[is.finite(M)])
+  } else {
+    NA_real_
+  }
+  
+  if (
+    is.finite(observed_max) &&
+    is.finite(max_distance) &&
+    observed_max > max_distance
+  ) {
+    problems <- c(
+      problems,
+      paste0(
+        "Maximum dissimilarity ",
+        signif(observed_max, 6),
+        " exceeds `max_distance = ",
+        signif(max_distance, 6),
+        "`."
+      )
+    )
+  }
+  
+  if (!is.null(expected_names)) {
+    if (
+      is.null(rownames(M)) ||
+      is.null(colnames(M))
+    ) {
+      problems <- c(
+        problems,
+        "Dissimilarity matrix has no row or column names."
+      )
+    } else {
+      if (
+        !setequal(
+          rownames(M),
+          expected_names
+        ) ||
+        !setequal(
+          colnames(M),
+          expected_names
+        )
+      ) {
+        problems <- c(
+          problems,
+          "Dissimilarity matrix contains unexpected locations."
+        )
+      }
+    }
+  }
+  
+  list(
+    valid = length(problems) == 0L,
+    problems = problems,
+    max_distance = observed_max
+  )
+}
+
+
+validate_distance_result <- \(
+  dist,
+  expected_names,
+  symmetry_tol = 1e-8,
+  diagonal_tol = 1e-8,
+  negative_tol = 1e-10,
+  max_distance = 1e6
+) {
+  if (
+    !is.list(dist) ||
+    length(dist) != 2L
+  ) {
+    return(
+      list(
+        valid = FALSE,
+        problems = paste0(
+          "Expected two temporal-block distance objects; received ",
+          length(dist),
+          "."
+        ),
+        checks = NULL
+      )
+    )
+  }
+  
+  valid_structure <- vapply(
+    dist,
+    \(x) {
+      is.list(x) &&
+        !is.null(x$dist_mat)
+    },
+    logical(1)
+  )
+  
+  if (!all(valid_structure)) {
+    return(
+      list(
+        valid = FALSE,
+        problems = "At least one block has no `dist_mat`.",
+        checks = NULL
+      )
+    )
+  }
+  
+  checks <- lapply(
+    seq_along(dist),
+    \(block_index) {
+      check <- validate_distance_matrix(
+        dist[[block_index]]$dist_mat,
+        expected_names =
+          expected_names[[block_index]],
+        symmetry_tol = symmetry_tol,
+        diagonal_tol = diagonal_tol,
+        negative_tol = negative_tol,
+        max_distance = max_distance
+      )
+      
+      check$block <- block_index
+      check
+    }
+  )
+  
+  problems <- unlist(
+    lapply(
+      checks,
+      \(x) {
+        if (length(x$problems) == 0L) {
+          return(character())
+        }
+        
+        paste0(
+          "Block ",
+          x$block,
+          ": ",
+          x$problems
+        )
+      }
+    ),
+    use.names = FALSE
+  )
+  
+  list(
+    valid = length(problems) == 0L,
+    problems = problems,
+    checks = checks
+  )
+}
+
 # Function to fit CE, compute distances
 calc_dist <- \(
   marg,
@@ -433,110 +871,611 @@ calc_dist <- \(
   aLow = -1,
   nruns = 1,
   ret_dep = FALSE,
-  start = list(c(a = 0.01, b = 0.01), c(a = 0.01, b = 0.01)),
+  start = list(
+    c(a = 0.01, b = 0.01),
+    c(a = 0.01, b = 0.01)
+  ),
+  min_exceedances = 20L,
+  min_scale = 1e-4,
+  max_abs_parameter = 1e4,
+  symmetry_tol = 1e-8,
+  diagonal_tol = 1e-8,
+  negative_tol = 1e-10,
+  max_distance = 1e6,
+  validation_warnings = TRUE,
   ...
 ) {
+  fail <- \(message) {
+    if (validation_warnings) {
+      warning(
+        message,
+        call. = FALSE
+      )
+    }
+    
+    NA
+  }
+  
+  if (!is.list(marg) || length(marg) != 2L) {
+    return(
+      fail(
+        "`marg` must contain exactly two temporal blocks."
+      )
+    )
+  }
+  
+  if (
+    length(start) <
+    length(marg)
+  ) {
+    return(
+      fail(
+        "`start` does not contain values for both temporal blocks."
+      )
+    )
+  }
+  
   if (!is.null(cond_val)) {
     cond_prob <- NULL
   }
-
-  # fit CE models
-  if (use_evgam == FALSE) {
-    dep <- lapply(seq_along(marg), \(i) {
-      cecl_dep(
-        obj         = marg[[i]],
-        cond_prob   = cond_prob,
-        cond_val    = cond_val,
-        cond_var    = cond_var,
-        aLow        = aLow,
-        nruns       = nruns,
-        fit_no_keef = TRUE,
-        start       = start[[i]]
+  
+  #### Validate marginal structures and exceedance counts ####
+  
+  expected_names <- lapply(
+    seq_along(marg),
+    \(block_index) {
+      transformed <- marg[
+        [block_index]
+      ]$transformed
+      
+      if (
+        is.null(transformed) ||
+        !is.list(transformed)
+      ) {
+        return(NULL)
+      }
+      
+      names(transformed)
+    }
+  )
+  
+  if (
+    any(
+      vapply(
+        expected_names,
+        is.null,
+        logical(1)
       )
-    })
-    # skip bad permutations
-    if (any(sapply(dep, \(x) any(is.na(unlist(x$dependence)))))) {
-      return(NA)
-    }
-  } else if (use_evgam) {
-    if (is.null(data_loc)) {
-      stop("data_loc must be provided when use_evgam = TRUE")
-    }
-
-    # first, put marginal data into form for evgam fitting
-    marg_join_lst <- lapply(seq_along(marg), \(k) {
-      x <- marg[[k]]
-      bind_rows(lapply(seq_along(x$transformed), \(j) {
-        data.frame(x$transformed[[j]]) |>
-          mutate(name = paste0("loc_", j))
-      })) |>
-        left_join(
-          # data |>
-          data_loc |>
-            filter(block == k) |>
-            distinct(name, x_loc, y_loc),
-          by = "name"
-        ) |>
-        rename(x = x_loc, y = y_loc) |>
-        select(-name)
-    })
-
-    dep <- lapply(marg_join_lst, \(x) {
-      x1_cond <- NULL
-      if (!is.null(cond_var) && cond_var == "X1") {
-        x1_cond <- fit_evgam(
-          df = x,
-          dep_val = cond_val,
-          var = "X2",
-          cond_var = "X1"
-        )
-      }
-
-      x2_cond <- NULL
-      if (!is.null(cond_var) && cond_var == "X2") {
-        x2_cond <- fit_evgam(
-          df = x,
-          dep_val = cond_val,
-          var = "X1",
-          cond_var = "X2"
-        )
-      }
-
-      # join and change to `cecl_dep` format
-      coef_evgam <- bind_rows(x1_cond$predictions, x2_cond$predictions) |>
-        arrange(name, var, cond_var)
-      rownames(coef_evgam) <- NULL
-      as_cecl_dep(coef_evgam)
-    })
-  } else {
-    stop("Invalid value for use_evgam")
-  }
-
-  # TODO Implement (and add message)
-  thresh_max <- NULL
-  if (use_dth == TRUE) {
-    thresh <- lapply(dep, \(x) {
-      lapply(x$dependence, CeCl:::pull_thresh_trans)
-    })
-    # take max
-    thresh_max <- max(unlist(thresh))
-  }
-
-  # compute distances
-  dist <- lapply(seq_along(dep), \(i) {
-    cecl_dist(
-      dep[[i]],
-      marg[[i]],
-      n_mc = n_mc,
-      dth = thresh_max,
-      ...
     )
-  })
-  if (ret_dep) {
-    return(list("dist" = dist, "dep" = dep))
-  } else {
-    return(dist)
+  ) {
+    return(
+      fail(
+        "At least one marginal object has no named transformed data."
+      )
+    )
   }
+  
+  if (
+    !setequal(
+      expected_names[[1]],
+      expected_names[[2]]
+    )
+  ) {
+    return(
+      fail(
+        "The temporal blocks contain different locations."
+      )
+    )
+  }
+  
+  if (!is.null(min_exceedances)) {
+    exceedance_rows <- list()
+    
+    for (
+      block_index in
+      seq_along(marg)
+    ) {
+      transformed <- marg[
+        [block_index]
+      ]$transformed
+      
+      for (
+        location in
+        names(transformed)
+      ) {
+        Y <- as.matrix(
+          transformed[[location]]
+        )
+        
+        conditioning_variables <- if (
+          is.null(cond_var)
+        ) {
+          colnames(Y)
+        } else {
+          cond_var
+        }
+        
+        missing_conditioning_variables <-
+          setdiff(
+            conditioning_variables,
+            colnames(Y)
+          )
+        
+        if (
+          length(
+            missing_conditioning_variables
+          ) > 0L
+        ) {
+          return(
+            fail(
+              paste0(
+                "Missing conditioning variable(s) at location ",
+                location,
+                ": ",
+                paste(
+                  missing_conditioning_variables,
+                  collapse = ", "
+                ),
+                "."
+              )
+            )
+          )
+        }
+        
+        for (
+          conditioning_variable in
+          conditioning_variables
+        ) {
+          values <- Y[
+            ,
+            conditioning_variable
+          ]
+          
+          threshold <- if (
+            !is.null(cond_val)
+          ) {
+            cond_val
+          } else {
+            stats::quantile(
+              values,
+              probs = cond_prob,
+              na.rm = TRUE,
+              names = FALSE
+            )
+          }
+          
+          n_exc <- sum(
+            values > threshold,
+            na.rm = TRUE
+          )
+          
+          exceedance_rows[
+            [length(exceedance_rows) + 1L]
+          ] <- tibble(
+            block = block_index,
+            name = location,
+            cond_var =
+              conditioning_variable,
+            threshold = threshold,
+            n_exceedances = n_exc
+          )
+        }
+      }
+    }
+    
+    exceedance_df <- bind_rows(
+      exceedance_rows
+    )
+    
+    insufficient <- exceedance_df |>
+      filter(
+        n_exceedances <
+          min_exceedances
+      )
+    
+    if (nrow(insufficient) > 0L) {
+      worst <- insufficient |>
+        arrange(n_exceedances) |>
+        slice(1)
+      
+      return(
+        fail(
+          paste0(
+            nrow(insufficient),
+            " CE fit(s) have fewer than ",
+            min_exceedances,
+            " exceedances. Minimum = ",
+            worst$n_exceedances,
+            " at location ",
+            worst$name,
+            ", block ",
+            worst$block,
+            ", conditioning variable ",
+            worst$cond_var,
+            "."
+          )
+        )
+      )
+    }
+  } else {
+    exceedance_df <- NULL
+  }
+  
+  #### Fit CE models ####
+  
+  if (!use_evgam) {
+    dep <- lapply(
+      seq_along(marg),
+      \(block_index) {
+        tryCatch(
+          {
+            cecl_dep(
+              obj =
+                marg[[block_index]],
+              cond_prob =
+                cond_prob,
+              cond_val =
+                cond_val,
+              cond_var =
+                cond_var,
+              aLow =
+                aLow,
+              nruns =
+                nruns,
+              fit_no_keef =
+                TRUE,
+              start =
+                start[[block_index]]
+            )
+          },
+          error = \(e) {
+            structure(
+              list(
+                message =
+                  conditionMessage(e)
+              ),
+              class = "ce_fit_error"
+            )
+          }
+        )
+      }
+    )
+    
+    fit_errors <- vapply(
+      dep,
+      inherits,
+      logical(1),
+      what = "ce_fit_error"
+    )
+    
+    if (any(fit_errors)) {
+      messages <- vapply(
+        dep[fit_errors],
+        \(x) x$message,
+        character(1)
+      )
+      
+      return(
+        fail(
+          paste0(
+            "CE fitting failed: ",
+            paste(
+              messages,
+              collapse = " | "
+            )
+          )
+        )
+      )
+    }
+    
+    ce_check <- validate_ce_dep(
+      dep,
+      min_scale =
+        min_scale,
+      max_abs_parameter =
+        max_abs_parameter
+    )
+    
+    if (!ce_check$valid) {
+      return(
+        fail(
+          paste0(
+            "CE validation failed: ",
+            paste(
+              ce_check$problems,
+              collapse = " | "
+            )
+          )
+        )
+      )
+    }
+    
+  } else {
+    if (is.null(data_loc)) {
+      return(
+        fail(
+          "`data_loc` must be provided when `use_evgam = TRUE`."
+        )
+      )
+    }
+    
+    marg_join_lst <- lapply(
+      seq_along(marg),
+      \(block_index) {
+        x <- marg[[block_index]]
+        
+        bind_rows(
+          lapply(
+            seq_along(
+              x$transformed
+            ),
+            \(location_index) {
+              data.frame(
+                x$transformed[
+                  [location_index]
+                ]
+              ) |>
+                mutate(
+                  name = paste0(
+                    "loc_",
+                    location_index
+                  )
+                )
+            }
+          )
+        ) |>
+          left_join(
+            data_loc |>
+              filter(
+                block ==
+                  block_index
+              ) |>
+              distinct(
+                name,
+                x_loc,
+                y_loc
+              ),
+            by = "name"
+          ) |>
+          rename(
+            x = x_loc,
+            y = y_loc
+          ) |>
+          select(-name)
+      }
+    )
+    
+    dep <- lapply(
+      marg_join_lst,
+      \(x) {
+        x1_cond <- NULL
+        x2_cond <- NULL
+        
+        if (
+          is.null(cond_var) ||
+          cond_var == "X1"
+        ) {
+          x1_cond <- fit_evgam(
+            df = x,
+            dep_val = cond_val,
+            var = "X2",
+            cond_var = "X1"
+          )
+        }
+        
+        if (
+          is.null(cond_var) ||
+          cond_var == "X2"
+        ) {
+          x2_cond <- fit_evgam(
+            df = x,
+            dep_val = cond_val,
+            var = "X1",
+            cond_var = "X2"
+          )
+        }
+        
+        predictions <- bind_rows(
+          if (!is.null(x1_cond)) {
+            x1_cond$predictions
+          },
+          if (!is.null(x2_cond)) {
+            x2_cond$predictions
+          }
+        ) |>
+          arrange(
+            name,
+            var,
+            cond_var
+          )
+        
+        rownames(predictions) <- NULL
+        
+        as_cecl_dep(predictions)
+      }
+    )
+    
+    ce_check <- validate_ce_dep(
+      dep,
+      min_scale =
+        min_scale,
+      max_abs_parameter =
+        max_abs_parameter
+    )
+    
+    if (!ce_check$valid) {
+      return(
+        fail(
+          paste0(
+            "CE validation failed: ",
+            paste(
+              ce_check$problems,
+              collapse = " | "
+            )
+          )
+        )
+      )
+    }
+  }
+  
+  #### Determine common comparison threshold ####
+  
+  thresh_max <- NULL
+  
+  if (use_dth) {
+    threshold_attempt <- tryCatch(
+      {
+        thresh <- lapply(
+          dep,
+          \(x) {
+            lapply(
+              x$dependence,
+              CeCl:::pull_thresh_trans
+            )
+          }
+        )
+        
+        max(
+          unlist(thresh)
+        )
+      },
+      error = \(e) {
+        NA_real_
+      }
+    )
+    
+    if (
+      length(threshold_attempt) != 1L ||
+      !is.finite(threshold_attempt)
+    ) {
+      return(
+        fail(
+          "Could not calculate a valid common dependence threshold."
+        )
+      )
+    }
+    
+    thresh_max <- threshold_attempt
+  }
+  
+  #### Calculate dissimilarity matrices ####
+  
+  dist <- lapply(
+    seq_along(dep),
+    \(block_index) {
+      tryCatch(
+        {
+          cecl_dist(
+            dep[[block_index]],
+            marg[[block_index]],
+            n_mc = n_mc,
+            dth = thresh_max,
+            ...
+          )
+        },
+        error = \(e) {
+          structure(
+            list(
+              message =
+                conditionMessage(e)
+            ),
+            class =
+              "ce_dist_error"
+          )
+        }
+      )
+    }
+  )
+  
+  dist_errors <- vapply(
+    dist,
+    inherits,
+    logical(1),
+    what = "ce_dist_error"
+  )
+  
+  if (any(dist_errors)) {
+    messages <- vapply(
+      dist[dist_errors],
+      \(x) x$message,
+      character(1)
+    )
+    
+    return(
+      fail(
+        paste0(
+          "Dissimilarity calculation failed: ",
+          paste(
+            messages,
+            collapse = " | "
+          )
+        )
+      )
+    )
+  }
+  
+  #### Validate dissimilarity matrices ####
+  
+  dist_check <- validate_distance_result(
+    dist,
+    expected_names =
+      expected_names,
+    symmetry_tol =
+      symmetry_tol,
+    diagonal_tol =
+      diagonal_tol,
+    negative_tol =
+      negative_tol,
+    max_distance =
+      max_distance
+  )
+  
+  if (!dist_check$valid) {
+    return(
+      fail(
+        paste0(
+          "Dissimilarity validation failed: ",
+          paste(
+            dist_check$problems,
+            collapse = " | "
+          )
+        )
+      )
+    )
+  }
+  
+  #### Return ####
+  
+  if (ret_dep) {
+    return(
+      list(
+        dist = dist,
+        dep = dep,
+        validation = list(
+          exceedances =
+            exceedance_df,
+          ce =
+            ce_check,
+          distance =
+            dist_check
+        )
+      )
+    )
+  }
+  
+  attr(
+    dist,
+    "validation"
+  ) <- list(
+    exceedances =
+      exceedance_df,
+    ce =
+      ce_check,
+    distance =
+      dist_check
+  )
+  
+  dist
 }
 
 # function to calculate log-Euclidean SPD distance between two distance matrices
@@ -2340,6 +3279,8 @@ perm_test_fun <- \(
   data,
   grid_vals,
   n_perm = 100,
+  max_perm_attempts = NULL,
+  max_failure_rate = 0.1,
   n_per_block = NULL,
   n_years_per_block = NULL,
   n_vars = 2,
@@ -2348,369 +3289,521 @@ perm_test_fun <- \(
   ret_dep = FALSE,
   use_dth = FALSE,
   verbose = FALSE,
+  cond_prob = 0.9,
+  cond_val = NULL,
+  cond_var = NULL,
+  laplace_sample = NULL,
+  n_mc = 500,
+  aLow = -1,
+  nruns = 1,
+  validation_warnings = TRUE,
+  permutation_validation_warnings = FALSE,
   ...
 ) {
   #### Validate arguments ####
-
-  if (!is.null(n_per_block) && !is.null(n_years_per_block)) {
+  
+  if (
+    !is.null(n_per_block) &&
+    !is.null(n_years_per_block)
+  ) {
     stop(
       "Supply only one of `n_per_block` and ",
       "`n_years_per_block`."
     )
   }
-
+  
   if (length(grid_vals) == 0L) {
-    stop("`grid_vals` must contain at least one candidate boundary.")
+    stop(
+      "`grid_vals` must contain at least one candidate boundary."
+    )
   }
-
+  
   if (
     length(n_perm) != 1L ||
-      is.na(n_perm) ||
-      n_perm < 1L
+    is.na(n_perm) ||
+    n_perm < 1L
   ) {
     stop("`n_perm` must be a positive integer.")
   }
-
+  
+  n_perm <- as.integer(n_perm)
+  
+  if (is.null(max_perm_attempts)) {
+    max_perm_attempts <- 5L * n_perm
+  }
+  
+  if (
+    length(max_perm_attempts) != 1L ||
+    is.na(max_perm_attempts) ||
+    max_perm_attempts < n_perm
+  ) {
+    stop(
+      "`max_perm_attempts` must be at least `n_perm`."
+    )
+  }
+  
+  max_perm_attempts <- as.integer(
+    max_perm_attempts
+  )
+  
+  if (
+    length(max_failure_rate) != 1L ||
+    is.na(max_failure_rate) ||
+    max_failure_rate < 0 ||
+    max_failure_rate >= 1
+  ) {
+    stop(
+      "`max_failure_rate` must lie in [0, 1)."
+    )
+  }
+  
   row_window_mode <- !is.null(n_per_block)
-  year_window_mode <- !is.null(n_years_per_block)
-  cumulative_mode <- is.null(n_per_block) &&
-    is.null(n_years_per_block)
-
+  year_window_mode <- !is.null(
+    n_years_per_block
+  )
+  
   if (row_window_mode) {
     if (
       length(n_per_block) != 1L ||
-        is.na(n_per_block) ||
-        n_per_block < 1L
+      is.na(n_per_block) ||
+      n_per_block < 1L
     ) {
-      stop("`n_per_block` must be a positive integer.")
+      stop(
+        "`n_per_block` must be a positive integer."
+      )
     }
-
+    
     n_per_block <- as.integer(n_per_block)
   }
-
+  
   if (year_window_mode) {
-    required_columns <- c("name", "date", "season_year")
-    missing_columns <- setdiff(required_columns, names(data))
-
+    required_columns <- c(
+      "name",
+      "date",
+      "season_year",
+      "X1",
+      "X2"
+    )
+    
+    missing_columns <- setdiff(
+      required_columns,
+      names(data)
+    )
+    
     if (length(missing_columns) > 0L) {
       stop(
-        "Year-based windows require the following missing columns: ",
-        paste(missing_columns, collapse = ", ")
+        "Year-based windows require: ",
+        paste(
+          missing_columns,
+          collapse = ", "
+        )
       )
     }
-
+    
     if (
       length(n_years_per_block) != 1L ||
-        is.na(n_years_per_block) ||
-        n_years_per_block < 1L
+      is.na(n_years_per_block) ||
+      n_years_per_block < 1L
     ) {
-      stop("`n_years_per_block` must be a positive integer.")
-    }
-
-    n_years_per_block <- as.integer(n_years_per_block)
-
-    all_years <- sort(unique(data$season_year))
-
-    if (length(all_years) < 2L * n_years_per_block) {
       stop(
-        "There are only ", length(all_years),
+        "`n_years_per_block` must be a positive integer."
+      )
+    }
+    
+    n_years_per_block <- as.integer(
+      n_years_per_block
+    )
+    
+    all_years <- sort(
+      unique(data$season_year)
+    )
+    
+    if (
+      length(all_years) <
+      2L * n_years_per_block
+    ) {
+      stop(
+        "There are only ",
+        length(all_years),
         " seasonal years, but at least ",
         2L * n_years_per_block,
-        " are needed."
+        " are required."
       )
     }
-
-    invalid_grid_vals <- setdiff(grid_vals, all_years)
-
+    
+    invalid_grid_vals <- setdiff(
+      grid_vals,
+      all_years
+    )
+    
     if (length(invalid_grid_vals) > 0L) {
       stop(
-        "These year-based `grid_vals` are not present in ",
-        "`season_year`: ",
-        paste(invalid_grid_vals, collapse = ", ")
+        "These grid values are absent from `season_year`: ",
+        paste(
+          invalid_grid_vals,
+          collapse = ", "
+        )
       )
     }
   }
-
-  #### Initial parameter values ####
-
-  start <- replicate(
-    n_vars,
-    c(a = 0.01, b = 0.01),
-    simplify = FALSE
-  )
-
-  if (use_start) {
-    data_start <- data
-
-    if (!"block" %in% names(data_start)) {
-      if (year_window_mode) {
-        # Use the middle candidate boundary to construct representative
-        # starting-value blocks containing whole seasonal years.
-        start_grid_val <- grid_vals[
-          ceiling(length(grid_vals) / 2)
-        ]
-
-        start_year_position <- match(
-          start_grid_val,
-          all_years
-        )
-
-        start_left_years <- all_years[
-          (start_year_position - n_years_per_block + 1L):
-          start_year_position
-        ]
-
-        start_right_years <- all_years[
-          (start_year_position + 1L):
-          (start_year_position + n_years_per_block)
-        ]
-
-        data_start <- data_start |>
-          filter(
-            season_year %in% c(
-              start_left_years,
-              start_right_years
-            )
-          ) |>
-          mutate(
-            block = if_else(
-              season_year %in% start_left_years,
-              "1",
-              "2"
-            )
-          ) |>
-          arrange(name, date)
+  
+  dots <- list(...)
+  
+  if ("start" %in% names(dots)) {
+    stop(
+      "Do not supply `start` through `...`."
+    )
+  }
+  
+  #### Generic helpers ####
+  
+  is_failed_result <- \(x) {
+    is.atomic(x) &&
+      length(x) == 1L &&
+      is.na(x)
+  }
+  
+  run_calc_dist <- \(
+    marginal_data,
+    start_values,
+    return_dependence,
+    show_validation_warnings
+  ) {
+    args <- list(
+      marg = marginal_data,
+      n_mc = n_mc,
+      cond_prob = cond_prob,
+      cond_val = cond_val,
+      use_dth = use_dth,
+      cond_var = cond_var,
+      aLow = aLow,
+      nruns = nruns,
+      ret_dep = return_dependence,
+      start = start_values,
+      validation_warnings =
+        show_validation_warnings
+    )
+    
+    if (!is.null(laplace_sample)) {
+      args$laplace_sample <-
+        laplace_sample
+    }
+    
+    do.call(
+      calc_dist,
+      c(args, dots)
+    )
+  }
+  
+  run_perm_test_prep <- \(
+    marginal_data,
+    permutation_groups,
+    start_values
+  ) {
+    args <- list(
+      data_laplace_loc =
+        marginal_data,
+      permutation_groups =
+        permutation_groups,
+      cond_prob = cond_prob,
+      cond_val = cond_val,
+      cond_var = cond_var,
+      use_dth = use_dth,
+      aLow = aLow,
+      nruns = nruns,
+      n_mc = n_mc,
+      start = start_values,
+      validation_warnings =
+        permutation_validation_warnings
+    )
+    
+    if (!is.null(laplace_sample)) {
+      args$laplace_sample <-
+        laplace_sample
+    }
+    
+    do.call(
+      perm_test_prep,
+      c(args, dots)
+    )
+  }
+  
+  make_failed_result <- \(
+    block_info,
+    stage,
+    message,
+    norm_orig = NULL,
+    permutation_info = NULL
+  ) {
+    ret <- list(
+      success = FALSE,
+      block_info = block_info,
+      
+      p_value_frob = NA_real_,
+      p_value_inf = NA_real_,
+      p_value_spec = NA_real_,
+      
+      norm_orig_frob = if (
+        is.null(norm_orig)
+      ) {
+        NA_real_
       } else {
-        # Original observation-based behaviour
-        if ("date" %in% names(data_start)) {
-          data_start <- data_start |>
-            arrange(name, date)
-        }
-
-        data_start <- data_start |>
-          group_by(name) |>
-          mutate(
-            block = if_else(
-              row_number() <= floor(n() / 2),
-              "1",
-              "2"
-            )
-          ) |>
-          ungroup()
-      }
-    }
-
-    data_laplace_start <- trans_fun(
-      data_start,
-      n_vars,
-      laplace_trans
+        norm_orig$frob
+      },
+      
+      norm_orig_inf = if (
+        is.null(norm_orig)
+      ) {
+        NA_real_
+      } else {
+        norm_orig$inf
+      },
+      
+      norm_orig_spec = if (
+        is.null(norm_orig)
+      ) {
+        NA_real_
+      } else {
+        norm_orig$spec
+      },
+      
+      perm_norms_frob = numeric(),
+      perm_norms_inf = numeric(),
+      perm_norms_spec = numeric(),
+      
+      n_attempted = 0L,
+      n_successful = 0L,
+      n_failed = 0L,
+      failure_rate = NA_real_,
+      
+      error_stage = stage,
+      error_message = message
     )
-
-    dots <- list(...)
-
-    cond_val_start <- if ("cond_val" %in% names(dots)) {
-      dots$cond_val
-    } else {
-      NULL
+    
+    if (!is.null(permutation_info)) {
+      ret$perm_norms_frob <-
+        permutation_info$perm_norms_frob
+      
+      ret$perm_norms_inf <-
+        permutation_info$perm_norms_inf
+      
+      ret$perm_norms_spec <-
+        permutation_info$perm_norms_spec
+      
+      ret$n_attempted <-
+        permutation_info$n_attempted
+      
+      ret$n_successful <-
+        permutation_info$n_successful
+      
+      ret$n_failed <-
+        permutation_info$n_failed
+      
+      ret$failure_rate <-
+        permutation_info$failure_rate
     }
-
-    cond_prob_start <- if ("cond_prob" %in% names(dots)) {
-      dots$cond_prob
-    } else {
-      NULL
-    }
-
-    cond_var_start <- if ("cond_var" %in% names(dots)) {
-      dots$cond_var
-    } else {
-      NULL
-    }
-
-    nruns_start <- if ("nruns" %in% names(dots)) {
-      dots$nruns
-    } else {
-      1
-    }
-
-    aLow_start <- if ("aLow" %in% names(dots)) {
-      dots$aLow
-    } else {
-      -1
-    }
-
-    dep_start <- lapply(
-      seq_along(data_laplace_start),
-      \(k) {
-        cecl_dep(
-          data_laplace_start[[k]],
-          cond_val = cond_val_start,
-          cond_prob = cond_prob_start,
-          fit_no_keef = TRUE,
-          nruns = nruns_start,
-          cond_var = cond_var_start,
-          aLow = aLow_start,
-          start = start[[k]]
-        )
-      }
-    )
-
-    start <- lapply(dep_start, coef)
+    
+    ret
   }
-
-  #### Choose level of parallelisation ####
-
-  i_fun <- lapply
-  j_fun <- lapply
-
-  if (length(grid_vals) > n_perm) {
-    i_fun <- mclapply
-  } else {
-    j_fun <- mclapply
-  }
-
-  #### Test one candidate boundary ####
-
-  ret_fun <- \(i) {
-    # browser()
-    grid_position <- match(i, grid_vals)
-
-    if (verbose) {
-      message(
-        "\nCandidate ",
-        grid_position,
-        " of ",
-        length(grid_vals),
-        ": ",
-        i
-      )
-    }
-
-    #### Construct observed blocks ####
-
+  
+  #### Construct blocks for one candidate ####
+  
+  make_blocks <- \(i) {
     if (year_window_mode) {
-      # In year mode, i means that the candidate change occurs
-      # between season_year i and the following available season_year.
-
-      year_position <- match(i, all_years)
-
-      if (year_position < n_years_per_block) {
+      year_position <- match(
+        i,
+        all_years
+      )
+      
+      if (is.na(year_position)) {
         stop(
-          "Grid value ", i,
-          " does not have ", n_years_per_block,
-          " seasonal years available on the left."
+          "Candidate year ",
+          i,
+          " is absent from `season_year`."
         )
       }
-
+      
       if (
-        length(all_years) - year_position <
-          n_years_per_block
+        year_position <
+        n_years_per_block
       ) {
         stop(
-          "Grid value ", i,
-          " does not have ", n_years_per_block,
-          " seasonal years available on the right."
+          "Candidate ",
+          i,
+          " has insufficient years on the left."
         )
       }
-
+      
+      if (
+        length(all_years) -
+        year_position <
+        n_years_per_block
+      ) {
+        stop(
+          "Candidate ",
+          i,
+          " has insufficient years on the right."
+        )
+      }
+      
       left_years <- all_years[
-        (year_position - n_years_per_block + 1L):
-        year_position
+        (
+          year_position -
+            n_years_per_block +
+            1L
+        ):
+          year_position
       ]
-
+      
       right_years <- all_years[
         (year_position + 1L):
-        (year_position + n_years_per_block)
+          (
+            year_position +
+              n_years_per_block
+          )
       ]
-
+      
       data_block <- data |>
         filter(
-          season_year %in% c(left_years, right_years)
+          season_year %in% c(
+            left_years,
+            right_years
+          )
         ) |>
         mutate(
           block = if_else(
-            season_year %in% left_years,
+            season_year %in%
+              left_years,
             "1",
             "2"
           )
         ) |>
-        arrange(name, date)
-
-      # Confirm that no seasonal year has been split between blocks.
+        arrange(
+          name,
+          date
+        )
+      
       year_check <- data_block |>
-        distinct(season_year, block) |>
-        count(season_year, name = "n_blocks")
-
+        distinct(
+          season_year,
+          block
+        ) |>
+        count(
+          season_year,
+          name = "n_blocks"
+        )
+      
       if (any(year_check$n_blocks != 1L)) {
         stop(
-          "At least one seasonal year was assigned to ",
-          "more than one block."
+          "At least one seasonal year was split between blocks."
         )
       }
-
-      # Confirm that every station has the same date coverage within
-      # each block.
+      
       station_block_sizes <- data_block |>
-        distinct(name, block, date) |>
-        count(name, block, name = "n_dates")
-
+        distinct(
+          name,
+          block,
+          date
+        ) |>
+        count(
+          name,
+          block,
+          name = "n_dates"
+        )
+      
       coverage_check <- station_block_sizes |>
         group_by(block) |>
         summarise(
-          n_distinct_sizes = n_distinct(n_dates),
+          n_sizes =
+            n_distinct(n_dates),
           .groups = "drop"
         )
-
-      if (any(coverage_check$n_distinct_sizes != 1L)) {
+      
+      if (any(coverage_check$n_sizes != 1L)) {
         stop(
-          "Stations do not have equal date coverage within ",
-          "at least one year-based block."
+          "Stations have unequal date coverage within a block."
         )
       }
-
-      n_left_dates <- data_block |>
+      
+      n_left <- data_block |>
         filter(block == "1") |>
-        summarise(n = n_distinct(date)) |>
+        summarise(
+          n = n_distinct(date)
+        ) |>
         pull(n)
-
-      n_right_dates <- data_block |>
+      
+      n_right <- data_block |>
         filter(block == "2") |>
-        summarise(n = n_distinct(date)) |>
+        summarise(
+          n = n_distinct(date)
+        ) |>
         pull(n)
-
+      
       block_info <- list(
         mode = "season_year",
         split_after = i,
-        split_before = all_years[year_position + 1L],
+        split_before =
+          all_years[year_position + 1L],
         left_years = left_years,
         right_years = right_years,
-        n_left = n_left_dates,
-        n_right = n_right_dates
+        n_left = n_left,
+        n_right = n_right
       )
+      
+      permutation_groups <- data_block |>
+        distinct(
+          block,
+          date,
+          season_year
+        ) |>
+        arrange(
+          block,
+          date
+        ) |>
+        group_split(
+          block,
+          .keep = FALSE
+        ) |>
+        lapply(
+          \(x) x$season_year
+        )
+      
     } else {
-      # In row mode, i is a row position within each station.
-
       data_ordered <- data
-
+      
       if ("date" %in% names(data_ordered)) {
         data_ordered <- data_ordered |>
-          arrange(name, date)
+          arrange(
+            name,
+            date
+          )
       }
-
+      
       n_by_station <- data_ordered |>
-        count(name, name = "n_observations")
-
+        count(
+          name,
+          name = "n_observations"
+        )
+      
       if (i < 1L) {
-        stop("All row-based `grid_vals` must be positive.")
-      }
-
-      if (any(i >= n_by_station$n_observations)) {
         stop(
-          "Grid value ", i,
-          " does not leave observations on both sides ",
-          "for every station."
+          "Row-based grid values must be positive."
         )
       }
-
+      
+      if (
+        any(
+          i >=
+          n_by_station$n_observations
+        )
+      ) {
+        stop(
+          "Grid value ",
+          i,
+          " does not leave data on both sides."
+        )
+      }
+      
       data_block <- data_ordered |>
         group_by(name) |>
         mutate(
@@ -2721,47 +3814,51 @@ perm_test_fun <- \(
           )
         ) |>
         ungroup()
-
+      
       if (row_window_mode) {
         if (i < n_per_block) {
           stop(
-            "Grid value ", i,
-            " leaves fewer than ", n_per_block,
-            " observations in the left block."
+            "Insufficient observations on the left of ",
+            i,
+            "."
           )
         }
-
+        
         if (
           any(
-            n_by_station$n_observations - i <
-              n_per_block
+            n_by_station$n_observations -
+            i <
+            n_per_block
           )
         ) {
           stop(
-            "Grid value ", i,
-            " leaves fewer than ", n_per_block,
-            " observations in the right block for ",
-            "at least one station."
+            "Insufficient observations on the right of ",
+            i,
+            "."
           )
         }
-
+        
         left_block <- data_block |>
           filter(block == "1") |>
           group_by(name) |>
-          slice_tail(n = n_per_block) |>
+          slice_tail(
+            n = n_per_block
+          ) |>
           ungroup()
-
+        
         right_block <- data_block |>
           filter(block == "2") |>
           group_by(name) |>
-          slice_head(n = n_per_block) |>
+          slice_head(
+            n = n_per_block
+          ) |>
           ungroup()
-
+        
         data_block <- bind_rows(
           left_block,
           right_block
         )
-
+        
         block_info <- list(
           mode = "fixed_rows",
           split_after = i,
@@ -2771,7 +3868,8 @@ perm_test_fun <- \(
           n_left = n_per_block,
           n_right = n_per_block
         )
-      } else if (cumulative_mode) {
+        
+      } else {
         block_info <- list(
           mode = "cumulative_rows",
           split_after = i,
@@ -2780,208 +3878,670 @@ perm_test_fun <- \(
           right_years = NULL,
           n_left = i,
           n_right = min(
-            n_by_station$n_observations - i
+            n_by_station$n_observations -
+              i
           )
         )
       }
+      
+      permutation_groups <- NULL
     }
-
-    #### Transform and fit observed blocks ####
     
-    data_laplace_block <- trans_fun(
-      # data_block,
-      select(data_block, X1, X2, name, block),
+    if ("date" %in% names(data_block)) {
+      alignment_check <- data_block |>
+        distinct(
+          block,
+          date,
+          name
+        ) |>
+        count(
+          block,
+          date,
+          name = "n_locations"
+        )
+      
+      expected_locations <- n_distinct(
+        data_block$name
+      )
+      
+      if (
+        any(
+          alignment_check$n_locations !=
+          expected_locations
+        )
+      ) {
+        stop(
+          "At least one date is not available at every location."
+        )
+      }
+    }
+    
+    list(
+      data = data_block,
+      block_info = block_info,
+      permutation_groups =
+        permutation_groups
+    )
+  }
+  
+  #### Starting values ####
+  
+  start <- replicate(
+    2L,
+    c(a = 0.01, b = 0.01),
+    simplify = FALSE
+  )
+  
+  if (use_start) {
+    middle_grid <- grid_vals[
+      ceiling(length(grid_vals) / 2)
+    ]
+    
+    start_blocks <- make_blocks(
+      middle_grid
+    )
+    
+    start_marg <- trans_fun(
+      start_blocks$data |>
+        select(
+          X1,
+          X2,
+          name,
+          block
+        ),
       n_vars,
       laplace_trans
     )
     
-    dist <- suppressMessages(
-      calc_dist(
-        data_laplace_block,
-        start = start,
-        ret_dep = ret_dep,
-        use_dth = use_dth,
-        ...
+    start_fit <- suppressMessages(
+      run_calc_dist(
+        marginal_data = start_marg,
+        start_values = start,
+        return_dependence = TRUE,
+        show_validation_warnings =
+          validation_warnings
       )
     )
     
-    if (ret_dep) {
-      dep <- dist$dep
-      dist <- dist$dist
+    if (is_failed_result(start_fit)) {
+      stop(
+        "The CE fit used to calculate starting values failed."
+      )
     }
-
-    #### Observed statistics ####
-
-    norm_orig_frob <- compare_blocks(
-      dist,
-      type = "norm",
-      norm_type = "F"
+    
+    start <- lapply(
+      start_fit$dep,
+      coef
     )
-
-    norm_orig_inf <- compare_blocks(
-      dist,
-      type = "norm",
-      norm_type = "M"
+  }
+  
+  #### Parallelisation ####
+  
+  parallel_grid <- (
+    length(grid_vals) >
+      n_perm
+  )
+  
+  grid_apply <- \(X, FUN) {
+    if (parallel_grid) {
+      parallel::mclapply(
+        X,
+        FUN,
+        mc.set.seed = TRUE
+      )
+    } else {
+      lapply(
+        X,
+        FUN
+      )
+    }
+  }
+  
+  permutation_apply <- \(X, FUN) {
+    if (!parallel_grid) {
+      parallel::mclapply(
+        X,
+        FUN,
+        mc.set.seed = TRUE
+      )
+    } else {
+      lapply(
+        X,
+        FUN
+      )
+    }
+  }
+  
+  #### Test one candidate ####
+  
+  test_candidate <- \(i) {
+    grid_position <- match(
+      i,
+      grid_vals
     )
-
-    norm_orig_spec <- compare_blocks(
-      dist,
-      type = "norm",
-      norm_type = "2"
-    )
-
-    # norm_orig_ln_spd <- compare_blocks(
-    #   dist,
-    #   type = "norm",
-    #   norm_type = "log SPD"
-    # )
-
-    #### Permutation statistics ####
-
-    norm_vals <- j_fun(
-      seq_len(n_perm),
-      \(j) {
-        if (verbose) {
-          # message(
-          #   "Candidate ", grid_position,
-          #   "/", length(grid_vals),
-          #   "; permutation ", j,
-          #   "/", n_perm
-          # )
-          # print progress of permutations
-          system(sprintf("echo Permutation %s", j))
-        }
-
-        # dist_perm <- perm_test_prep(
-        #   data_laplace_block,
-        #   start = start,
-        #   use_dth = use_dth,
-        #   ...
-        # )
-        dist_perm <- perm_test_prep(
-          data_laplace_block,
-          start = start,
-          use_dth = use_dth,
-          cond_val = dep_val,
-          laplace_sample = laplace_sample,
-          ...
+    
+    if (verbose) {
+      message(
+        "\nCandidate ",
+        grid_position,
+        "/",
+        length(grid_vals),
+        ": ",
+        i
+      )
+    }
+    
+    block_attempt <- tryCatch(
+      make_blocks(i),
+      error = \(e) {
+        structure(
+          list(
+            message =
+              conditionMessage(e)
+          ),
+          class = "block_error"
         )
-
+      }
+    )
+    
+    if (inherits(block_attempt, "block_error")) {
+      return(
+        make_failed_result(
+          block_info = NULL,
+          stage = "blocking",
+          message = block_attempt$message
+        )
+      )
+    }
+    
+    data_block <- block_attempt$data
+    block_info <- block_attempt$block_info
+    permutation_groups <-
+      block_attempt$permutation_groups
+    
+    data_laplace_block <- trans_fun(
+      data_block |>
+        select(
+          X1,
+          X2,
+          name,
+          block
+        ),
+      n_vars,
+      laplace_trans
+    )
+    
+    #### Observed fit ####
+    
+    observed_attempt <- tryCatch(
+      {
+        suppressMessages(
+          run_calc_dist(
+            marginal_data =
+              data_laplace_block,
+            start_values = start,
+            return_dependence = ret_dep,
+            show_validation_warnings =
+              validation_warnings
+          )
+        )
+      },
+      error = \(e) {
+        structure(
+          list(
+            message =
+              conditionMessage(e)
+          ),
+          class = "observed_error"
+        )
+      }
+    )
+    
+    if (
+      inherits(
+        observed_attempt,
+        "observed_error"
+      )
+    ) {
+      return(
+        make_failed_result(
+          block_info = block_info,
+          stage = "observed_fit",
+          message =
+            observed_attempt$message
+        )
+      )
+    }
+    
+    if (is_failed_result(observed_attempt)) {
+      return(
+        make_failed_result(
+          block_info = block_info,
+          stage = "observed_fit",
+          message =
+            "`calc_dist()` returned NA."
+        )
+      )
+    }
+    
+    if (ret_dep) {
+      dep <- observed_attempt$dep
+      dist <- observed_attempt$dist
+    } else {
+      dep <- NULL
+      dist <- observed_attempt
+    }
+    
+    #### Observed statistics ####
+    
+    observed_norms <- tryCatch(
+      {
         list(
           frob = compare_blocks(
-            dist_perm,
+            dist,
             type = "norm",
             norm_type = "F"
           ),
           inf = compare_blocks(
-            dist_perm,
+            dist,
             type = "norm",
             norm_type = "M"
           ),
           spec = compare_blocks(
-            dist_perm,
+            dist,
             type = "norm",
             norm_type = "2"
-          )# ,
-          # ln_spd = compare_blocks(
-          #   dist_perm,
-          #   type = "norm",
-          #   norm_type = "log SPD"
-          # )
+          )
+        )
+      },
+      error = \(e) {
+        structure(
+          list(
+            message =
+              conditionMessage(e)
+          ),
+          class = "norm_error"
         )
       }
     )
-
-    perm_norms_frob <- vapply(
-      norm_vals,
-      \(x) x$frob,
-      numeric(1)
-    )
-
-    perm_norms_inf <- vapply(
-      norm_vals,
-      \(x) x$inf,
-      numeric(1)
-    )
-
-    perm_norms_spec <- vapply(
-      norm_vals,
-      \(x) x$spec,
-      numeric(1)
-    )
-
-    # perm_norms_ln_spd <- vapply(
-    #   norm_vals,
-    #   \(x) x$ln_spd,
-    #   numeric(1)
-    # )
-
-    #### P-values ####
-
-    # p_value_frob <- mean(
-    #   perm_norms_frob >= norm_orig_frob
-    # )
-    p_value_frob <- (
-      1 + sum(perm_norms_frob >= norm_orig_frob)
-    ) / (length(perm_norms_frob) + 1)
-
-    # p_value_inf <- mean(
-    #   perm_norms_inf >= norm_orig_inf
-    # )
-    p_value_inf <- (
-      1 + sum(perm_norms_inf >= norm_orig_inf)
-    ) / (length(perm_norms_inf) + 1)
-
-    # p_value_spec <- mean(
-    #   perm_norms_spec >= norm_orig_spec
-    # )
-    p_value_spec <- (
-      1 + sum(perm_norms_spec >= norm_orig_spec)
-    ) / (length(perm_norms_spec) + 1)
-
-    # p_value_ln_spd <- mean(
-    #   perm_norms_ln_spd >= norm_orig_ln_spd
-    # )
-
-    if (verbose) {
-      message(
-        round(
-          grid_position / length(grid_vals) * 100,
-          1
-        ),
-        "% of candidate boundaries completed"
+    
+    if (inherits(observed_norms, "norm_error")) {
+      return(
+        make_failed_result(
+          block_info = block_info,
+          stage = "observed_norm",
+          message =
+            observed_norms$message
+        )
       )
     }
-
-    #### Return results ####
-
-    ret_list <- list(
-      block_info = block_info,
-      p_value_frob = p_value_frob,
-      p_value_inf = p_value_inf,
-      p_value_spec = p_value_spec,
-      # p_value_ln_spd = p_value_ln_spd,
-      norm_orig_frob = norm_orig_frob,
-      norm_orig_inf = norm_orig_inf,
-      norm_orig_spec = norm_orig_spec,
-      # norm_orig_ln_spd = norm_orig_ln_spd,
-      perm_norms_frob = perm_norms_frob,
-      perm_norms_inf = perm_norms_inf,
-      perm_norms_spec = perm_norms_spec # ,
-      # perm_norms_ln_spd = perm_norms_ln_spd
-    )
-
-    if (ret_dep) {
-      dep_vals_df <- lapply(dep, coef) |>
-        bind_rows(.id = "block")
-
-      ret_list$dep_vals <- dep_vals_df
+    
+    #### One permutation ####
+    
+    run_one_permutation <- \(attempt_number) {
+      if (verbose) {
+        message(
+          "Candidate ",
+          grid_position,
+          "/",
+          length(grid_vals),
+          "; permutation attempt ",
+          attempt_number
+        )
+      }
+      
+      dist_perm <- tryCatch(
+        {
+          run_perm_test_prep(
+            marginal_data =
+              data_laplace_block,
+            permutation_groups =
+              permutation_groups,
+            start_values = start
+          )
+        },
+        error = \(e) {
+          NULL
+        }
+      )
+      
+      if (
+        is.null(dist_perm) ||
+        is_failed_result(dist_perm)
+      ) {
+        return(NULL)
+      }
+      
+      tryCatch(
+        {
+          list(
+            frob = compare_blocks(
+              dist_perm,
+              type = "norm",
+              norm_type = "F"
+            ),
+            inf = compare_blocks(
+              dist_perm,
+              type = "norm",
+              norm_type = "M"
+            ),
+            spec = compare_blocks(
+              dist_perm,
+              type = "norm",
+              norm_type = "2"
+            )
+          )
+        },
+        error = \(e) {
+          NULL
+        }
+      )
     }
-
-    ret_list
+    
+    #### Obtain successful permutations ####
+    
+    norm_vals <- list()
+    n_attempted <- 0L
+    
+    while (
+      length(norm_vals) < n_perm &&
+      n_attempted <
+      max_perm_attempts
+    ) {
+      n_needed <- n_perm -
+        length(norm_vals)
+      
+      n_remaining <- max_perm_attempts -
+        n_attempted
+      
+      batch_size <- min(
+        n_needed,
+        n_remaining
+      )
+      
+      attempt_numbers <- n_attempted +
+        seq_len(batch_size)
+      
+      batch_results <- permutation_apply(
+        attempt_numbers,
+        run_one_permutation
+      )
+      
+      norm_vals <- c(
+        norm_vals,
+        Filter(
+          Negate(is.null),
+          batch_results
+        )
+      )
+      
+      n_attempted <- n_attempted +
+        batch_size
+    }
+    
+    n_successful <- length(norm_vals)
+    n_failed <- n_attempted -
+      n_successful
+    
+    failure_rate <- if (
+      n_attempted > 0L
+    ) {
+      n_failed / n_attempted
+    } else {
+      NA_real_
+    }
+    
+    message(
+      "Candidate ",
+      i,
+      ": ",
+      n_successful,
+      " successful permutations from ",
+      n_attempted,
+      " attempts; ",
+      n_failed,
+      " failed (",
+      round(
+        100 * failure_rate,
+        2
+      ),
+      "%)."
+    )
+    
+    if (n_successful > 0L) {
+      perm_norms_frob <- vapply(
+        norm_vals,
+        \(x) x$frob,
+        numeric(1)
+      )
+      
+      perm_norms_inf <- vapply(
+        norm_vals,
+        \(x) x$inf,
+        numeric(1)
+      )
+      
+      perm_norms_spec <- vapply(
+        norm_vals,
+        \(x) x$spec,
+        numeric(1)
+      )
+    } else {
+      perm_norms_frob <- numeric()
+      perm_norms_inf <- numeric()
+      perm_norms_spec <- numeric()
+    }
+    
+    permutation_info <- list(
+      perm_norms_frob =
+        perm_norms_frob,
+      perm_norms_inf =
+        perm_norms_inf,
+      perm_norms_spec =
+        perm_norms_spec,
+      n_attempted =
+        n_attempted,
+      n_successful =
+        n_successful,
+      n_failed =
+        n_failed,
+      failure_rate =
+        failure_rate
+    )
+    
+    if (n_successful == 0L) {
+      return(
+        make_failed_result(
+          block_info = block_info,
+          stage = "permutation",
+          message =
+            "No successful permutations.",
+          norm_orig = observed_norms,
+          permutation_info =
+            permutation_info
+        )
+      )
+    }
+    
+    if (
+      is.finite(failure_rate) &&
+      failure_rate >
+      max_failure_rate
+    ) {
+      warning(
+        "Candidate ",
+        i,
+        " has a permutation failure rate of ",
+        round(
+          100 * failure_rate,
+          2
+        ),
+        "%, exceeding the permitted ",
+        round(
+          100 * max_failure_rate,
+          2
+        ),
+        "%. No p-value will be reported.",
+        call. = FALSE
+      )
+      
+      return(
+        make_failed_result(
+          block_info = block_info,
+          stage =
+            "permutation_failure_rate",
+          message = paste0(
+            "Permutation failure rate exceeded ",
+            max_failure_rate,
+            "."
+          ),
+          norm_orig = observed_norms,
+          permutation_info =
+            permutation_info
+        )
+      )
+    }
+    
+    if (n_successful < n_perm) {
+      warning(
+        "Only ",
+        n_successful,
+        " successful permutations were obtained for candidate ",
+        i,
+        ".",
+        call. = FALSE
+      )
+    }
+    
+    #### Corrected Monte Carlo p-values ####
+    
+    p_value_frob <- (
+      1 +
+        sum(
+          perm_norms_frob >=
+            observed_norms$frob
+        )
+    ) / (
+      n_successful + 1
+    )
+    
+    p_value_inf <- (
+      1 +
+        sum(
+          perm_norms_inf >=
+            observed_norms$inf
+        )
+    ) / (
+      n_successful + 1
+    )
+    
+    p_value_spec <- (
+      1 +
+        sum(
+          perm_norms_spec >=
+            observed_norms$spec
+        )
+    ) / (
+      n_successful + 1
+    )
+    
+    message(
+      "Candidate ",
+      i,
+      ": p(Frobenius) = ",
+      signif(
+        p_value_frob,
+        4
+      ),
+      ", p(max-entry) = ",
+      signif(
+        p_value_inf,
+        4
+      ),
+      ", p(spectral) = ",
+      signif(
+        p_value_spec,
+        4
+      ),
+      "; failure rate = ",
+      round(
+        100 * failure_rate,
+        2
+      ),
+      "% (",
+      n_failed,
+      "/",
+      n_attempted,
+      ")."
+    )
+    
+    #### Successful result ####
+    
+    ret <- list(
+      success = TRUE,
+      block_info = block_info,
+      
+      p_value_frob =
+        p_value_frob,
+      p_value_inf =
+        p_value_inf,
+      p_value_spec =
+        p_value_spec,
+      
+      norm_orig_frob =
+        observed_norms$frob,
+      norm_orig_inf =
+        observed_norms$inf,
+      norm_orig_spec =
+        observed_norms$spec,
+      
+      perm_norms_frob =
+        perm_norms_frob,
+      perm_norms_inf =
+        perm_norms_inf,
+      perm_norms_spec =
+        perm_norms_spec,
+      
+      permutation_unit = if (
+        year_window_mode
+      ) {
+        "season_year"
+      } else {
+        "observation"
+      },
+      
+      n_attempted =
+        n_attempted,
+      n_successful =
+        n_successful,
+      n_failed =
+        n_failed,
+      failure_rate =
+        failure_rate,
+      
+      error_stage =
+        NA_character_,
+      error_message =
+        NA_character_
+    )
+    
+    if (ret_dep) {
+      ret$dep_vals <- lapply(
+        dep,
+        coef
+      ) |>
+        bind_rows(
+          .id = "block"
+        )
+    }
+    
+    ret
   }
-
-  i_fun(grid_vals, ret_fun)
+  
+  grid_apply(
+    grid_vals,
+    test_candidate
+  )
 }
 
 seed_fun <- \(seed) {
