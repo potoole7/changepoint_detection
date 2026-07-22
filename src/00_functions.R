@@ -563,36 +563,115 @@ log_euclid <- \(M1, M2, sigma = NULL, eps = 1e-6) {
 }
 
 # Function to calculate norm or clustering diff
-compare_blocks <- \(dist, type = c("norm", "clustering"), norm_type = "F") {
+compare_blocks <- \(
+  dist,
+  type = c("norm", "clustering"),
+  norm_type = "F"
+) {
+  type <- match.arg(type)
+
   if (type == "norm") {
-    # norm of difference
-    if (norm_type == "log SPD") {
-      return(
-        log_euclid(as.matrix(dist[[1]]$dist_mat), as.matrix(dist[[2]]$dist_mat))
-      )
-    } else {
-      mat <- as.matrix(dist[[2]]$dist_mat - dist[[1]]$dist_mat)
-      return(norm(
-        mat,
-        type = norm_type
-      ))
+    M1 <- as.matrix(dist[[1]]$dist_mat)
+    M2 <- as.matrix(dist[[2]]$dist_mat)
+
+    if (
+      !is.null(rownames(M1)) &&
+        !is.null(rownames(M2))
+    ) {
+      if (
+        !setequal(rownames(M1), rownames(M2)) ||
+          !setequal(colnames(M1), colnames(M2))
+      ) {
+        stop(
+          "The two distance matrices contain different locations."
+        )
+      }
+
+      M2 <- M2[
+        rownames(M1),
+        colnames(M1),
+        drop = FALSE
+      ]
     }
-  } else if (type == "clustering") {
-    # clustering solution
+
+    if (!identical(dim(M1), dim(M2))) {
+      stop("Distance matrices have different dimensions.")
+    }
+
+    if (norm_type == "log SPD") {
+      return(log_euclid(M1, M2))
+    }
+
+    A <- M2 - M1
+    value <- norm(A, type = norm_type)
+
+    if (norm_type == "2") {
+      frobenius <- norm(A, type = "F")
+
+      if (
+        value >
+          frobenius +
+            100 * .Machine$double.eps *
+              max(1, frobenius)
+      ) {
+        stop(
+          "Spectral norm exceeds Frobenius norm: ",
+          "spectral = ", value,
+          ", Frobenius = ", frobenius
+        )
+      }
+    }
+
+    return(value)
+  }
+
+  if (type == "clustering") {
     clust <- lapply(
       dist,
       cecl_clust,
       k = n_clust,
-      # cluster_mem = sort(rep(1:n_clust, each = n_locs / n_clust)),
       seed = seed
     )
-    # calculate difference in clustering solutions
-    return(mclust::adjustedRandIndex(
-      clust[[1]]$pam$clustering,
-      clust[[2]]$pam$clustering
-    ))
+
+    return(
+      mclust::adjustedRandIndex(
+        clust[[1]]$pam$clustering,
+        clust[[2]]$pam$clustering
+      )
+    )
   }
 }
+
+# compare_blocks <- \(dist, type = c("norm", "clustering"), norm_type = "F") {
+#   if (type == "norm") {
+#     # norm of difference
+#     if (norm_type == "log SPD") {
+#       return(
+#         log_euclid(as.matrix(dist[[1]]$dist_mat), as.matrix(dist[[2]]$dist_mat))
+#       )
+#     } else {
+#       mat <- as.matrix(dist[[2]]$dist_mat - dist[[1]]$dist_mat)
+#       return(norm(
+#         mat,
+#         type = norm_type
+#       ))
+#     }
+#   } else if (type == "clustering") {
+#     # clustering solution
+#     clust <- lapply(
+#       dist,
+#       cecl_clust,
+#       k = n_clust,
+#       # cluster_mem = sort(rep(1:n_clust, each = n_locs / n_clust)),
+#       seed = seed
+#     )
+#     # calculate difference in clustering solutions
+#     return(mclust::adjustedRandIndex(
+#       clust[[1]]$pam$clustering,
+#       clust[[2]]$pam$clustering
+#     ))
+#   }
+# }
 
 # # Function to run single iteration of exploration for a given block position i
 # single_run_explore <- \(data, i, laplace_trans = FALSE, ...) {
@@ -693,76 +772,76 @@ single_run_explore <- \(
   ...
 ) {
   #### Validate arguments ####
-  
+
   if (!is.null(n_per_block) && !is.null(n_years_per_block)) {
     stop(
       "Supply only one of `n_per_block` and ",
       "`n_years_per_block`."
     )
   }
-  
+
   row_window_mode <- !is.null(n_per_block)
   year_window_mode <- !is.null(n_years_per_block)
-  
+
   if (row_window_mode) {
     if (
       length(n_per_block) != 1L ||
-      is.na(n_per_block) ||
-      n_per_block < 1L
+        is.na(n_per_block) ||
+        n_per_block < 1L
     ) {
       stop("`n_per_block` must be a positive integer.")
     }
-    
+
     n_per_block <- as.integer(n_per_block)
   }
-  
+
   if (year_window_mode) {
     required_columns <- c(
       "name",
       "date",
       "season_year"
     )
-    
+
     missing_columns <- setdiff(
       required_columns,
       names(data)
     )
-    
+
     if (length(missing_columns) > 0L) {
       stop(
         "Year-based windows require the following columns: ",
         paste(missing_columns, collapse = ", ")
       )
     }
-    
+
     if (
       length(n_years_per_block) != 1L ||
-      is.na(n_years_per_block) ||
-      n_years_per_block < 1L
+        is.na(n_years_per_block) ||
+        n_years_per_block < 1L
     ) {
       stop(
         "`n_years_per_block` must be a positive integer."
       )
     }
-    
+
     n_years_per_block <- as.integer(
       n_years_per_block
     )
   }
-  
+
   #### Construct blocks ####
-  
+
   if (year_window_mode) {
     all_years <- sort(unique(data$season_year))
     year_position <- match(i, all_years)
-    
+
     if (is.na(year_position)) {
       stop(
         "Candidate year ", i,
         " is not present in `season_year`."
       )
     }
-    
+
     if (year_position < n_years_per_block) {
       stop(
         "Candidate year ", i,
@@ -770,10 +849,10 @@ single_run_explore <- \(
         " years available on the left."
       )
     }
-    
+
     if (
       length(all_years) - year_position <
-      n_years_per_block
+        n_years_per_block
     ) {
       stop(
         "Candidate year ", i,
@@ -781,17 +860,17 @@ single_run_explore <- \(
         " years available on the right."
       )
     }
-    
+
     left_years <- all_years[
       (year_position - n_years_per_block + 1L):
-        year_position
+      year_position
     ]
-    
+
     right_years <- all_years[
       (year_position + 1L):
-        (year_position + n_years_per_block)
+      (year_position + n_years_per_block)
     ]
-    
+
     data_block <- data |>
       filter(
         season_year %in% c(
@@ -807,7 +886,7 @@ single_run_explore <- \(
         )
       ) |>
       arrange(name, date)
-    
+
     # Confirm that no seasonal year has been split.
     year_check <- data_block |>
       distinct(season_year, block) |>
@@ -815,14 +894,14 @@ single_run_explore <- \(
         season_year,
         name = "n_blocks"
       )
-    
+
     if (any(year_check$n_blocks != 1L)) {
       stop(
         "At least one seasonal year was assigned to ",
         "more than one block."
       )
     }
-    
+
     # Confirm equal date coverage across stations within each block.
     station_block_sizes <- data_block |>
       distinct(name, block, date) |>
@@ -831,31 +910,31 @@ single_run_explore <- \(
         block,
         name = "n_dates"
       )
-    
+
     coverage_check <- station_block_sizes |>
       group_by(block) |>
       summarise(
         n_distinct_sizes = n_distinct(n_dates),
         .groups = "drop"
       )
-    
+
     if (any(coverage_check$n_distinct_sizes != 1L)) {
       stop(
         "Stations have different numbers of dates within ",
         "at least one block."
       )
     }
-    
+
     n_left <- data_block |>
       filter(block == "1") |>
       summarise(n = n_distinct(date)) |>
       pull(n)
-    
+
     n_right <- data_block |>
       filter(block == "2") |>
       summarise(n = n_distinct(date)) |>
       pull(n)
-    
+
     block_info <- list(
       mode = "season_year",
       split_after = i,
@@ -867,29 +946,28 @@ single_run_explore <- \(
       n_left = n_left,
       n_right = n_right
     )
-    
   } else {
     #### Original row-based modes ####
-    
+
     data_ordered <- data
-    
+
     if ("date" %in% names(data_ordered)) {
       data_ordered <- data_ordered |>
         arrange(name, date)
     }
-    
+
     n_by_station <- data_ordered |>
       count(
         name,
         name = "n_observations"
       )
-    
+
     if (i < 1L) {
       stop(
         "The candidate row position must be positive."
       )
     }
-    
+
     if (any(i >= n_by_station$n_observations)) {
       stop(
         "Candidate row ", i,
@@ -897,7 +975,7 @@ single_run_explore <- \(
         "for every station."
       )
     }
-    
+
     data_block <- data_ordered |>
       group_by(name) |>
       mutate(
@@ -908,7 +986,7 @@ single_run_explore <- \(
         )
       ) |>
       ungroup()
-    
+
     if (row_window_mode) {
       if (i < n_per_block) {
         stop(
@@ -917,11 +995,11 @@ single_run_explore <- \(
           " observations on the left."
         )
       }
-      
+
       if (
         any(
           n_by_station$n_observations - i <
-          n_per_block
+            n_per_block
         )
       ) {
         stop(
@@ -930,24 +1008,24 @@ single_run_explore <- \(
           " observations on the right."
         )
       }
-      
+
       left_block <- data_block |>
         filter(block == "1") |>
         group_by(name) |>
         slice_tail(n = n_per_block) |>
         ungroup()
-      
+
       right_block <- data_block |>
         filter(block == "2") |>
         group_by(name) |>
         slice_head(n = n_per_block) |>
         ungroup()
-      
+
       data_block <- bind_rows(
         left_block,
         right_block
       )
-      
+
       block_info <- list(
         mode = "fixed_rows",
         split_after = i,
@@ -957,7 +1035,6 @@ single_run_explore <- \(
         n_left = n_per_block,
         n_right = n_per_block
       )
-      
     } else {
       block_info <- list(
         mode = "cumulative_rows",
@@ -972,9 +1049,9 @@ single_run_explore <- \(
       )
     }
   }
-  
+
   #### Helper for failed fits ####
-  
+
   failed_result <- \(
     message,
     stage = "calc_dist"
@@ -991,9 +1068,9 @@ single_run_explore <- \(
       error_message = message
     )
   }
-  
+
   #### Convert to required CE structure ####
-  
+
   data_laplace_block <- trans_fun(
     data_block |>
       select(
@@ -1005,9 +1082,9 @@ single_run_explore <- \(
     n_vars,
     laplace_trans
   )
-  
+
   #### Calculate divergence matrices ####
-  
+
   dist_attempt <- tryCatch(
     {
       suppressMessages(
@@ -1026,7 +1103,7 @@ single_run_explore <- \(
       )
     }
   )
-  
+
   # calc_dist threw an error.
   if (inherits(dist_attempt, "calc_dist_error")) {
     error_message <- paste0(
@@ -1035,13 +1112,13 @@ single_run_explore <- \(
       ": ",
       dist_attempt$message
     )
-    
+
     if (!skip_failed) {
       stop(error_message, call. = FALSE)
     }
-    
+
     warning(error_message, call. = FALSE)
-    
+
     return(
       failed_result(
         message = dist_attempt$message,
@@ -1049,29 +1126,29 @@ single_run_explore <- \(
       )
     )
   }
-  
+
   dist_obj <- dist_attempt
-  
+
   # calc_dist returned a bare NA.
   is_na_result <- (
     is.atomic(dist_obj) &&
       length(dist_obj) == 1L &&
       is.na(dist_obj)
   )
-  
+
   if (is_na_result) {
     error_message <- paste0(
       "`calc_dist()` returned NA at candidate ",
       i,
       "."
     )
-    
+
     if (!skip_failed) {
       stop(error_message, call. = FALSE)
     }
-    
+
     warning(error_message, call. = FALSE)
-    
+
     return(
       failed_result(
         message = error_message,
@@ -1079,9 +1156,9 @@ single_run_explore <- \(
       )
     )
   }
-  
+
   #### Extract distance matrices ####
-  
+
   has_dep <- (
     !is.null(names(dist_obj)) &&
       all(
@@ -1089,15 +1166,15 @@ single_run_explore <- \(
           names(dist_obj)
       )
   )
-  
+
   if (has_dep) {
     dist <- dist_obj$dist
   } else {
     dist <- dist_obj
   }
-  
+
   #### Validate distance-matrix structure ####
-  
+
   valid_dist_structure <- (
     is.list(dist) &&
       length(dist) == 2L &&
@@ -1114,20 +1191,20 @@ single_run_explore <- \(
         )
       )
   )
-  
+
   if (!valid_dist_structure) {
     error_message <- paste0(
       "Invalid distance-matrix result at candidate ",
       i,
       "."
     )
-    
+
     if (!skip_failed) {
       stop(error_message, call. = FALSE)
     }
-    
+
     warning(error_message, call. = FALSE)
-    
+
     return(
       failed_result(
         message = error_message,
@@ -1135,13 +1212,13 @@ single_run_explore <- \(
       )
     )
   }
-  
+
   #### Ensure no location was silently dropped ####
-  
+
   expected_n_locations <- n_distinct(
     data_block$name
   )
-  
+
   correct_dimensions <- all(
     vapply(
       dist,
@@ -1157,7 +1234,7 @@ single_run_explore <- \(
       logical(1)
     )
   )
-  
+
   if (!correct_dimensions) {
     actual_dimensions <- paste(
       vapply(
@@ -1172,7 +1249,7 @@ single_run_explore <- \(
       ),
       collapse = "; "
     )
-    
+
     error_message <- paste0(
       "At least one location was dropped at candidate ",
       i,
@@ -1184,13 +1261,13 @@ single_run_explore <- \(
       actual_dimensions,
       "."
     )
-    
+
     if (!skip_failed) {
       stop(error_message, call. = FALSE)
     }
-    
+
     warning(error_message, call. = FALSE)
-    
+
     return(
       failed_result(
         message = error_message,
@@ -1198,13 +1275,13 @@ single_run_explore <- \(
       )
     )
   }
-  
+
   #### Calculate discrepancy statistics ####
-  
+
   norm_attempt <- tryCatch(
     {
       mat1 <- dist[[1]]$dist_mat
-      
+
       norm_results <- list(
         frob = compare_blocks(
           dist,
@@ -1215,27 +1292,27 @@ single_run_explore <- \(
         spec = NA_real_,
         ln_spd = NA_real_
       )
-      
+
       if (nrow(mat1) > 2L) {
         norm_results$inf <- compare_blocks(
           dist,
           type = "norm",
           norm_type = "M"
         )
-        
+
         norm_results$spec <- compare_blocks(
           dist,
           type = "norm",
           norm_type = "2"
         )
-        
+
         norm_results$ln_spd <- compare_blocks(
           dist,
           type = "norm",
           norm_type = "log SPD"
         )
       }
-      
+
       norm_results
     },
     error = \(e) {
@@ -1247,7 +1324,7 @@ single_run_explore <- \(
       )
     }
   )
-  
+
   if (inherits(norm_attempt, "norm_error")) {
     error_message <- paste0(
       "Norm calculation failed at candidate ",
@@ -1255,13 +1332,13 @@ single_run_explore <- \(
       ": ",
       norm_attempt$message
     )
-    
+
     if (!skip_failed) {
       stop(error_message, call. = FALSE)
     }
-    
+
     warning(error_message, call. = FALSE)
-    
+
     return(
       failed_result(
         message = norm_attempt$message,
@@ -1269,9 +1346,9 @@ single_run_explore <- \(
       )
     )
   }
-  
+
   #### Return successful result ####
-  
+
   list(
     success = TRUE,
     block_info = block_info,
