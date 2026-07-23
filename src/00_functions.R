@@ -921,12 +921,27 @@ calc_dist <- \(
   
   #### Validate marginal structures and exceedance counts ####
   
+  # expected_names <- lapply(
+  #   seq_along(marg),
+  #   \(block_index) {
+  #     transformed <- marg[
+  #       [block_index]
+  #     ]$transformed
+  #     
+  #     if (
+  #       is.null(transformed) ||
+  #       !is.list(transformed)
+  #     ) {
+  #       return(NULL)
+  #     }
+  #     
+  #     names(transformed)
+  #   }
+  # )
   expected_names <- lapply(
     seq_along(marg),
     \(block_index) {
-      transformed <- marg[
-        [block_index]
-      ]$transformed
+      transformed <- marg[[block_index]]$transformed
       
       if (
         is.null(transformed) ||
@@ -975,9 +990,7 @@ calc_dist <- \(
       block_index in
       seq_along(marg)
     ) {
-      transformed <- marg[
-        [block_index]
-      ]$transformed
+      transformed <- marg[[block_index]]$transformed
       
       for (
         location in
@@ -1049,9 +1062,7 @@ calc_dist <- \(
             na.rm = TRUE
           )
           
-          exceedance_rows[
-            [length(exceedance_rows) + 1L]
-          ] <- tibble(
+          exceedance_rows[[length(exceedance_rows) + 1L]] <- tibble(
             block = block_index,
             name = location,
             cond_var =
@@ -1211,9 +1222,7 @@ calc_dist <- \(
             ),
             \(location_index) {
               data.frame(
-                x$transformed[
-                  [location_index]
-                ]
+                x$transformed[[location_index]]
               ) |>
                 mutate(
                   name = paste0(
@@ -2619,9 +2628,7 @@ perm_test_prep <- \(
     lapply(
       seq_len(n_blocks),
       \(block_index) {
-        block <- transformed_blocks[
-          [block_index]
-        ]
+        block <- transformed_blocks[[block_index]]
         
         bind_rows(
           Map(
@@ -2650,9 +2657,7 @@ perm_test_prep <- \(
                   original_block = block_index,
                   observation_index = row_number(),
                   permutation_group =
-                    permutation_groups[
-                      [block_index]
-                    ]
+                    permutation_groups[[block_index]]
                 )
             },
             block,
