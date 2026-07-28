@@ -3,6 +3,9 @@
 /*.csv
 /*.rds
 
+data/
+plots/
+
 Rproj.user
 .Rhistory
 .RData
