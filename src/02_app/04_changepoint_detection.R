@@ -1255,9 +1255,9 @@ screen_failure_summary
 sink()
 
 # save
-readr::write_csv(screen_res_df, "screen_res.csv.gz")
+readr::write_csv(screen_res_df, "data/02_app/screen_res.csv.gz")
 
-screen_res_df <- readr::read_csv("screen_res.csv.gz")
+screen_res_df <- readr::read_csv("data/02_app/screen_res.csv.gz")
 
 
 #### Plotting ####
@@ -1612,7 +1612,11 @@ ggsave("p_all_norms_25.png", p_all_norms_25, width = 12, height = 8)
 n_perm_screen <- 1000L
 n_years_per_block <- 25L # best choice, from screening round
 
-sink("sink_perm_output.txt")
+sink(paste0(
+  "sink_perm_output_nperm_", 
+  n_perm_screen, "_n_years_", 
+  n_years_per_block, ".txt"
+))
 
 source("src/00_functions.R")
 permutation_scan_results <- setNames(
