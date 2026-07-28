@@ -29,6 +29,7 @@ library(data.table)
 library(sf)
 library(ggplot2)
 library(patchwork)
+library(SPEI)
 
 #### Functions ####
 
@@ -111,6 +112,7 @@ areas_ccaa <- areas %>%
 
 # dates over which to pull data
 start_date <- as.Date("1960-01-01")
+# start_date <- as.Date("1950-01-01")
 end_date <- as.Date("2024-12-31")
 
 # station file
@@ -168,7 +170,8 @@ data_lst <- mapply(
   load_data,
   files_es,
   c("tx", "rr", "fg"),
-  min_date = start_date,
+  # min_date = start_date,
+  min_date = start_date - years(1), # need year before for Winter data
   max_date = end_date,
   SIMPLIFY = FALSE
 )
@@ -231,6 +234,8 @@ ecad_filtered <- ecad_filtered[
   !station_name %in% c("Melilla")
 ]
 
+stopifnot(length(unique(ecad_filtered$station_id)) > 80) # ~86
+
 
 #### Convert to weekly scale ####
 
@@ -238,7 +243,10 @@ ecad_filtered <- ecad_filtered[
 ecad_weekly <- ecad_filtered[
   ,
   .(
-    temp       = max(temp, na.rm = TRUE),
+    # temp       = max(temp, na.rm = TRUE),
+    temp_max   = as.numeric(max(temp, na.rm = TRUE)),
+    # use high quantile rather than max to better reflect how hot a week is
+    temp       = quantile(temp, probs = 0.9, na.rm = TRUE),
     rain       = sum(rain, na.rm = TRUE),
     wind_speed = mean(wind_speed, na.rm = TRUE)
   ),
@@ -253,6 +261,8 @@ ecad_weekly <- ecad_filtered[
 
 # replace NaN with NA in weekly data
 ecad_weekly[is.nan(wind_speed), wind_speed := NA_real_]
+# replace infs with NA
+ecad_weekly[is.infinite(temp), temp := NA_real_]
 
 # how many sites have full records (i.e all of n_weeks)?
 # start_date_temp <- as.Date("1950-01-01")
@@ -283,122 +293,200 @@ ecad_weekly_complete <- ecad_weekly[
 
 #### Calculate SPI ####
 
+# # ecad_weekly_complete[
+# #   ,
+# #   season := fifelse(
+# #     month(date) %in% c(10:12, 1:3),
+# #     "Winter",
+# #     "Summer"
+# #   )
+# # ]
+#
+# # add season
 # ecad_weekly_complete[
 #   ,
-#   season := fifelse(
-#     month(date) %in% c(10:12, 1:3),
-#     "Winter",
-#     "Summer"
-#   )
+#   month := month(date)
 # ]
-
-# add season
-ecad_weekly_complete[
-  ,
-  month := month(date)
-]
-
-# TODO Rewrite in data.table
-ecad_weekly_complete <- ecad_weekly_complete |>
-  mutate(season = case_when(
-    month %in% c(12, 1:2) ~ "Winter",
-    month %in% 3:5 ~ "Spring",
-    month %in% 6:8 ~ "Summer",
-    TRUE ~ "Autumn"
-  ))
-
-# assign season-year:
-# Jan-Mar belong to the winter that started in the previous calendar year
+#
+# # TODO Rewrite in data.table
+# ecad_weekly_complete <- ecad_weekly_complete |>
+#   mutate(season = case_when(
+#     month %in% c(12, 1:2) ~ "Winter",
+#     month %in% 3:5 ~ "Spring",
+#     month %in% 6:8 ~ "Summer",
+#     TRUE ~ "Autumn"
+#   ))
+#
+# # assign season-year:
+# # Jan-Mar belong to the winter that started in the previous calendar year
+# # ecad_weekly_complete[
+# #   ,
+# #   season_year := fifelse(
+# #     season == "Winter" & month(date) %in% c(1, 2, 3),
+# #     year(date) - 1L,
+# #     year(date)
+# #   )
+# # ]
+# # Jan-Feb belong to the winter that started in the previous calendar year
 # ecad_weekly_complete[
 #   ,
 #   season_year := fifelse(
-#     season == "Winter" & month(date) %in% c(1, 2, 3),
+#     season == "Winter" & month(date) %in% c(1, 2),
 #     year(date) - 1L,
 #     year(date)
 #   )
 # ]
-# Jan-Feb belong to the winter that started in the previous calendar year
-ecad_weekly_complete[
-  ,
-  season_year := fifelse(
-    season == "Winter" & month(date) %in% c(1, 2),
-    year(date) - 1L,
-    year(date)
-  )
-]
-
-# seasonal precipitation totals
-seasonal_rain <- ecad_weekly_complete[
-  ,
-  .(
-    rain_season = sum(rain, na.rm = TRUE)
-  ),
-  by = .(
-    station_id,
-    station_name,
-    lon,
-    lat,
-    season,
-    season_year
-  )
-]
-
-# remove edge season at start
-seasonal_rain <- seasonal_rain[
-  !(season == "Winter" & season_year == year(start_date) - 1L)
-]
-
-# # empirical drought index by station and season
-# seasonal_rain[
+#
+# # seasonal precipitation totals
+# seasonal_rain <- ecad_weekly_complete[
 #   ,
-#   rain_u := frank(rain_season, ties.method = "average") / (.N + 1),
-#   # by = .(station_id, season)
-#   by = .(season)
-# ]
-
-# empirical drought indexes:
-# # Calculate empirical/non-parametric seasonal SPI
-# Local: relative to each station's own seasonal climatology
-seasonal_rain[
-  ,
-  drought_local := 1 - frank(rain_season, ties.method = "average") / (.N + 1),
-  by = .(station_id, season)
-]
-
-# Global: relative to all stations in the same season/year
-seasonal_rain[
-  ,
-  drought_global := 1 - frank(rain_season, ties.method = "average") / (.N + 1),
-  by = .(season, season_year)
-]
-
-# standardise to normal distribution (allows for fitting normal GAM later)
-seasonal_rain <- seasonal_rain |>
-  mutate(
-    drought_local_norm = qnorm(drought_local),
-    drought_global_norm = qnorm(drought_global)
-  )
-
-# seasonal_rain[
-#   ,
-#   spi_emp := qnorm(rain_u)
+#   .(
+#     rain_season = sum(rain, na.rm = TRUE)
+#   ),
+#   by = .(
+#     station_id,
+#     station_name,
+#     lon,
+#     lat,
+#     season,
+#     season_year
+#   )
 # ]
 #
-# # large positive is equivalent to dryness!
+# # remove edge season at start
+# seasonal_rain <- seasonal_rain[
+#   !(season == "Winter" & season_year == year(start_date) - 1L)
+# ]
+#
+# # # empirical drought index by station and season
+# # seasonal_rain[
+# #   ,
+# #   rain_u := frank(rain_season, ties.method = "average") / (.N + 1),
+# #   # by = .(station_id, season)
+# #   by = .(season)
+# # ]
+#
+# # empirical drought indexes:
+# # # Calculate empirical/non-parametric seasonal SPI
+# # Local: relative to each station's own seasonal climatology
 # seasonal_rain[
 #   ,
-#   drought_spi := -spi_emp
+#   drought_local := 1 - frank(rain_season, ties.method = "average") / (.N + 1),
+#   by = .(station_id, season)
+# ]
+#
+# # Global: relative to all stations in the same season/year
+# seasonal_rain[
+#   ,
+#   drought_global := 1 - frank(rain_season, ties.method = "average") / (.N + 1),
+#   by = .(season, season_year)
+# ]
+#
+# # standardise to normal distribution (allows for fitting normal GAM later)
+# seasonal_rain <- seasonal_rain |>
+#   mutate(
+#     drought_local_norm = qnorm(drought_local),
+#     drought_global_norm = qnorm(drought_global)
+#   )
+#
+# # seasonal_rain[
+# #   ,
+# #   spi_emp := qnorm(rain_u)
+# # ]
+# #
+# # # large positive is equivalent to dryness!
+# # seasonal_rain[
+# #   ,
+# #   drought_spi := -spi_emp
+# # ]
+#
+# # remove unneeded columns
+# seasonal_rain[, c("rain_u", "spi_emp") := NULL]
+#
+# # join seasonal drought back to weekly data
+# ecad_weekly_complete <- seasonal_rain[
+#   ecad_weekly_complete,
+#   # on = .(station_id, station_name, lon, lat, season, season_year)
+#   on = .(station_id, station_name, lon, lat, season, season_year)
 # ]
 
-# remove unneeded columns
-seasonal_rain[, c("rain_u", "spi_emp") := NULL]
+# make sure every station has every week
+station_grid <- CJ(
+  station_id = unique(ecad_weekly_complete$station_id),
+  date = all_weeks
+)
 
-# join seasonal drought back to weekly data
-ecad_weekly_complete <- seasonal_rain[
+ecad_weekly_complete <- station_grid[
   ecad_weekly_complete,
-  # on = .(station_id, station_name, lon, lat, season, season_year)
-  on = .(station_id, station_name, lon, lat, season, season_year)
+  on = .(station_id, date)
 ]
+
+# wide matrix: rows = weeks, columns = stations
+rain_wide <- dcast(
+  ecad_weekly_complete,
+  date ~ station_id,
+  value.var = "rain"
+)
+
+rain_dates <- rain_wide$date
+rain_mat <- as.matrix(rain_wide[, -"date"])
+
+# 13-week rolling SPI = approximately seasonal / 3-month SPI
+spi_13 <- SPEI::spi(
+  rain_mat,
+  # 13 weeks, week 13 uses weeks 1-13, week 14 uses 2-14
+  scale = 13,
+  # assume rainfall follows Gamma
+  # (automatically handles 0s)
+  distribution = "Gamma",
+  # Unbiased Probability Weighted Moments
+  fit = "ub-pwm",
+  # equal weight to every week
+  kernel = list(type = "rectangular", shift = 0),
+  na.rm = TRUE
+)
+
+# TODO Look into -Infs (23)
+spi_13_fitted <- spi_13$fitted
+as.data.frame(spi_13_fitted) |>
+  filter(if_any(everything(), \(x) is.infinite(x))) |>
+  nrow()
+# 243 out of 3393 rows
+# # give them a value of -4/4 (equivalent to 1 in 10,000 chance of rainfall)
+# spi_13_fitted[spi_13_fitted == -Inf] <- -4
+# spi_13_fitted[spi_13_fitted == Inf] <- 4
+# change to NA, may cause problems in tails with Gaussian GAM!!
+spi_13_fitted[spi_13_fitted == -Inf] <- NA
+spi_13_fitted[spi_13_fitted == Inf] <- NA
+
+
+# extract fitted SPI values
+spi_13_wide <- as.data.table(spi_13_fitted)
+spi_13_wide[, date := rain_dates]
+
+# convert back to long format
+spi_13_long <- melt(
+  spi_13_wide,
+  id.vars = "date",
+  variable.name = "station_id",
+  value.name = "spi_13w"
+) |>
+  # eww, mixing data.table and dplyr syntax here...
+  rename(drought_local = spi_13w) |>
+  mutate(station_id = as.integer(as.character(station_id)))
+
+spi_13_long |>
+  filter(is.na(drought_local)) |>
+  nrow()
+# 852 of 240903 rows
+
+# join back onto weekly data
+ecad_weekly_complete <- merge(
+  ecad_weekly_complete,
+  spi_13_long,
+  by = c("station_id", "date"),
+  all.x = TRUE
+)
 
 
 #### Remove neighbours ####
@@ -459,28 +547,46 @@ ecad_selected <- ecad_weekly_complete[
 # now left with 40 stations, with good coverage across Spain!
 # Is this too many to cluster/use for changepoint detection?
 
+# calculate season
+ecad_selected <- ecad_selected |>
+  mutate(
+    month = month(date),
+    season = case_when(
+      month %in% c(12, 1:2) ~ "Winter",
+      month %in% 3:5 ~ "Spring",
+      month %in% 6:8 ~ "Summer",
+      TRUE ~ "Autumn"
+    ),
+    season_year = case_when(
+      season == "Winter" & month %in% c(1, 2) ~ year(date) - 1L,
+      TRUE ~ year(date)
+    )
+  )
+
+#### Save ####
+
 # final changes
 ecad_selected <- ecad_selected |>
   mutate(
+    temp_max = temp_max / 10,
     temp = temp / 10,
     rain = rain / 10
   ) |>
   select(
     date,
+    month,
+    season,
+    season_year,
     station_id,
     station_name,
     lon,
     lat,
     temp,
+    temp_max,
     rain,
     wind_speed,
-    season,
-    season_year,
-    rain_season,
-    drought_local,
-    drought_global,
-    drought_local_norm,
-    drought_global_norm
+    # rain_season,
+    drought_local
   )
 
 # save

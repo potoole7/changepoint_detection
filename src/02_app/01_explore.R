@@ -347,7 +347,8 @@ data_mean <- data_sf |>
 # calculate differences from first decade (1960s)
 data_mean_diff <- calc_diff(
   data_mean,
-  c("temp", "rain", "wind_speed", "drought_global", "drought_local"),
+  # c("temp", "rain", "wind_speed", "drought_global", "drought_local"),
+  c("temp", "rain", "wind_speed", "drought_local"),
   first(decades)
 )
 
@@ -360,13 +361,13 @@ pdf("plots/02_app/01_rain_means.pdf", width = 10, height = 8)
 plot_pdf(data_mean, data_mean_diff, areas_ccaa, "rain", "mm")
 dev.off()
 
-pdf("plots/02_app/01_drought_global_means.pdf", width = 10, height = 8)
-plot_pdf(data_mean, data_mean_diff, areas_ccaa, "drought_local", "Local Drought Index")
-dev.off()
-
-pdf("plots/02_app/01_drought_local_means.pdf", width = 10, height = 8)
-plot_pdf(data_mean, data_mean_diff, areas_ccaa, "drought_global", "Global Drought Index")
-dev.off()
+# pdf("plots/02_app/01_drought_global_means.pdf", width = 10, height = 8)
+# plot_pdf(data_mean, data_mean_diff, areas_ccaa, "drought_local", "Local Drought Index")
+# dev.off()
+# 
+# pdf("plots/02_app/01_drought_local_means.pdf", width = 10, height = 8)
+# plot_pdf(data_mean, data_mean_diff, areas_ccaa, "drought_global", "Global Drought Index")
+# dev.off()
 
 pdf("plots/02_app/01_ws_means.pdf", width = 10, height = 8)
 plot_pdf(data_mean, data_mean_diff, areas_ccaa, "wind_speed", "m/s")
@@ -386,7 +387,8 @@ data_q <- data_sf |>
 
 data_q_diff <- calc_diff(
   data_q,
-  c("temp", "rain", "wind_speed", "drought_global", "drought_local"),
+  # c("temp", "rain", "wind_speed", "drought_global", "drought_local"),
+  c("temp", "rain", "wind_speed", "drought_local"),
   first(decades)
 )
 
@@ -399,13 +401,13 @@ pdf("plots/02_app/01a_rain_q.pdf", width = 10, height = 8)
 plot_pdf(data_q, data_q_diff, areas_ccaa, "rain", "mm")
 dev.off()
 
-pdf("plots/02_app/01a_drought_global_q.pdf", width = 10, height = 8)
-plot_pdf(data_q, data_q_diff, areas_ccaa, "drought_local", "Local Drought Index")
-dev.off()
-
-pdf("plots/02_app/01a_drought_local_q.pdf", width = 10, height = 8)
-plot_pdf(data_q, data_q_diff, areas_ccaa, "drought_global", "Global Drought Index")
-dev.off()
+# pdf("plots/02_app/01a_drought_global_q.pdf", width = 10, height = 8)
+# plot_pdf(data_q, data_q_diff, areas_ccaa, "drought_local", "Local Drought Index")
+# dev.off()
+# 
+# pdf("plots/02_app/01a_drought_local_q.pdf", width = 10, height = 8)
+# plot_pdf(data_q, data_q_diff, areas_ccaa, "drought_global", "Global Drought Index")
+# dev.off()
 
 pdf("plots/02_app/01a_ws_q.pdf", width = 10, height = 8)
 plot_pdf(data_q, data_q_diff, areas_ccaa, "wind_speed", "m/s")
@@ -457,7 +459,8 @@ chi_settings_df <- tidyr::crossing(
   # "season" = c("Winter", "Summer", NA),
   "season" = c("Winter", "Spring", "Summer", "Autumn", NA),
   # "combo"  = c("temp - rain", "rain - wind_speed"),
-  "combo"  = c("temp - drought_global", "temp - drought_local", "rain - wind_speed"),
+  # "combo"  = c("temp - drought_global", "temp - drought_local", "rain - wind_speed"),
+  "combo"  = c("temp - drought_local", "rain - wind_speed"),
   "decade" = c(NA, decades)
 ) |>
   separate_wider_delim(combo, delim = " - ", names = c("var1", "var2")) |>
@@ -550,13 +553,13 @@ pdf("plots/02_app/01b_chi_maps_temp_drought_local.pdf", width = 10, height = 8)
 lapply(plot_list[grepl("drought_local", names(plot_list))], `[[`, "plot")
 dev.off()
 
-pdf("plots/02_app/01b_chi_maps_temp_drought_global.pdf", width = 10, height = 8)
-lapply(plot_list[grepl("drought_global", names(plot_list))], `[[`, "plot")
-dev.off()
-
-pdf("plots/02_app/01b_chi_maps_rain_ws.pdf", width = 10, height = 8)
-lapply(plot_list[grepl("wind_speed", names(plot_list))], `[[`, "plot")
-dev.off()
+# pdf("plots/02_app/01b_chi_maps_temp_drought_global.pdf", width = 10, height = 8)
+# lapply(plot_list[grepl("drought_global", names(plot_list))], `[[`, "plot")
+# dev.off()
+# 
+# pdf("plots/02_app/01b_chi_maps_rain_ws.pdf", width = 10, height = 8)
+# lapply(plot_list[grepl("wind_speed", names(plot_list))], `[[`, "plot")
+# dev.off()
 
 # Calculate differences and plot
 plot_list_1960 <- plot_list[grepl("1960", names(plot_list))]
@@ -585,7 +588,7 @@ plot_list_diff <- lapply(plot_list_diff, \(x) {
   return(list("data" = chi_95_sf_diff, "plot" = p_spec))
 })
 
-plot_list_diff$`temp - drought_global - Summer - 1990`$plot
+# plot_list_diff$`temp - drought_global - Summer - 1990`$plot
 
 # save plots
 # pdf("plots/02_app/01c_chi_maps_diff_temp_rain.pdf", width = 10, height = 8)
@@ -596,9 +599,9 @@ pdf("plots/02_app/01c_chi_maps_diff_temp_drought_local.pdf", width = 10, height 
 lapply(plot_list_diff[grepl("drought_local", names(plot_list_diff))], `[[`, "plot")
 dev.off()
 
-pdf("plots/02_app/01c_chi_maps_diff_temp_drought_global.pdf", width = 10, height = 8)
-lapply(plot_list_diff[grepl("drought_global", names(plot_list_diff))], `[[`, "plot")
-dev.off()
+# pdf("plots/02_app/01c_chi_maps_diff_temp_drought_global.pdf", width = 10, height = 8)
+# lapply(plot_list_diff[grepl("drought_global", names(plot_list_diff))], `[[`, "plot")
+# dev.off()
 
 pdf("plots/02_app/01c_chi_maps_diff_rain_ws.pdf", width = 10, height = 8)
 lapply(plot_list_diff[grepl("wind_speed", names(plot_list_diff))], `[[`, "plot")

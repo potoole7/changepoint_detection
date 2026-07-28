@@ -2,7 +2,7 @@
 
 # TODO Allow for location-specific quantiles in CeCl
 
-# TODO Fit for drought_local_norm vs temp
+# TODO Fit for drought_local vs temp
 
 # Threshold with qgam model fit to all months together with# cyclical spline (don't split) (done)
 # Fit evgam model in the same way (done)
@@ -52,27 +52,18 @@ devtools::load_all("../CeCl")
 
 #### Metadata ####
 
+seed <- 123
+
 decades <- seq(1960, 2010, by = 10)
 
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
+# temp_var <- "temp"
+temp_var <- "temp_max"
+
 # var_dep <- "rain"
 # var_dep <- "drought_local"
-# var_dep <- "drought_global"
-var_dep <- "drought_local_norm"
-
-# variables of interest
-vars <- c("temp", var_dep)
-
-# different seasons and variables to fit margianl model for
-season_var_df <- tidyr::crossing(
-  # "var" = c("rain", "temp"),
-  "var" = c(var_dep, "temp"),
-  # "season" = c("Winter", "Summer")
-  "season" = c("Winter", "Spring", "Summer", "Autumn")
-) |>
-  mutate(lst_name = paste0(var, "_", season))
-
+var_dep <- "drought_local_rev"
 
 #### Load Data ####
 
@@ -95,11 +86,41 @@ data <- readr::read_csv(
   ) |>
   relocate(c(year, month), .after = date)
 
+# if specified, use maximum temperature rather than 90th quantile
+if (temp_var == "temp_max") {
+  data <- data |> 
+    mutate(
+      temp_max = ifelse(is.infinite(temp_max), NA, temp_max),
+      temp     = temp_max
+    ) |> 
+    filter(!is.na(temp))
+}
+
+# reverse drought_local variable to give positive alpha values, if desired
+if (var_dep == "drought_local_rev") {
+  data <- data |> 
+    mutate(drought_local = -drought_local)
+  var_dep <- "drought_local"
+}
+
 # remove 0s in rain if interested in rain, since they are not extreme events
 if (var_dep == "rain") {
   data <- data |>
     filter(rain > 0)
 }
+
+# variables of interest
+vars <- c("temp", var_dep)
+
+# different seasons and variables to fit margianl model for
+season_var_df <- tidyr::crossing(
+  # "var" = c("rain", "temp"),
+  "var" = c(var_dep, "temp"),
+  # "season" = c("Winter", "Summer")
+  "season" = c("Winter", "Spring", "Summer", "Autumn")
+) |>
+  mutate(lst_name = paste0(var, "_", season))
+
 
 areas <- read_sf("data/02_app/spain_shapefile.geojson") |>
   filter(
@@ -124,7 +145,7 @@ data2 <- data |>
   filter(
     if_all(
       # c(temp, rain, drought_local, drought_global),
-      c(temp, rain, drought_local_norm),
+      c(temp, rain, drought_local),
       \(x) !is.na(x)
     )
   )
@@ -134,12 +155,12 @@ station_names <- unique(data2$name)
 
 data2 |>
   filter(name == data2$name[1]) |>
-  ggplot(aes(date, drought_local_norm)) +
+  ggplot(aes(date, drought_local)) +
   geom_point(alpha = 0.7)
 
 # data_drought |>
 #   filter(name == data2$name[1]) |>
-#   ggplot(aes(season_year, drought_local_norm)) +
+#   ggplot(aes(season_year, drought_local)) +
 #   geom_point(alpha = 0.7)
 
 #### Convert temperature to seasonal max ####
@@ -148,7 +169,7 @@ data2 |>
 #   group_by(name, lon, lat, season, season_year) |>
 #   summarise(
 #     temp = max(temp, na.rm = TRUE),
-#     drought_local_norm = max(drought_local_norm, na.rm = TRUE),
+#     drought_local = max(drought_local, na.rm = TRUE),
 #     .groups = "drop"
 #   )
 
@@ -180,8 +201,8 @@ marg_season <- data2 |>
   mclapply(\(x)   {
     # lapply(\(x) {
     # browser()
-    print(x$name[1])
-    print(x$season[1])
+    # print(x$name[1])
+    # print(x$season[1])
     CeCl::cecl_marg(
       # select(x, -rain),
       # select(x, name, temp, rain),
@@ -378,7 +399,7 @@ thresh_data_var_qgam <- lapply(vars, \(var) {
     print(station)
     data_spec <- filter(data2, name == station)
 
-    f <- target ~ s(year) + s(month, bs = "cc", k = 11)
+    f <- target ~ s(year, k = 3) + s(month, bs = "cc", k = 11)
 
     thresh_qgam(
       data_spec,
@@ -422,7 +443,7 @@ evgam_fit <- \(
   # pull useful names
   x_spec <- x |>
     # select(name, year, season_month, thresh, excess) |>
-    select(name, year, month, thresh, excess) |>
+    select(name, year, month, season, thresh, excess) |>
     filter(name == !!name)
 
   # formula
@@ -434,7 +455,9 @@ evgam_fit <- \(
   # create predictions for unique rows in pred_data (ensures one pred per loc)
   predictors <- m$predictor.names
   pred_dat_distinct <- x_spec |>
-    distinct(across(all_of(predictors)), thresh)
+    # keep season to label properly
+    # distinct(across(all_of(predictors)), thresh)
+    distinct(across(all_of(predictors)), season, thresh)
   # distinct(across(all_of(predictors)), thresh)
   predictions <- cbind(
     pred_dat_distinct,
@@ -467,7 +490,7 @@ obj1 <- evgam_fit(
   # thresh_data_season_var$temp_Winter,
   thresh_data_var_qgam$temp,
   # f = list(excess ~ s(year) + s(season_month, k = 3), ~1),
-  f = list(excess ~ s(year) + s(month, k = 11, bs = "cc"), ~1),
+  f = list(excess ~ s(year, k = 3) + s(month, k = 11, bs = "cc"), ~1),
   name = name,
   ret_mod = TRUE
 )
@@ -479,7 +502,7 @@ obj2 <- evgam_fit(
   # thresh_data_season_var$temp_Winter,
   # thresh_data_season_var$temp,
   thresh_data_var_qgam$temp,
-  f = list(excess ~ s(year) + s(month, k = 11, bs = "cc"), ~ s(year)),
+  f = list(excess ~ s(year, k = 3) + s(month, k = 11, bs = "cc"), ~ s(year)),
   name = name,
   ret_mod = TRUE
 )
@@ -500,17 +523,18 @@ bind_rows(
   facet_wrap(~parameter, scale = "free") +
   cecl_theme()
 
-var <- "drought_local_norm"
-station <- "Getafe"
+# var <- "drought_local"
+# # station <- "Getafe"
+# station <- "Barcelona Fabra"
 
 # fit location-specific GPDs for each variable-season setup
-# gpd_var <- lapply(thresh_data_var_qgam, \(x) {
+set.seed(seed)
 gpd_var <- lapply(vars, \(var) {
   x <- thresh_data_var_qgam[[var]]
   print(var)
-  bind_rows(lapply(station_names, \(station) {
+  # bind_rows(lapply(station_names, \(station) {
+  bind_rows(mclapply(station_names, \(station) {
     print(station)
-    # bind_rows(mclapply(station_names, \(y) {
     dat <- x |>
       filter(name == station) |>
       # ensure distinct works on thresh
@@ -518,18 +542,20 @@ gpd_var <- lapply(vars, \(var) {
     # n_month <- length(unique(dat$season_month))
     # k_month <- min(5, n_month - 1) # must be greater than number of months avail
 
+    # TODO Use minimum k allowed
     f <- list(
       as.formula(paste0(
         # "excess ~ s(year) + s(season_month, k = ", k_month, ")"
-        "excess ~ s(year) + s(month, k = 11, bs = 'cc')"
+        "excess ~ s(year, k = 3) + s(month, k = 11, bs = 'cc')"
       )),
       ~1
     )
 
-    evgam_fit(dat, f = f, name = station)
+    ret <- evgam_fit(dat, f = f, name = station)
   }))
 })
 names(gpd_var) <- names(thresh_data_var_qgam)
+
 
 # TODO Plot time series of scale parameter
 # TODO Plot maps for some years (end of decade ones)
@@ -742,12 +768,11 @@ trans_fun <- \(x, season) {
   return(as_cecl_marg(laplace_lst))
 }
 
-marg_season_evgam <- list(
-  "Winter" = trans_fun(laplace_season_var, "Winter"),
-  "Spring" = trans_fun(laplace_season_var, "Spring"),
-  "Summer" = trans_fun(laplace_season_var, "Summer"),
-  "Autumn" = trans_fun(laplace_season_var, "Autumn")
-)
+# split by season to make it easier to use with CE later
+marg_season_evgam <- lapply(seasons, \(season) {
+  trans_fun(laplace_season_var, season)
+})
+names(marg_season) <- seasons
 
 saveRDS(
   marg_season_evgam,
@@ -796,7 +821,6 @@ dev.off()
 # Inspect country with outlier
 df <- trans_marg_ns_one(
   data2,
-  # gpd_var$temp_Summer,
   gpd_var$temp,
   "temp",
   "Summer",
@@ -833,7 +857,9 @@ n <- sum(
     data2$season == "Summer"
 )
 
+# rough scale of largest Laplace value for empirical transformation
 log((n + 1) / 2)
+
 
 #### QQ plots ####
 
@@ -959,7 +985,7 @@ qq_plots <- mclapply(station_names, \(station) {
     geom_point() +
     facet_wrap(~var) +
     cecl_theme() +
-    labs(title = x, x = "Theoretical", y = "Observed")
+    labs(title = station, x = "Theoretical", y = "Observed")
 })
 
 pdf("plots/02_app/05_qq_plots.pdf", width = 12, height = 8)
@@ -1007,14 +1033,15 @@ shape_sf |>
   # facet_wrap(~ind) +
   facet_wrap(~var) +
   cecl_theme(nejm_pal = FALSE, legend.position = "right") +
-  scale_fill_gradient2(
-    low = "blue3",
-    mid = "white",
-    high = "red3",
-    midpoint = 0,
-    # limits = c(-rng, rng),
-    na.value = "grey80"
-  )
+  # scale_fill_gradient2(
+  #   low = "blue3",
+  #   mid = "white",
+  #   high = "red3",
+  #   midpoint = 0,
+  #   # limits = c(-rng, rng),
+  #   na.value = "grey80"
+  # )
+  scale_fill_viridis_b()
 
 
 #### Scale plots ####
@@ -1022,7 +1049,7 @@ shape_sf |>
 scale_df <- bind_rows(lapply(seq_along(gpd_var), \(i) {
   gpd_var[[i]] |>
     # distinct(name, year, season_month, scale) |>
-    distinct(name, year, month, scale) |>
+    distinct(name, year, month, season, scale) |>
     mutate(
       # var = season_var_df$var[[i]],
       # season = season_var_df$season[[i]]
@@ -1036,39 +1063,48 @@ scale_sf <- scale_df |>
   ) |>
   st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas_ccaa))
 
-# TODO Try add season back??
+# TODO Plot by season here?
 scale_sf |>
   # filter(var == "rain", season == "Summer") |>
-  filter(year == 2000, var %in% c(vars)) |>
+  filter(year == 2000, var %in% c(vars), season %in% c("Summer", "Winter")) |>
   # filter(year == 2020, var == "temp") |>
   # group_by(name, var, year, season) |>
   group_by(name, var, year) |>
   filter(scale == max(abs(scale))) |>
   ungroup() |>
-  # mutate(ind = paste0(var, ", ", season)) |>
-  ggplot() +
-  geom_sf(data = areas_ccaa, fill = NA, colour = "black") +
-  geom_sf(
-    aes(fill = scale),
-    colour = "black",
-    stroke = 1,
-    size = 5,
-    pch = 21
-  ) +
-  # facet_wrap(~ind) +
-  facet_wrap(~var) +
-  cecl_theme(nejm_pal = FALSE, legend.position = "right") +
-  scale_fill_gradient2(
-    low = "blue3",
-    mid = "white",
-    high = "red3",
-    midpoint = 0,
-    na.value = "grey80"
-  )
-# scale_fill_viridis_b()
+  group_split(var) |>
+  lapply(\(x) {
+    x |>
+      mutate(ind = paste0(var, ", ", season)) |>
+      ggplot() +
+      geom_sf(data = areas_ccaa, fill = NA, colour = "black") +
+      geom_sf(
+        aes(fill = scale),
+        colour = "black",
+        stroke = 1,
+        size = 5,
+        pch = 21
+      ) +
+      facet_wrap(~ind, nrow = 2) +
+      cecl_theme(nejm_pal = FALSE, legend.position = "bottom") +
+      # scale_fill_gradient2(
+      #   low = "blue3",
+      #   mid = "white",
+      #   high = "red3",
+      #   midpoint = 0,
+      #   na.value = "grey80"
+      # )
+      scale_fill_viridis_b() +
+      theme(legend.text = element_text(size = 10, angle = 45, hjust = 1))
+    # scale_fill_viridis_b()
+  }) |>
+  wrap_plots()
 
 
 #### Return level plots ####
+
+# TODO Requires model for P(X > u) (i.e. logistic regression for
+# exceedance probability) to calculate return levels properly)
 
 # Calculate GPD return levels from fitted threshold, scale, shape
 calc_return_levels <- function(gpd_fit,
@@ -1112,7 +1148,7 @@ rl_sf <- rl_df |>
 
 rl_sf |>
   filter(
-    year == 2020,
+    year == 2018,
     # season == "Summer",
     month == 3,
     return_period == 20

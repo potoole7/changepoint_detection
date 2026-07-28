@@ -36,7 +36,11 @@ decades <- seq(1960, 2010, by = 10)
 # seasons <- c("Winter", "Summer")
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
 # var_dep <- "rain"
-var_dep <- "drought_local_norm"
+# var_dep <- "drought_local"
+var_dep <- "drought_local_rev"
+
+# temp_var <- "temp"
+temp_var <- "temp_max"
 
 # different seasons and variables to fit margianl model for
 season_var_df <- tidyr::crossing(
@@ -69,6 +73,23 @@ data <- readr::read_csv(
   ) |>
   relocate(c(year, month), .after = date)
 
+# if specified, use maximum temperature rather than 90th quantile
+if (temp_var == "temp_max") {
+  data <- data |> 
+    mutate(
+      temp_max = ifelse(is.infinite(temp_max), NA, temp_max),
+      temp     = temp_max
+    ) |> 
+    filter(!is.na(temp))
+}
+
+# reverse drought_local variable to give positive alpha values, if desired
+if (var_dep == "drought_local_rev") {
+  data <- data |> 
+    mutate(drought_local = -drought_local)
+  var_dep <- "drought_local"
+}
+
 areas <- read_sf("data/02_app/spain_shapefile.geojson") |>
   filter(
     !ine.ccaa.name %in% c("Canarias", "Balears, Illes", "Ceuta", "Melilla")
@@ -91,7 +112,7 @@ data <- data |>
   ) |>
   filter(
     if_all(
-      c(temp, rain, drought_local_norm),
+      c(temp, rain, drought_local),
       \(x) !is.na(x)
     )
   ) |>
@@ -100,17 +121,17 @@ data <- data |>
 # pull station names for looping over later
 station_names <- unique(data$name)
 
-# add weights for drought_local_norm to account for different number of
-# observations per station and season
-data <- data |>
-  group_by(name, season, season_year) |>
-  mutate(
-    drought_weight = 1 / n()
-  ) |>
-  ungroup()
+# # add weights for drought_local to account for different number of
+# # observations per station and season
+# data <- data |>
+#   group_by(name, season, season_year) |>
+#   mutate(
+#     drought_weight = 1 / n()
+#   ) |>
+#   ungroup()
 
 
-#### Fit Gaussian and Gamma distributions ####
+#### Fit Gaussian and mma distributions ####
 
 # function to find the minimum valid k pair for year and season_month
 find_min_k_pair <- \(
@@ -121,45 +142,45 @@ find_min_k_pair <- \(
   fam,
   ...
 ) {
-  w <- if (
-    response_name == "drought_local_norm" && "drought_weight" %in% names(x_spec)
-  ) {
-    x_spec$drought_weight
-  } else {
-    rep(1, nrow(x_spec))
-  }
+  # w <- if (
+  #   response_name == "drought_local" && "drought_weight" %in% names(x_spec)
+  # ) {
+  #   x_spec$drought_weight
+  # } else {
+  #   rep(1, nrow(x_spec))
+  # }
 
   for (ky in k_year_vals) {
     # for (km in k_season_month_vals) {
-    if (response_name == "drought_local_norm") {
-      f_try <- list(
-        reformulate(
-          termlabels = c(
-            sprintf("s(season_year, k = %s)", ky)
-          ),
-          response = response_name
+    # if (response_name == "drought_local") {
+    #   f_try <- list(
+    #     reformulate(
+    #       termlabels = c(
+    #         sprintf("s(season_year, k = %s)", ky)
+    #       ),
+    #       response = response_name
+    #     ),
+    #     ~1
+    #   )
+    # } else {
+    f_try <- list(
+      reformulate(
+        termlabels = c(
+          sprintf("s(year, k = %s)", ky),
+          sprintf("s(month, bs = 'cc', k = %s)", 11)
         ),
-        ~1
-      )
-    } else {
-      f_try <- list(
-        reformulate(
-          termlabels = c(
-            sprintf("s(year, k = %s)", ky),
-            sprintf("s(month, bs = 'cc', k = %s)", 11)
-          ),
-          response = response_name
-        ),
-        ~1
-      )
-    }
+        response = response_name
+      ),
+      ~1
+    )
+    # }
     fit <- try(
       mgcv::gam(
         f_try,
         data = x_spec,
         family = fam,
         method = "REML",
-        weights = w,
+        # weights = w,
         ...
       ),
       silent = TRUE
@@ -222,7 +243,7 @@ qq_data_mgcv <- function(m, x_spec, response_name, family) {
 mgcv_fit <- \(
   x,
   name,
-  response_name = c("temp", "rain", "drought_local_norm"),
+  response_name = c("temp", "rain", "drought_local"),
   ret_mod = FALSE,
   family = c("gaulss", "gammals"),
   k_year_vals = 3:9,
@@ -332,11 +353,14 @@ mgcv_fit <- \(
   }
 }
 
+# name <- "Badajoz Aeropuerto" # not great for drought_local
+name <- "Valencia" # pretty good for both, might need a GPD upper tail
+
 # test
 plot(mgcv_fit(
   # x = data |> filter(season == "Winter"),
   x = data,
-  name = "Badajoz Aeropuerto",
+  name = name,
   response_name = "temp",
   family = "gaulss",
   ret_mod = TRUE
@@ -348,31 +372,12 @@ abline(a = 0, b = 1, col = "red", lwd = 2)
 plot(mgcv_fit(
   # x = data |> filter(season == "Winter"),
   x = data,
-  name = "Badajoz Aeropuerto",
+  name = name,
   response_name = var_dep,
   family = "gaulss",
   ret_mod = TRUE
 )$qq, type = "o")
 abline(a = 0, b = 1, col = "red", lwd = 2)
-
-data_drought <- data |>
-  distinct(name, lon, lat, season, season_year, drought_local_norm) |>
-  filter(!is.na(drought_local_norm)) |>
-  mutate(
-    year = season_year,
-    season = factor(season, levels = seasons)
-  )
-
-plot(mgcv_fit(
-  # x = data |> filter(season == "Winter"),
-  x = data_drought,
-  name = "Badajoz Aeropuerto",
-  response_name = var_dep,
-  family = "gaulss",
-  ret_mod = TRUE
-)$qq, type = "o")
-abline(a = 0, b = 1, col = "red", lwd = 2)
-# a lot better
 
 # fit gaulss distribution to temperature and drought_local for each station
 gaulss_var <- lapply(c("temp", var_dep), \(var) {
@@ -411,6 +416,8 @@ summary(pred[, 2])
 
 # function to compute QQ envelope for a given sample size n,
 # number of simulations nsim, and confidence level conf
+# TODO NOTE: QQ envelope assumes stationarity, which is not the case here,
+# so this is just a rough guide
 qq_envelope <- function(n, nsim = 1000, conf = 0.95) {
   sims <- replicate(nsim, sort(rnorm(n)))
 
@@ -492,9 +499,8 @@ dev.off()
 # Across stations, QQ residual plots from the gaulss model for temperature are
 # generally close to the theoretical normal distribution, with only minor
 # departures in the extreme upper tail (particularly A Coruna Badajoz, Almeria)
-# The naive Gaussian model is obviously not suitable for the naturally bounded
-# drought_local, although the good fit to the bulk is promising
-
+# Fit really good to SPI/drought local! Few deviations but hopefully fixed by
+# fitting GPD to upper tail
 
 #### Laplace transformation ####
 
@@ -635,7 +641,7 @@ trans_fun <- \(x, season) {
       select(-name) |>
       # TODO Make more programatic
       # rename(rain = laplace)
-      rename(drought_local_norm = laplace)
+      rename(drought_local = laplace)
   ) |>
     mutate(name = factor(name))
 
@@ -668,7 +674,7 @@ saveRDS(
 # plot one transformed dataset
 data.frame(marg_season_mgcv$Winter$transformed$`Badajoz Aeropuerto`) |>
   # data.frame(marg_season_mgcv$Winter$transformed$Santander) |>
-  # ggplot(aes(x = temp, y = drought_local_norm)) +
+  # ggplot(aes(x = temp, y = drought_local)) +
   ggplot(aes(x = temp, y = get(var_dep))) +
   geom_point(alpha = 0.8) +
   cecl_theme() +
@@ -789,32 +795,35 @@ thresh_mgcv <- function(
 thresh_data_var <- lapply(c("temp", var_dep), \(var) {
   thresh_mgcv(
     data = data,
-    mgcv_season_var = gaulss_var,
+    mgcv_var = gaulss_var,
     var = var,
     family = "gaulss",
     q = q
+    # q = 0.85
   )
 })
+names(thresh_data_var) <- c("temp", var_dep)
 
 
 #### Fit GPD ####
 
-find_min_k_pair_evgam <- function(
-    x_spec,
-    k_year_vals = 3:9,
-    # k_season_month_vals = 3:5,
-    ...) {
+find_min_k_pair_evgam <- \(
+  x_spec,
+  # k_year_vals = 3:9,
+  k_year_vals = 1:9,
+  # k_season_month_vals = 3:5,
+  ...) {
   for (ky in k_year_vals) {
     # for (km in k_season_month_vals) {
     f_try <- list(
       # excess ~ s(year, k = ky) + s(season_month, k = km),
-      excess ~ s(year, k = ky) + s(month, bs = "cc", k = 11)
-      ~ 1
+      excess ~ s(year, k = ky) + s(month, bs = "cc", k = 11),
+      ~1
     )
 
     fit <- try(
       evgam::evgam(
-        f_try,
+        formula = f_try,
         data = x_spec,
         family = "gpd",
         ...
@@ -825,7 +834,7 @@ find_min_k_pair_evgam <- function(
     if (!inherits(fit, "try-error")) {
       return(list(
         k_year = ky,
-        k_season_month = km,
+        # k_season_month = km,
         formula = f_try,
         fit = fit
       ))
@@ -836,16 +845,17 @@ find_min_k_pair_evgam <- function(
   stop("No valid k pair found for evgam GPD.")
 }
 
-evgam_fit <- function(
-    x,
-    name,
-    ret_mod = FALSE,
-    k_year_vals = 3:9,
-    # k_season_month_vals = 3:5,
-    ...) {
+evgam_fit <- \(
+  x,
+  name,
+  ret_mod = FALSE,
+  k_year_vals = 2:9,
+  # k_year_vals = 1:10,
+  # k_season_month_vals = 3:5,
+  ...) {
   x_spec <- x |>
     # select(name, year, season_month, thresh, excess) |>
-    select(name, year, month, thresh, excess) |>
+    select(name, year, month, season, thresh, excess) |>
     filter(.data$name == .env$name) |>
     filter(
       !is.na(excess),
@@ -872,7 +882,7 @@ evgam_fit <- function(
   predictors <- m$predictor.names
 
   pred_dat_distinct <- x_spec |>
-    distinct(across(all_of(predictors)), thresh)
+    distinct(across(all_of(predictors)), season, thresh)
 
   pred <- predict(m, pred_dat_distinct, type = "response")
 
@@ -885,7 +895,8 @@ evgam_fit <- function(
       k_year = min_fit$k_year,
       # k_season_month = min_fit$k_season_month
     ) |>
-    relocate(name, k_year, k_season_month)
+    # relocate(name, k_year, k_season_month)
+    relocate(name, k_year)
 
   rownames(predictions) <- NULL
 
@@ -894,8 +905,8 @@ evgam_fit <- function(
       evgam_fit = m,
       marginal = predictions,
       formula = min_fit$formula,
-      k_year = min_fit$k_year,
-      k_season_month = min_fit$k_season_month
+      # k_season_month = min_fit$k_season_month,
+      k_year = min_fit$k_year
     )
   } else {
     predictions
@@ -903,13 +914,17 @@ evgam_fit <- function(
 }
 
 # fit GPD to the excesses for each station and season
-gpd_mgcv_season_var <- lapply(names(thresh_data_season_var_mgcv), \(nm) {
-  x <- thresh_data_season_var_mgcv[[nm]]
+# gpd_mgcv_season_var <- lapply(names(thresh_data_season_var_mgcv), \(nm) {
+gpd_mgcv_var <- lapply(names(thresh_data_var), \(var) {
+  # x <- thresh_data_season_var_mgcv[[nm]]
+  print(var)
+  x <- thresh_data_var[[var]]
 
-  ret <- mclapply(station_names, \(st) {
+  ret <- lapply(station_names, \(station) {
+    print(station)
     evgam_fit(
       x = x,
-      name = st,
+      name = station,
       ret_mod = TRUE
     )
   })
@@ -917,7 +932,9 @@ gpd_mgcv_season_var <- lapply(names(thresh_data_season_var_mgcv), \(nm) {
   names(ret) <- station_names
   ret
 })
-names(gpd_mgcv_season_var) <- names(thresh_data_season_var_mgcv)
+# names(gpd_mgcv_season_var) <- names(thresh_data_season_var_mgcv)
+names(gpd_mgcv_var) <- names(thresh_data_var)
+
 
 #### QQ plots ####
 
@@ -934,10 +951,12 @@ pgpd_excess <- function(excess, scale, shape) {
 gpd_qq_data_one <- \(data_thresh, gpd_fit, station) {
   d <- data_thresh |>
     filter(name == station) |>
-    select(name, date, year, season_month, thresh, excess)
+    # select(name, date, year, season_month, thresh, excess)
+    select(name, date, year, month, season, thresh, excess)
 
   gpd <- gpd_fit[[station]]$marginal |>
-    select(year, season_month, thresh, scale, shape)
+    # select(year, season_month, thresh, scale, shape)
+    select(year, month, season, thresh, scale, shape)
 
   qq_dat <- d |>
     left_join(
@@ -969,36 +988,58 @@ gpd_qq_data_one <- \(data_thresh, gpd_fit, station) {
 }
 
 season_var_df <- tidyr::crossing(
-  "var" = c("rain", "temp"),
-  "season" = c("Winter", "Summer")
+  # "var" = c("rain", "temp"),
+  "var" = c(var_dep, "temp"),
+  # "season" = c("Winter", "Summer")
+  season = seasons
 ) |>
   mutate(lst_name = paste0(var, "_", season))
 
+# qq_df <- bind_rows(lapply(seq_len(nrow(season_var_df)), \(i) {
+#   lst_nm <- season_var_df$lst_name[[i]]
+#
+#   # bind_rows(mclapply(station_names, \(st) {
+#   bind_rows(lapply(station_names, \(st) {
+#     # fit_obj <- gpd_mgcv_season_var[[lst_nm]][[st]]
+#     fit_obj <- gpd_mgcv_season_var[[lst_nm]][[st]]
+#
+#     if (is.null(fit_obj)) {
+#       return(NULL)
+#     }
+#
+#     gpd_qq_data_one(
+#       data_thresh = thresh_data_season_var_mgcv[[lst_nm]],
+#       gpd_fit = gpd_mgcv_season_var[[lst_nm]],
+#       station = st
+#     ) |>
+#       mutate(
+#         season = !!season_var_df$season[[i]],
+#         var = !!season_var_df$var[[i]]
+#       ) |>
+#       relocate(season, var, .after = name)
+#   }))
+# }))
 
-qq_df <- bind_rows(lapply(seq_len(nrow(season_var_df)), \(i) {
-  lst_nm <- season_var_df$lst_name[[i]]
-
-  # bind_rows(mclapply(station_names, \(st) {
-  bind_rows(lapply(station_names, \(st) {
-    fit_obj <- gpd_mgcv_season_var[[lst_nm]][[st]]
+qq_df <- bind_rows(lapply(names(thresh_data_var), \(var) {
+  bind_rows(mclapply(station_names, \(station) {
+    # bind_rows(lapply(station_names, \(station) {
+    fit_obj <- gpd_mgcv_var[[var]][[station]]
 
     if (is.null(fit_obj)) {
       return(NULL)
     }
 
     gpd_qq_data_one(
-      data_thresh = thresh_data_season_var_mgcv[[lst_nm]],
-      gpd_fit = gpd_mgcv_season_var[[lst_nm]],
-      station = st
+      data_thresh = thresh_data_var[[var]],
+      gpd_fit     = gpd_mgcv_var[[var]],
+      station     = station
     ) |>
-      mutate(
-        season = !!season_var_df$season[[i]],
-        var = !!season_var_df$var[[i]]
-      ) |>
+      mutate(var = !!var) |>
       relocate(season, var, .after = name)
   }))
 }))
 
+# test
 qq_df |>
   filter(name == qq_df$name[1]) |>
   mutate(ind = paste0(var, ", ", season)) |>
@@ -1009,9 +1050,10 @@ qq_df |>
   ) +
   geom_abline(intercept = 0, slope = 1, linetype = 2) +
   geom_point() +
-  facet_wrap(~ind) +
+  facet_wrap(~ind, nrow = 2, scales = "free") +
   cecl_theme() +
   labs(title = qq_df$name[1], x = "Theoretical", y = "Observed")
+# looks great!!
 
 qq_plots <- mclapply(station_names, \(x) {
   qq_df |>
@@ -1024,7 +1066,7 @@ qq_plots <- mclapply(station_names, \(x) {
     ) +
     geom_abline(intercept = 0, slope = 1, linetype = 2) +
     geom_point() +
-    facet_wrap(~ind) +
+    facet_wrap(~ind, nrow = 2, scales = "free") +
     cecl_theme() +
     labs(title = x, x = "Theoretical", y = "Observed")
 })
@@ -1036,7 +1078,7 @@ dev.off()
 
 #### Piecewise Laplace transformation for GPD fitting ####
 
-p_gpd_mgcv_ns <- function(dat, bulk_fit, gpd_fit, var, family) {
+p_gpd_mgcv_ns <- \(dat, bulk_fit, gpd_fit, var, family) {
   x <- dat[[var]]
 
   # fitted bulk CDF at observed value
@@ -1051,8 +1093,10 @@ p_gpd_mgcv_ns <- function(dat, bulk_fit, gpd_fit, var, family) {
   dat_par <- dat |>
     left_join(
       gpd_fit |>
-        select(year, season_month, thresh, scale, shape) |>
-        distinct(year, season_month, .keep_all = TRUE) # ,
+        # select(year, season_month, thresh, scale, shape) |>
+        # distinct(year, season_month, .keep_all = TRUE) # ,
+        select(year, month, season, thresh, scale, shape) |>
+        distinct(year, month, season, .keep_all = TRUE)
       # by = c("year", "season_month")
     )
 
@@ -1092,16 +1136,17 @@ p_gpd_mgcv_ns <- function(dat, bulk_fit, gpd_fit, var, family) {
   pmin(pmax(F_hat, 1e-6), 1 - 1e-6)
 }
 
-trans_marg_mgcv_gpd_one <- function(
-    data_orig,
-    bulk_fit,
-    gpd_fit,
-    var,
-    family,
-    season,
-    station) {
+trans_marg_mgcv_gpd_one <- \(
+  data_orig,
+  bulk_fit,
+  gpd_fit,
+  var,
+  family,
+  season,
+  station) {
   dat <- data_orig |>
-    select(name, lon, lat, date, year, season_month, season, all_of(var)) |>
+    # select(name, lon, lat, date, year, season_month, season, all_of(var)) |>
+    select(name, lon, lat, date, year, month, season, all_of(var)) |>
     filter(name == station, season == !!season) |>
     arrange(date) |>
     filter(!is.na(.data[[var]]))
@@ -1112,8 +1157,10 @@ trans_marg_mgcv_gpd_one <- function(
 
   stopifnot(nrow(dat) > 0)
 
-  bulk_obj <- bulk_fit[[season]][[station]]$mgcv_fit
-  gpd_obj <- gpd_fit[[paste0(var, "_", season)]][[station]]$marginal
+  # bulk_obj <- bulk_fit[[season]][[station]]$mgcv_fit
+  # gpd_obj <- gpd_fit[[paste0(var, "_", season)]][[station]]$marginal
+  bulk_obj <- bulk_fit[[var]][[station]]$mgcv_fit
+  gpd_obj <- gpd_fit[[var]][[station]]$marginal
 
   F_hat <- p_gpd_mgcv_ns(
     dat = dat,
@@ -1130,38 +1177,63 @@ trans_marg_mgcv_gpd_one <- function(
     )
 }
 
-laplace_mgcv_gpd_season_var <- list(
-  temp_Winter = bind_rows(lapply(station_names, \(st) {
-    trans_marg_mgcv_gpd_one(data, gaulss_season_var, gpd_mgcv_season_var,
-      var = "temp", family = "gaulss", season = "Winter", station = st
-    )
-  })) |> select(name, date, laplace),
-  temp_Summer = bind_rows(lapply(station_names, \(st) {
-    trans_marg_mgcv_gpd_one(data, gaulss_season_var, gpd_mgcv_season_var,
-      var = "temp", family = "gaulss", season = "Summer", station = st
-    )
-  })) |> select(name, date, laplace),
-  rain_Winter = bind_rows(lapply(station_names, \(st) {
-    trans_marg_mgcv_gpd_one(data, gammals_season_var, gpd_mgcv_season_var,
-      var = "rain", family = "gammals", season = "Winter", station = st
-    )
-  })) |> select(name, date, laplace),
-  rain_Summer = bind_rows(lapply(station_names, \(st) {
-    trans_marg_mgcv_gpd_one(data, gammals_season_var, gpd_mgcv_season_var,
-      var = "rain", family = "gammals", season = "Summer", station = st
-    )
-  })) |> select(name, date, laplace)
-)
+# # transform data for each station, season and variable
+# laplace_mgcv_gpd_season_var <- list(
+#   temp_Winter = bind_rows(lapply(station_names, \(st) {
+#     trans_marg_mgcv_gpd_one(data, gaulss_season_var, gpd_mgcv_season_var,
+#       var = "temp", family = "gaulss", season = "Winter", station = st
+#     )
+#   })) |> select(name, date, laplace),
+#   temp_Summer = bind_rows(lapply(station_names, \(st) {
+#     trans_marg_mgcv_gpd_one(data, gaulss_season_var, gpd_mgcv_season_var,
+#       var = "temp", family = "gaulss", season = "Summer", station = st
+#     )
+#   })) |> select(name, date, laplace),
+#   rain_Winter = bind_rows(lapply(station_names, \(st) {
+#     trans_marg_mgcv_gpd_one(data, gammals_season_var, gpd_mgcv_season_var,
+#       # var = "rain", family = "gammals", season = "Winter", station = st
+#       var = var_dep, family = "gammals", season = "Winter", station = st
+#     )
+#   })) |> select(name, date, laplace),
+#   rain_Summer = bind_rows(lapply(station_names, \(st) {
+#     trans_marg_mgcv_gpd_one(data, gammals_season_var, gpd_mgcv_season_var,
+#       # var = "rain", family = "gammals", season = "Summer", station = st
+#       var = var_dep, family = "gammals", season = "Summer", station = st
+#     )
+#   })) |> select(name, date, laplace)
+# )
 
-trans_fun2 <- function(x, season) {
+# transform data for each station, season and variable
+laplace_mgcv_gpd_season_var <- lapply(seq_len(nrow(season_var_df)), \(i) {
+  bind_rows(mclapply(station_names, \(station) {
+    with(
+      season_var_df,
+      trans_marg_mgcv_gpd_one(
+        data, gaulss_var, gpd_mgcv_var,
+        var = var[i],
+        family = "gaulss",
+        # season = "Winter",
+        season = season[i],
+        station = station
+      )
+    )
+  })) |>
+    select(name, date, laplace)
+})
+names(laplace_mgcv_gpd_season_var) <- season_var_df$lst_name
+
+trans_fun2 <- \(x, season, dep_var) {
   laplace_df <- x[[paste0("temp_", season)]] |>
     rename(temp = laplace) |>
     left_join(
-      x[[paste0("rain_", season)]] |>
-        rename(rain = laplace),
+      # x[[paste0("rain_", season)]] |>
+      x[[paste0(dep_var, "_", season)]] |>
+        # rename(rain = laplace),
+        rename(!!dep_var := laplace),
       by = c("name", "date")
     ) |>
-    select(name, temp, rain) |>
+    # select(name, temp, rain) |>
+    select(name, temp, !!dep_var) |>
     mutate(name = factor(name))
 
   laplace_lst <- group_split(laplace_df, name, .keep = FALSE) |>
@@ -1177,21 +1249,27 @@ trans_fun2 <- function(x, season) {
 }
 
 # plot transformed data for a given location
-laplace_mgcv_gpd_season_var$rain_Summer |>
+# laplace_mgcv_gpd_season_var$rain_Summer |>
+laplace_mgcv_gpd_season_var[[paste0(var_dep, "_Summer")]] |>
   filter(name == "Valencia") |>
-  rename(rain = laplace) |>
+  rename(!!var_dep := laplace) |>
   left_join(
     laplace_mgcv_gpd_season_var$temp_Summer |>
       filter(name == "Valencia") |>
       rename(temp = laplace)
   ) |>
-  ggplot(aes(x = temp, y = rain)) +
+  # ggplot(aes(x = temp, y = rain)) +
+  ggplot(aes(x = temp, y = get(var_dep))) +
   geom_point()
 
-marg_season_mgcv_gpd <- list(
-  Winter = trans_fun2(laplace_mgcv_gpd_season_var, "Winter"),
-  Summer = trans_fun2(laplace_mgcv_gpd_season_var, "Summer")
-)
+# marg_season_mgcv_gpd <- list(
+#   Winter = trans_fun2(laplace_mgcv_gpd_season_var, "Winter"),
+#   Summer = trans_fun2(laplace_mgcv_gpd_season_var, "Summer")
+# )
+marg_season_mgcv_gpd <- lapply(seasons, \(season) {
+  print(season)
+  trans_fun2(laplace_mgcv_gpd_season_var, season, var_dep)
+})
 
 saveRDS(
   marg_season_mgcv_gpd,

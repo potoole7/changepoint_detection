@@ -71,21 +71,32 @@ source("src/00_functions.R")
 
 # dep_vars <- c("rain", "drought_local", "drought_global")
 # dep_vars <- c("rain")
-dep_vars <- c("drought_local_norm")
+# dep_vars <- c("drought_local_norm")
+# dep_vars <- c("drought_local")
+dep_vars <- c("drought_local_rev")
+
+# temp_var <- "temp"
+temp_var <- "temp_max"
+
 # k_vals <- 1:5
-k_vals <- 1:8
+k_vals <- 1:6
+
 decades <- seq(1960, 2010, by = 10)
+
 # seasons <- c("Summer", "Winter", "Year")
 # seasons <- c("Summer", "Winter")
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
-cond_prob <- 0.85 # default dependence threshold quantile
+
+cond_prob <- 0.8 # most stable based on looking at clustering plots
+# cond_prob <- 0.85 # default dependence threshold quantile
 # cond_prob <- 0.9 # try higher, CE diagnostics aren't good here!
 # cond_prob <- 0.95
 
+# TODO Make a file that just sources this one and changes these variables!
 # save_dir <- "plots/02_app/"
 # save_dir <- "plots/02_app/evgam/"
-# save_dir <- "plots/02_app/roll_emp/"
-save_dir <- "plots/02_app/mgcv/"
+save_dir <- "plots/02_app/roll_emp/"
+# save_dir <- "plots/02_app/mgcv/"
 # save_dir <- "plots/02_app/mgcv/gpd/"
 # save_dir <- "plots/02_app/mgcv_spat/"
 # save_dir <- "plots/02_app/mgcv_spat/gpd/"
@@ -96,21 +107,14 @@ if (!dir.exists(save_dir)) {
 
 # file <- "data/02_app/marg_season_emp.rds"
 # file <- "data/02_app/marg_season_evgam.rds"
-# file <- "data/02_app/marg_season_roll_emp.rds"
-file <- "data/02_app/marg_season_mgcv.rds"
+file <- "data/02_app/marg_season_roll_emp.rds"
+# file <- "data/02_app/marg_season_mgcv.rds"
 # file <- "data/02_app/marg_season_mgcv_gpd.rds"
 # file <- "data/02_app/marg_season_mgcv_spat.rds"
 # file <- "data/02_app/marg_season_mgcv_gpd_spat.rds"
 
 # marg_season_decade <- readRDS("data/02_app/marg_season_decade_emp.rds")
 
-# marg_season <- readRDS("data/02_app/marg_season_emp.rds")
-# marg_season <- readRDS("data/02_app/marg_season_evgam.rds")
-# marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_spat.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd_spat.rds")
 marg_season <- readRDS(file)
 if (!is.null(names(marg_season))) {
   seasons <- names(marg_season)
@@ -607,14 +611,24 @@ if (dep_vars == "rain") {
     filter(rain > 0)
 }
 
+# if specified, use maximum temperature rather than 90th quantile
+if (temp_var == "temp_max") {
+  data <- data |>
+    mutate(
+      temp_max = ifelse(is.infinite(temp_max), NA, temp_max),
+      temp     = temp_max
+    ) |>
+    filter(!is.na(temp))
+}
+
+# reverse drought_local variable to give positive alpha values, if desired
+if (dep_vars == "drought_local_rev") {
+  data <- data |>
+    mutate(drought_local = -drought_local)
+  dep_vars <- c("drought_local")
+}
+
 # marginal fits
-# marg_season <- readRDS("data/02_app/marg_season_emp.rds")
-# marg_season <- readRDS("data/02_app/marg_season_evgam.rds")
-# marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_spat.rds")
-# marg_season <- readRDS("data/02_app/marg_season_mgcv_gpd_spat.rds")
 marg_season <- readRDS(file)
 if (!is.null(names(marg_season))) {
   seasons <- names(marg_season)
@@ -886,6 +900,10 @@ dev.off()
 
 #### Cluster ####
 
+if (is.null(names(marg_season))) {
+  names(marg_season) <- seasons
+}
+
 # calculate distances
 set.seed(123)
 dist_var_season <- lapply(seq_along(dep_var_season), \(i) {
@@ -1075,13 +1093,12 @@ plot_one_map <- \(clust_sets, dist_type, k, season, var = "rain", title = NULL) 
   ) +
     cecl_theme()
 
-  if (is.null(dist_type)) {
-    p <- p +
-      ggtitle(dist_type)
+  if (is.null(title)) {
+    p <- p + ggtitle(dist_type)
   } else {
-    p <- p +
-      ggtitle(title)
+    p <- p + ggtitle(title)
   }
+
   p
 }
 
@@ -1089,11 +1106,11 @@ plot_one_heatmap <- \(clust_sets, dist_type, k, season, var = "rain", title = NU
   # ggplot(clust_sets[[dist_type]][[obj_name]], which = "image") +
   p <- ggplot(
     clust_sets[[dist_type]][[as.character(k)]][[paste(var, season, sep = "_")]],
-    which = "image",
     # fill_limits = c(0, 0.15),
-    fill_limits = c(0, 0.05),
-    # fill_breaks = seq(0, 0.15, by = 0.03)
-    fill_breaks = seq(0, 0.05, length.out = 6)
+    # fill_limits = c(0, 0.05),
+    # fill_breaks = seq(0, 0.15, by = 0.03),
+    # fill_breaks = seq(0, 0.05, length.out = 6),
+    which = "image"
   ) +
     theme(
       legend.position = "bottom",
@@ -1287,64 +1304,90 @@ clust_plot_dqu <- \(dist_mat = "Total", dqu = 0.9) {
 }
 
 # remove large objects from previous runs
-rm(dep_var_season, dist_var_season, clust_var_season_k, clust_var_season_k_rain, clust_var_season_k_temp)
+rm(ab_plots_season, ce_plots, clust_sets, dep_var_season, dist_var_season, clust_var_season_k, clust_var_season_k_rain, clust_var_season_k_temp)
 gc()
 
 # dqu_vals <- c(0.8, 0.85, 0.88, 0.9, 0.92, 0.95)
 # TODO Very memory intensive, find way to make it not so bad!
 # Code may just be badly written??
-dqu_vals <- c(0.8, 0.85, 0.88, 0.9)
+# dqu_vals <- c(0.8, 0.85, 0.88, 0.9)
+dqu_vals <- c(0.75, 0.8, 0.85, 0.88, 0.9)
+# dqu_vals <- dqu_vals[dqu_vals != cond_prob] # don't need to rerun
+
 clust_dqu_plots_total <- lapply(dqu_vals, \(dqu) {
   print(paste0("dqu = ", dqu))
   clust_plot_dqu(dist_mat = "Total", dqu = dqu)
 })
 
-# save pdfs
-pdf(paste0(save_dir, "cluster_maps_dqu_total.pdf"), width = 12, height = 10)
-lapply(clust_dqu_plots_total, \(x) {
-  x$map_plots +
-    plot_annotation(title = paste0(dqu))
-})
-pdf(paste0(save_dir, "heatmaps_dqu_total.pdf"), width = 12, height = 10)
-lapply(clust_dqu_plots_total, \(x) {
-  x$heatmap_plots +
-    plot_annotation(title = paste0(dqu))
-})
+pdf(
+  paste0(save_dir, "cluster_maps_dqu_total.pdf"),
+  width = 12,
+  height = 10
+)
+
+for (i in seq_along(dqu_vals)) {
+  print(
+    clust_dqu_plots_total[[i]]$map_plots +
+      plot_annotation(
+        title = paste0("DQU = ", dqu_vals[[i]])
+      )
+  )
+}
+
+dev.off()
+
+
+pdf(
+  paste0(save_dir, "heatmaps_dqu_total.pdf"),
+  width = 12,
+  height = 10
+)
+
+for (i in seq_along(dqu_vals)) {
+  print(
+    clust_dqu_plots_total[[i]]$heatmap_plots +
+      plot_annotation(
+        title = paste0("DQU = ", dqu_vals[[i]])
+      )
+  )
+}
+
+dev.off()
 
 rm(clust_dqu_plots_total)
 gc()
 
-# rain and temp
-clust_dqu_plots_rain <- lapply(dqu_vals, \(dqu) {
-  clust_plot_dqu(dist_mat = "rain", dqu = dqu)
+# var_dep and temp
+clust_dqu_plots_var_dep <- lapply(dqu_vals, \(dqu) {
+  clust_plot_dqu(dist_mat = dep_vars, dqu = dqu)
 })
-pdf(paste0(save_dir, "cluster_maps_dqu_rain.pdf"), width = 12, height = 10)
-lapply(clust_dqu_plots_rain, \(x) {
-  x$map_plots +
-    plot_annotation(title = paste0(dqu))
-})
-pdf(paste0(save_dir, "heatmaps_dqu_rain.pdf"), width = 12, height = 10)
-lapply(clust_dqu_plots_rain, \(x) {
-  x$heatmap_plots +
-    plot_annotation(title = paste0(dqu))
-})
+# pdf(paste0(save_dir, "cluster_maps_dqu_rain.pdf"), width = 12, height = 10)
+pdf(paste0(save_dir, "cluster_maps_dqu_", dep_vars, ".pdf"), width = 12, height = 10)
+for (i in seq_along(dqu_vals)) {
+  print(
+    clust_dqu_plots_var_dep[[i]]$map_plots +
+      plot_annotation(
+        title = paste0("DQU = ", dqu_vals[[i]])
+      )
+  )
+}
 
-rm(clust_dqu_plots_rain)
+rm(clust_dqu_plots_var_dep)
 gc()
 
 clust_dqu_plots_temp <- lapply(dqu_vals, \(dqu) {
   clust_plot_dqu(dist_mat = "temp", dqu = dqu)
 })
 pdf(paste0(save_dir, "cluster_maps_dqu_temp.pdf"), width = 12, height = 10)
-lapply(clust_dqu_plots_temp, \(x) {
-  x$map_plots +
-    plot_annotation(title = paste0(dqu))
-})
-pdf(paste0(save_dir, "heatmaps_dqu_temp.pdf"), width = 12, height = 10)
-lapply(clust_dqu_plots_temp, \(x) {
-  x$heatmap_plots +
-    plot_annotation(title = paste0(dqu))
-})
+for (i in seq_along(dqu_vals)) {
+  print(
+    clust_dqu_plots_temp[[i]]$map_plots +
+      plot_annotation(
+        title = paste0("DQU = ", dqu_vals[[i]])
+      )
+  )
+}
+dev.off()
 
 rm(clust_dqu_plots_temp)
 gc()

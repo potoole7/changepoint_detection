@@ -4001,7 +4001,13 @@ perm_test_fun <- \(
       )
     }
   }
-  
+  # grid_apply <- \(X, FUN) {
+  #   lapply(
+  #     X,
+  #     FUN
+  #   )
+  # }
+  # 
   permutation_apply <- \(X, FUN) {
     if (!parallel_grid) {
       parallel::mclapply(
@@ -4024,6 +4030,8 @@ perm_test_fun <- \(
       i,
       grid_vals
     )
+    
+    # browser()
     
     if (verbose) {
       message(
