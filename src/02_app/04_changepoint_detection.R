@@ -1,6 +1,17 @@
 #### Changepoint Detection for Spanish application ####
 
-# TODO Check where
+# Things to check from writing retreat!
+# TODO - When does it happen that # years on LHS > RHS, or vice versa??
+# TODO - 
+
+# Save plots from screening (done)
+# TODO Write up summary of screening results
+# TODO Run permutation tests with 100 permutations
+# TODO Run permutation tests with 1000 permutations (??)
+# TODO Code changes required to allow for multiple testing
+
+
+# TODO Think about effect of different hyperparameters (n_perm, n_per_block, etc)
 
 # How to deal with different number of observations for some locations?? (done)
 
@@ -9,20 +20,19 @@
 # Look into Laplace sample being used across different comparisons, how
 # to decide? Is the 80th quantile of the Laplace distribution a good shout? (done)
 
-# TODO WHat about which model to use, how do I decide on that? Use total for
+# Misc:
+# TODO What about which model to use, how do I decide on that? Use total for
 # now??
 
-# Testing:
-# Set grid_vals according to start/end of season year (done)
-# Set n_per_block so as not to cut off season year (done)
-# TODO Investigate weird histograms for ln SPD + spectral methods
-# TODO Increase n_perm to 1000, ideally (run on cluster)
+# TODO Move functions to own section
 
 # Sliding window:
-# TODO Get working
-# TODO Identify peak(s) for each season
-# TODO Try for different #s of min years (10, 15, 20 I guess? For each season)
-# TODO Plot
+# Get working (done)
+# Investigate errors for 10 years in August (done, not enough years)
+# Investigate massive dissimilarities (done, occurs where not enough data)
+# Identify peak(s) for each season (done)
+# Try for different #s of min years (10, 15, 20 I guess? For each season) (done)
+# Plot (done)
 
 # Permutation test
 # TODO Get working
@@ -52,8 +62,940 @@ library(patchwork)
 source("src/00_functions.R")
 
 
-#### Metadata ####
+#### Functions ####
 
+# Function to perform screening for a single season and number of years
+# Screen one season using complete season-year windows.
+screen_one_setting <- \(
+  season_name,
+  n_years_per_block,
+  verbose = TRUE,
+  mc.cores = getOption("mc.cores", 1L)
+) {
+  # Prepare data
+  season_data <- data_laplace_season[[season_name]] |>
+    select(
+      name,
+      date,
+      season_year,
+      X1 = temp,
+      X2 = drought_local
+    ) |>
+    filter(
+      !is.na(name),
+      !is.na(date),
+      !is.na(season_year)
+    ) |>
+    arrange(name, date)
+
+  available_years <- season_data |>
+    distinct(season_year) |>
+    arrange(season_year) |>
+    pull(season_year)
+
+  n_available_years <- length(available_years)
+
+  if (n_available_years < 2L * n_years_per_block) {
+    stop(
+      "Season ", season_name,
+      " has only ", n_available_years,
+      " years, but ", 2L * n_years_per_block,
+      " are required."
+    )
+  }
+
+  candidate_positions <- seq.int(
+    from = n_years_per_block,
+    to = n_available_years - n_years_per_block
+  )
+
+  block_vec <- available_years[candidate_positions]
+
+  # Try to obtain common starting values
+  middle_candidate <- block_vec[
+    ceiling(length(block_vec) / 2)
+  ]
+
+  start_fit <- tryCatch(
+    single_run_explore(
+      data = season_data,
+      i = middle_candidate,
+      n_years_per_block = n_years_per_block,
+      n_vars = 2,
+      laplace_trans = TRUE,
+      skip_failed = TRUE,
+      cond_val = dep_val,
+      laplace_sample = laplace_sample,
+      aLow = 0,
+      nruns = 3,
+      ret_dep = TRUE
+    ),
+    error = \(e) {
+      NULL
+    }
+  )
+
+  start_vals <- NULL
+
+  if (
+    is.list(start_fit) &&
+      isTRUE(start_fit$success) &&
+      !is.null(start_fit$dep)
+  ) {
+    candidate_start_vals <- tryCatch(
+      lapply(start_fit$dep, coef),
+      error = \(e) {
+        NULL
+      }
+    )
+
+    # valid_start_vals <- (
+    #   !is.null(candidate_start_vals) &&
+    #     length(candidate_start_vals) > 0L &&
+    #     all(
+    #       vapply(
+    #         candidate_start_vals,
+    #         \(x) {
+    #           is.numeric(x) &&
+    #             length(x) > 0L &&
+    #             all(is.finite(x))
+    #         },
+    #         logical(1)
+    #       )
+    #     )
+    # )
+    valid_start_vals <- (
+      !is.null(candidate_start_vals) &&
+        length(candidate_start_vals) == 2L &&
+        all(
+          vapply(
+            candidate_start_vals,
+            \(x) {
+              !is.null(x) && length(x) > 0L
+            },
+            logical(1)
+          )
+        )
+    )
+
+    if (valid_start_vals) {
+      start_vals <- candidate_start_vals
+
+      if (verbose) {
+        message(
+          "Season ", season_name,
+          ", ", n_years_per_block,
+          "-year windows: starting values obtained at candidate ",
+          middle_candidate,
+          "."
+        )
+      }
+    }
+  }
+
+  if (is.null(start_vals)) {
+    warning(
+      "No valid common starting values for season ",
+      season_name,
+      " with ", n_years_per_block,
+      "-year windows; screening candidates using default starts.",
+      call. = FALSE
+    )
+  }
+
+  # Screen individual candidates
+  run_candidate <- \(candidate_index) {
+    candidate_year <- block_vec[[candidate_index]]
+
+    fit_args <- list(
+      data = season_data,
+      i = candidate_year,
+      n_years_per_block = n_years_per_block,
+      n_vars = 2,
+      laplace_trans = TRUE,
+      skip_failed = TRUE,
+      cond_val = dep_val,
+      laplace_sample = laplace_sample,
+      aLow = 0
+    )
+
+    # Common starting values are optional.
+    if (!is.null(start_vals)) {
+      fit_args$start <- start_vals
+    }
+
+    result <- tryCatch(
+      do.call(
+        single_run_explore,
+        fit_args
+      ),
+      error = \(e) {
+        list(
+          success = FALSE,
+          block_info = list(
+            split_after = candidate_year,
+            split_before = available_years[
+              candidate_positions[[candidate_index]] + 1L
+            ],
+            n_left = NA_integer_,
+            n_right = NA_integer_
+          ),
+          frob = NA_real_,
+          inf = NA_real_,
+          spec = NA_real_,
+          dep = NULL,
+          error_stage = "single_run_explore",
+          error_message = conditionMessage(e)
+        )
+      }
+    )
+
+    if (!is.list(result) || is.null(result$success)) {
+      result <- list(
+        success = FALSE,
+        block_info = list(
+          split_after = candidate_year,
+          split_before = available_years[
+            candidate_positions[[candidate_index]] + 1L
+          ],
+          n_left = NA_integer_,
+          n_right = NA_integer_
+        ),
+        frob = NA_real_,
+        inf = NA_real_,
+        spec = NA_real_,
+        dep = NULL,
+        error_stage = "invalid_result",
+        error_message = paste0(
+          "`single_run_explore()` returned an invalid result at candidate ",
+          candidate_year,
+          "."
+        )
+      )
+    }
+
+    result
+  }
+
+  if (mc.cores > 1L && .Platform$OS.type != "windows") {
+    screen_vals <- parallel::mclapply(
+      seq_along(block_vec),
+      run_candidate,
+      mc.cores = mc.cores
+    )
+  } else {
+    screen_vals <- lapply(
+      seq_along(block_vec),
+      run_candidate
+    )
+  }
+
+  # Collate results
+  screen_res <- bind_rows(
+    lapply(
+      seq_along(screen_vals),
+      \(candidate_index) {
+        result <- screen_vals[[candidate_index]]
+        block_info <- result$block_info
+
+        tibble(
+          season = season_name,
+          n_years_per_block = n_years_per_block,
+          change_after_year = block_vec[[candidate_index]],
+          change_before_year = if (
+            is.list(block_info) &&
+              !is.null(block_info$split_before)
+          ) {
+            as.integer(block_info$split_before)
+          } else {
+            available_years[
+              candidate_positions[[candidate_index]] + 1L
+            ]
+          },
+          n_left_dates = if (
+            is.list(block_info) &&
+              !is.null(block_info$n_left)
+          ) {
+            as.integer(block_info$n_left)
+          } else {
+            NA_integer_
+          },
+          n_right_dates = if (
+            is.list(block_info) &&
+              !is.null(block_info$n_right)
+          ) {
+            as.integer(block_info$n_right)
+          } else {
+            NA_integer_
+          },
+          success = isTRUE(result$success),
+          frob = if (isTRUE(result$success)) {
+            as.numeric(result$frob)
+          } else {
+            NA_real_
+          },
+          inf = if (isTRUE(result$success)) {
+            as.numeric(result$inf)
+          } else {
+            NA_real_
+          },
+          spec = if (isTRUE(result$success)) {
+            as.numeric(result$spec)
+          } else {
+            NA_real_
+          },
+          error_stage = if (
+            is.null(result$error_stage)
+          ) {
+            NA_character_
+          } else {
+            as.character(result$error_stage)
+          },
+          error_message = if (
+            is.null(result$error_message)
+          ) {
+            NA_character_
+          } else {
+            as.character(result$error_message)
+          }
+        )
+      }
+    )
+  ) |>
+    arrange(change_after_year)
+
+  # Mark local Frobenius peaks
+  screen_res <- screen_res |>
+    mutate(
+      local_peak_frob = (
+        success &
+          lag(success, default = FALSE) &
+          lead(success, default = FALSE) &
+          frob > lag(frob) &
+          frob >= lead(frob)
+      ),
+      local_peak_frob = replace_na(
+        local_peak_frob,
+        FALSE
+      )
+    )
+
+  failure_rate <- mean(!screen_res$success)
+
+  if (verbose) {
+    message(
+      "Season ", season_name,
+      ", ", n_years_per_block,
+      "-year windows: ",
+      sum(screen_res$success), " of ", nrow(screen_res),
+      " candidates succeeded; failure rate = ",
+      scales::percent(
+        failure_rate,
+        accuracy = 0.1
+      ),
+      "."
+    )
+  }
+
+  screen_res
+}
+
+# Run the permutation scan for one season
+run_season_permutation_scan <- \(
+  season_name,
+  n_years_per_block = 25L,
+  n_perm = 100L,
+  seed = 123L,
+  use_start = TRUE,
+  ret_dep = TRUE,
+  verbose = TRUE
+) {
+  season_data <- data_laplace_season[[season_name]] |>
+    select(
+      name,
+      date,
+      season_year,
+      X1 = temp,
+      X2 = drought_local
+    ) |>
+    filter(
+      !is.na(name),
+      !is.na(date),
+      !is.na(season_year)
+    ) |>
+    arrange(name, date)
+
+  available_years <- season_data |>
+    distinct(season_year) |>
+    arrange(season_year) |>
+    pull(season_year)
+
+  n_available_years <- length(available_years)
+
+  if (n_available_years < 2L * n_years_per_block) {
+    stop(
+      "Season ", season_name,
+      " has only ", n_available_years,
+      " seasonal years; ",
+      2L * n_years_per_block,
+      " are required."
+    )
+  }
+
+  candidate_positions <- seq.int(
+    from = n_years_per_block,
+    to = n_available_years - n_years_per_block
+  )
+
+  candidate_years <- available_years[
+    candidate_positions
+  ]
+
+  message(
+    "Running ", n_perm,
+    " permutations for season ", season_name,
+    " over candidate years ",
+    min(candidate_years),
+    "–",
+    max(candidate_years),
+    " using ", n_years_per_block,
+    " years per block."
+  )
+
+  set.seed(seed)
+
+  permutation_results <- perm_test_fun(
+    data = season_data,
+    grid_vals = candidate_years,
+    n_perm = n_perm,
+    max_perm_attempts = 5L * n_perm,
+    max_failure_rate = 0.10,
+    n_years_per_block = n_years_per_block,
+    n_vars = 2,
+    laplace_trans = TRUE,
+    use_start = use_start,
+    ret_dep = ret_dep,
+    use_dth = FALSE,
+    verbose = verbose,
+    cond_val = dep_val,
+    laplace_sample = laplace_sample,
+    n_mc = length(laplace_sample),
+    aLow = 0,
+    nruns = 1,
+    validation_warnings = TRUE,
+    permutation_validation_warnings = FALSE
+  )
+
+  list(
+    season = season_name,
+    n_years_per_block = n_years_per_block,
+    n_perm = n_perm,
+    candidate_years = candidate_years,
+    results = permutation_results
+  )
+}
+
+# function to preprocess permutation test results
+preprocess_permutation_scan <- \(scan_result) {
+  season_name <- scan_result$season
+  candidate_years <- scan_result$candidate_years
+  permutation_results <- scan_result$results
+
+  norm_names <- c(
+    frob = "Frobenius",
+    inf = "Maximum",
+    spec = "Spectral"
+  )
+
+  summary_rows <- vector(
+    "list",
+    length(permutation_results)
+  )
+
+  permutation_rows <- vector(
+    "list",
+    length(permutation_results)
+  )
+
+  dependence_rows <- vector(
+    "list",
+    length(permutation_results)
+  )
+
+  for (i in seq_along(permutation_results)) {
+    result <- permutation_results[[i]]
+    candidate_year <- candidate_years[[i]]
+
+    summary_rows[[i]] <- tibble(
+      season = season_name,
+      n_years_per_block =
+        scan_result$n_years_per_block,
+      change_after_year = candidate_year,
+      change_before_year = if (
+        !is.null(result$block_info$split_before)
+      ) {
+        result$block_info$split_before
+      } else {
+        NA_integer_
+      },
+      norm = unname(norm_names),
+      observed = c(
+        result$norm_orig_frob,
+        result$norm_orig_inf,
+        result$norm_orig_spec
+      ),
+      p_value = c(
+        result$p_value_frob,
+        result$p_value_inf,
+        result$p_value_spec
+      ),
+      success = isTRUE(result$success),
+      n_attempted = result$n_attempted,
+      n_successful = result$n_successful,
+      n_failed = result$n_failed,
+      failure_rate = result$failure_rate,
+      error_stage = result$error_stage,
+      error_message = result$error_message
+    )
+
+    permutation_values <- list(
+      Frobenius = result$perm_norms_frob,
+      Maximum = result$perm_norms_inf,
+      Spectral = result$perm_norms_spec
+    )
+
+    permutation_rows[[i]] <- bind_rows(
+      lapply(
+        names(permutation_values),
+        \(norm_name) {
+          values <- permutation_values[[norm_name]]
+
+          if (length(values) == 0L) {
+            return(NULL)
+          }
+
+          tibble(
+            season = season_name,
+            n_years_per_block =
+              scan_result$n_years_per_block,
+            change_after_year =
+              candidate_year,
+            norm = norm_name,
+            permutation = seq_along(values),
+            permutation_value = values
+          )
+        }
+      )
+    )
+
+    if (!is.null(result$dep_vals)) {
+      dependence_rows[[i]] <- result$dep_vals |>
+        as.data.frame() |>
+        mutate(
+          season = season_name,
+          n_years_per_block =
+            scan_result$n_years_per_block,
+          change_after_year =
+            candidate_year,
+          .before = 1
+        )
+    }
+  }
+
+  summary_df <- bind_rows(summary_rows) |>
+    mutate(
+      norm = factor(
+        norm,
+        levels = c(
+          "Frobenius",
+          "Maximum",
+          "Spectral"
+        )
+      )
+    ) |>
+    arrange(
+      change_after_year,
+      norm
+    )
+
+  permutation_df <- bind_rows(
+    permutation_rows
+  ) |>
+    mutate(
+      norm = factor(
+        norm,
+        levels = c(
+          "Frobenius",
+          "Maximum",
+          "Spectral"
+        )
+      )
+    )
+
+  dependence_df <- bind_rows(
+    dependence_rows
+  )
+
+  list(
+    summary = summary_df, # one row per candidate year and norm
+    permutations = permutation_df, # individual successful perm stats
+    dependence = dependence_df # fitted CE parameters from obs blocks
+  )
+}
+
+# function to plot permutation test results
+plot_permutation_scan <- \(
+  scan_tidy,
+  plot_ce_parameters = TRUE,
+  variable_names = c(
+    X1 = "Maximum temperature",
+    X2 = "Drought"
+  )
+) {
+  summary_df <- scan_tidy$summary
+  permutation_df <- scan_tidy$permutations
+  dependence_df <- scan_tidy$dependence
+  
+  season_name <- unique(
+    summary_df$season
+  )
+  
+  year_breaks <- sort(
+    unique(summary_df$change_after_year)
+  )
+  
+  #### Pointwise p-value profile ####
+  
+  p_value_profile <- summary_df |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = p_value,
+        colour = norm
+      )
+    ) +
+    geom_hline(
+      yintercept = 0.05,
+      colour = "grey40",
+      linetype = "dashed"
+    ) +
+    geom_line(
+      data = \(x) filter(x, success),
+      aes(group = norm)
+    ) +
+    geom_point(
+      data = \(x) filter(x, success),
+      size = 2
+    ) +
+    geom_rug(
+      data = \(x) {
+        x |>
+          distinct(
+            change_after_year,
+            success
+          ) |>
+          filter(!success)
+      },
+      aes(x = change_after_year),
+      inherit.aes = FALSE,
+      sides = "b",
+      colour = "red"
+    ) +
+    scale_x_continuous(
+      breaks = year_breaks
+    ) +
+    scale_y_continuous(
+      limits = c(0, 1),
+      breaks = seq(0, 1, by = 0.1)
+    ) +
+    scale_colour_brewer(
+      palette = "Dark2"
+    ) +
+    labs(
+      title = paste(
+        season_name,
+        "pointwise permutation p-values"
+      ),
+      # subtitle = paste0(
+      #   unique(summary_df$n_years_per_block),
+      #   "-year blocks"
+      # ),
+      # x = "Candidate change after seasonal year",
+      x = "season year",
+      # y = "Pointwise permutation p-value",
+      y = "p-value",
+      colour = "Norm",
+      # caption = paste(
+      #   "Dashed line indicates p = 0.05.",
+      #   "Red axis marks indicate failed candidates."
+      # )
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      ),
+      legend.position = "bottom"
+    )
+  
+  #### Observed statistics against permutation distributions ####
+  
+  permutation_boxplots <- permutation_df |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = permutation_value
+      )
+    ) +
+    geom_boxplot(
+      aes(
+        group = interaction(
+          norm,
+          change_after_year
+        )
+      ),
+      width = 0.6,
+      outliers = TRUE
+    ) +
+    geom_point(
+      data = summary_df |>
+        filter(success),
+      aes(
+        x = change_after_year,
+        y = observed
+      ),
+      inherit.aes = FALSE,
+      colour = "red",
+      size = 2.5
+    ) +
+    facet_wrap(
+      ~norm,
+      scales = "free_y"
+    ) +
+    scale_x_continuous(
+      breaks = year_breaks
+    ) +
+    labs(
+      title = paste(
+        season_name,
+        "observed and permuted discrepancies"
+      ),
+      # subtitle = paste0(
+      #   unique(summary_df$n_years_per_block),
+      #   "-year blocks"
+      # ),
+      # x = "Candidate change after seasonal year",
+      x = "season year",
+      y = "Test Statistic",
+      # caption = paste(
+      #   "Boxplots show permutation distributions;",
+      #   "red points show observed discrepancies."
+      # )
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      )
+    )
+  
+  #### Permutation histograms ####
+  
+  histogram_labels <- summary_df |>
+    transmute(
+      change_after_year,
+      norm,
+      histogram_panel = paste0(
+        change_after_year,
+        # "\n",
+        ", ",
+        norm,
+        # "\np = ",
+        ", ",
+        if_else(
+          is.na(p_value),
+          "NA",
+          format(
+            p_value,
+            digits = 3,
+            nsmall = 2
+          )
+        )
+      )
+    )
+  
+  permutation_histogram_data <- permutation_df |>
+    left_join(
+      histogram_labels,
+      by = c(
+        "change_after_year",
+        "norm"
+      )
+    )
+  
+  histogram_observed_data <- summary_df |>
+    filter(success) |>
+    left_join(
+      histogram_labels,
+      by = c(
+        "change_after_year",
+        "norm"
+      )
+    )
+  
+  permutation_histograms <- permutation_histogram_data |>
+    ggplot(
+      aes(x = permutation_value)
+    ) +
+    geom_histogram(
+      aes(y = after_stat(density)),
+      bins = 25,
+      fill = "firebrick2",
+      alpha = 0.6
+    ) +
+    geom_vline(
+      data = histogram_observed_data,
+      aes(xintercept = observed),
+      inherit.aes = FALSE,
+      colour = "black",
+      linetype = "dashed",
+      linewidth = 0.8
+    ) +
+    facet_wrap(
+      ~histogram_panel,
+      scales = "free",
+      ncol = 3
+    ) +
+    labs(
+      title = paste(
+        season_name,
+        "permutation distributions"
+      ),
+      x = "D",
+      y = "Density",
+      # caption = paste(
+      #   "Dashed lines show observed discrepancies.",
+      #   "Facet labels give pointwise p-values."
+      # )
+    ) +
+    cecl_theme(
+      nejm_pal = FALSE
+    )
+  
+  plots <- list(
+    p_value_profile = p_value_profile,
+    permutation_boxplots =
+      permutation_boxplots,
+    permutation_histograms =
+      permutation_histograms
+  )
+  
+  #### CE parameter plots ####
+  
+  if (
+    plot_ce_parameters &&
+    nrow(dependence_df) > 0L
+  ) {
+    dependence_df <- dependence_df |>
+      mutate(
+        var = recode(
+          var,
+          !!!variable_names
+        ),
+        cond_var = recode(
+          cond_var,
+          !!!variable_names
+        )
+      )
+    
+    parameter_columns <- intersect(
+      c(
+        "a",
+        "b",
+        "m",
+        "s",
+        "ll"
+      ),
+      names(dependence_df)
+    )
+    
+    station_ids <- unique(
+      dependence_df$name
+    )
+    
+    ce_parameter_plots <- lapply(
+      station_ids,
+      \(station_id) {
+        dependence_df |>
+          filter(name == station_id) |>
+          pivot_longer(
+            cols = all_of(
+              parameter_columns
+            ),
+            names_to = "parameter",
+            values_to = "value"
+          ) |>
+          mutate(
+            parameter = recode(
+              parameter,
+              ll = "LogLik"
+            ),
+            panel = paste0(
+              parameter,
+              ", ",
+              var,
+              " | ",
+              cond_var
+            )
+          ) |>
+          ggplot(
+            aes(
+              x = change_after_year,
+              y = value,
+              colour = block
+            )
+          ) +
+          geom_line() +
+          geom_point() +
+          facet_wrap(
+            ~panel,
+            scales = "free_y",
+            ncol = 4
+          ) +
+          labs(
+            title = paste(
+              season_name,
+              "CE parameters:",
+              station_id
+            ),
+            x = "Candidate change after seasonal year",
+            y = "Parameter value",
+            colour = "Block"
+          ) +
+          cecl_theme() +
+          theme(
+            axis.text.x = element_text(
+              angle = 45,
+              hjust = 1
+            )
+          )
+      }
+    )
+    
+    names(ce_parameter_plots) <-
+      station_ids
+    
+    plots$ce_parameter_plots <-
+      ce_parameter_plots
+  }
+  
+  plots
+}
+
+
+#### Metadata ####
 
 dep_var <- c("drought_local_rev")
 temp_var <- "temp_max"
@@ -64,6 +1006,7 @@ seed <- 123
 dqu <- 0.8
 n_samples <- 500
 # grid_vals <- seq(950, 1050, by = 10) # TODO Add more values once code works
+
 
 #### Load Data ####
 
@@ -267,1014 +1210,583 @@ laplace_sample <- rlaplace_trunc(
 #   y_max = laplace_cap
 # )
 
+#### Screening ####
 
+screen_setup_df <- tidyr::crossing(
+  "season" = seasons,
+  # 10 years too short (as is 15 actually) !!
+  # n_years_per_block = c(10L, 15L, 20L, 25L)
+  n_years_per_block = c(15L, 20L, 25L, 30L)
+)
 
-#### Run test ####
+sink("sink_screening_output.txt")
 
-n_perm <- 100
+screen_res_df <- bind_rows(lapply(seq_len(nrow(screen_setup_df)), \(i) {
+  print(paste0(round(i / nrow(screen_setup_df) * 100, 2), "% of setups done"))
+  print(paste0("season = ", screen_setup_df$season[[i]]))
+  print(paste0("n_years_per_block = ", screen_setup_df$n_years_per_block[[i]]))
+  if (i == 2) {
+    # debugonce(single_run_explore)
+  }
+  with(
+    screen_setup_df,
+    screen_one_setting(season[[i]], n_years_per_block[[i]])
+  )
+}))
 
-# test with Summer
-summer_data <- data_laplace_season$Summer |>
-  select(
-    name,
-    date,
-    season_year,
-    X1 = temp,
-    X2 = drought_local
+warnings()
+
+# summarise failures by season and n_years_per_block
+screen_failure_summary <- screen_res_df |>
+  group_by(
+    season,
+    n_years_per_block
   ) |>
-  arrange(name, date)
+  summarise(
+    n_candidates = n(),
+    n_successful = sum(success),
+    n_failed = sum(!success),
+    failure_rate = mean(!success),
+    .groups = "drop"
+  )
 
-# n_years_per_block <- 15L
-n_years_per_block <- 20L # wide for testing
+screen_failure_summary
 
-n_rm <- 10
-available_years <- summer_data |>
-  distinct(season_year) |>
-  arrange(season_year) |>
-  # remove some years as we're only testing here
-  slice(c(n_rm:(n() - n_rm))) |>
-  pull(season_year)
+sink()
+
+# save
+readr::write_csv(screen_res_df, "screen_res.csv.gz")
+
+screen_res_df <- readr::read_csv("screen_res.csv.gz")
 
 
-grid_vals_year <- available_years[
-  n_years_per_block:
-  (length(available_years) - n_years_per_block)
-]
+#### Plotting ####
+
+screen_res_df_plt <- screen_res_df |>
+  arrange(
+    season,
+    n_years_per_block,
+    change_after_year
+  ) |>
+  group_by(
+    season,
+    n_years_per_block
+  ) |>
+  mutate(
+    # Separate successful line segments at failed candidates.
+    success_run = cumsum(!success),
+
+    # Identify Frobenius local peaks.
+    local_peak_frob = (
+      success &
+        lag(success, default = FALSE) &
+        lead(success, default = FALSE) &
+        frob > lag(frob) &
+        frob >= lead(frob)
+    ),
+    local_peak_frob = replace_na(
+      local_peak_frob,
+      FALSE
+    )
+  ) |>
+  ungroup() |>
+  mutate(
+    setting = paste0(
+      season,
+      ", ",
+      n_years_per_block,
+      " years"
+    )
+  )
+
+# Preserve the desired facet ordering.
+setting_levels <- screen_res_df_plt |>
+  distinct(
+    season,
+    n_years_per_block,
+    setting
+  ) |>
+  arrange(
+    season,
+    n_years_per_block
+  ) |>
+  pull(setting)
+
+screen_res_df_plt <- screen_res_df_plt |>
+  mutate(
+    setting = factor(
+      setting,
+      levels = setting_levels
+    )
+  )
+
+
+# summarise Frobenius peaks
+candidate_peaks_frob <- screen_res_df_plt |>
+  filter(
+    success,
+    local_peak_frob
+  ) |>
+  arrange(
+    season,
+    n_years_per_block,
+    desc(frob)
+  )
+
+top_local_peaks_frob <- candidate_peaks_frob |>
+  group_by(
+    season,
+    n_years_per_block
+  ) |>
+  slice_max(
+    order_by = frob,
+    n = 3,
+    with_ties = FALSE
+  ) |>
+  arrange(
+    season,
+    n_years_per_block,
+    desc(frob)
+  ) |>
+  ungroup()
+
+top_local_peaks_frob
+
+
+# plot Frobenius norm peaks
+year_breaks <- seq(
+  floor(
+    min(
+      screen_res_df_plt$change_after_year,
+      na.rm = TRUE
+    ) / 2
+  ) * 2,
+  ceiling(
+    max(
+      screen_res_df_plt$change_after_year,
+      na.rm = TRUE
+    ) / 2
+  ) * 2,
+  by = 2
+  # by = 1
+)
+
+plot_frob <- \(df, spec_year = NULL) {
+  df_plot <- df
+  if (!is.null(spec_year)) {
+    df_plot <- df_plot |> 
+      filter(n_years_per_block == spec_year)
+  }
+  df_plot |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = frob
+      )
+    ) +
+    geom_line(
+      data = \(x) filter(x, success),
+      aes(
+        group = interaction(
+          setting,
+          success_run
+        )
+      ),
+      colour = "black"
+    ) +
+    geom_point(
+      data = \(x) filter(x, success),
+      colour = "black"
+    ) +
+    geom_point(
+      data = \(x) filter(x, local_peak_frob),
+      colour = "red",
+      size = 3
+    ) +
+    geom_rug(
+      data = \(x) filter(x, !success),
+      aes(x = change_after_year),
+      inherit.aes = FALSE,
+      sides = "b",
+      colour = "grey50"
+    ) +
+    facet_wrap(
+      ~setting,
+      scales = "free_y"
+    ) +
+    scale_x_continuous(
+      breaks = year_breaks
+    ) +
+    labs(
+      # x = "Candidate change after seasonal year",
+      x = "season year",
+      y = "Frobenius discrepancy",
+      # caption = paste(
+      #   "Red points indicate local peaks.",
+      #   "Grey axis marks indicate failed candidates."
+      # )
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      )
+    )
+}
+
+p_frob <- plot_frob(screen_res_df_plt)
+p_frob_25 <- plot_frob(screen_res_df_plt, spec_year = 25)
+
+# Convert all norms to long format
+screen_res_long <- screen_res_df_plt |>
+  pivot_longer(
+    cols = c(
+      frob,
+      inf,
+      spec
+    ),
+    names_to = "norm",
+    values_to = "value"
+  ) |>
+  mutate(
+    norm = recode(
+      norm,
+      frob = "Frobenius",
+      inf = "Maximum",
+      spec = "Spectral"
+    ),
+    norm = factor(
+      norm,
+      levels = c(
+        "Frobenius",
+        "Maximum",
+        "Spectral"
+      )
+    )
+  ) |>
+  arrange(
+    season,
+    n_years_per_block,
+    norm,
+    change_after_year
+  ) |>
+  group_by(
+    season,
+    n_years_per_block,
+    norm
+  ) |>
+  mutate(
+    # Peaks are calculated separately for each norm.
+    local_peak = (
+      success &
+        lag(success, default = FALSE) &
+        lead(success, default = FALSE) &
+        value > lag(value) &
+        value >= lead(value)
+    ),
+    local_peak = replace_na(
+      local_peak,
+      FALSE
+    )
+  ) |>
+  ungroup()
+
+
+# Peak summaries for every norm
+candidate_peaks_all <- screen_res_long |>
+  filter(
+    success,
+    local_peak
+  ) |>
+  arrange(
+    season,
+    n_years_per_block,
+    norm,
+    desc(value)
+  )
+
+top_local_peaks_all <- candidate_peaks_all |>
+  group_by(
+    season,
+    n_years_per_block,
+    norm
+  ) |>
+  slice_max(
+    order_by = value,
+    n = 3,
+    with_ties = FALSE
+  ) |>
+  arrange(
+    season,
+    n_years_per_block,
+    norm,
+    desc(value)
+  ) |>
+  ungroup()
+
+# Combined plot for all norms
+plot_all_norms <- \(df, spec_year = NULL) {
+  df_plot <- df
+  if (!is.null(spec_year)) {
+    df_plot <- df_plot |> 
+      filter(n_years_per_block == spec_year)
+  }
+  df_plot |>
+    # filter(n_years_per_block == 25) |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = value,
+        colour = norm
+      )
+    ) +
+    geom_line(
+      data = \(x) filter(x, success),
+      aes(
+        group = interaction(
+          setting,
+          norm,
+          success_run
+        )
+      )
+    ) +
+    geom_point(
+      data = \(x) filter(x, success)
+    ) +
+    geom_point(
+      data = \(x) filter(x, local_peak),
+      colour = "red",
+      size = 3
+    ) +
+    geom_rug(
+      data = \(x) filter(x, !success),
+      aes(x = change_after_year),
+      inherit.aes = FALSE,
+      sides = "b",
+      colour = "grey50"
+    ) +
+    facet_wrap(
+      ~setting,
+      scales = "free_y"
+    ) +
+    scale_x_continuous(
+      breaks = year_breaks
+    ) +
+    scale_colour_brewer(
+      palette = "Dark2"
+    ) +
+    labs(
+      # x = "Candidate change after seasonal year",
+      x = "season year",
+      y = "Discrepancy",
+      colour = "Norm",
+      # caption = paste(
+      #   "Red points indicate norm-specific local peaks.",
+      #   "Grey axis marks indicate failed candidates."
+      # )
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      ),
+      legend.position = "bottom"
+    )
+}
+
+p_all_norms <- plot_all_norms(screen_res_long)
+p_all_norms_25 <- plot_all_norms(screen_res_long, spec_year = 25)
+
+ggsave("p_frob.png", p_frob, width = 12, height = 8)
+ggsave("p_frob_25.png", p_frob_25, width = 12, height = 8)
+ggsave("p_all_norms.png", p_all_norms, width = 12, height = 8)
+ggsave("p_all_norms_25.png", p_all_norms_25, width = 12, height = 8)
+
+
+#### Permutation tests across full feasible range ####
+
+# run initially for just 100 permutations across full range
+# n_perm_screen <- 100L
+n_perm_screen <- 1000L
+n_years_per_block <- 25L # best choice, from screening round
+
+sink("sink_perm_output.txt")
 
 source("src/00_functions.R")
-set.seed(seed)
-# debugonce(perm_test_fun)
-perm_test_res <- perm_test_fun(
-  data = summer_data,
-  grid_vals = grid_vals_year,
-  n_perm = n_perm,
-  n_years_per_block = n_years_per_block,
-  verbose = TRUE,
-  laplace_trans = TRUE,
-  ret_dep = TRUE,
-  # nruns = 2, use_start = TRUE,
-  cond_val = dep_val,
-  laplace_sample = laplace_sample
+permutation_scan_results <- setNames(
+  lapply(
+    seq_along(seasons),
+    \(i) {
+      message("Season = ", seasons[[i]])
+      run_season_permutation_scan(
+        season_name = seasons[[i]],
+        n_years_per_block = n_years_per_block,
+        n_perm = n_perm_screen,
+        seed = seed + i - 1L,
+        use_start = TRUE,
+        ret_dep = TRUE,
+        verbose = TRUE
+      )
+    }
+  ),
+  seasons
+)
+
+sink()
+
+saveRDS(
+  permutation_scan_results,
+  paste0(
+    "data/02_app/",
+    "spain_permutation_scan_",
+    n_years_per_block,
+    "yr_",
+    n_perm_screen,
+    "perm.rds"
+  )
+)
+
+permutation_scan_results <- readRDS(
+  paste0(
+    "data/02_app/",
+    "spain_permutation_scan_",
+    n_years_per_block,
+    "yr_",
+    n_perm_screen,
+    "perm.rds"
+  )
+)
+
+
+#### Plotting ####
+
+# preprocess every season
+permutation_scan_tidy <- lapply(
+  permutation_scan_results,
+  preprocess_permutation_scan
+)
+
+permutation_summary_df <- bind_rows(
+  lapply(
+    permutation_scan_tidy,
+    \(x) x$summary
+  )
+)
+
+permutation_values_df <- bind_rows(
+  lapply(
+    permutation_scan_tidy,
+    \(x) x$permutations
+  )
+)
+
+permutation_dependence_df <- bind_rows(
+  lapply(
+    permutation_scan_tidy,
+    \(x) x$dependence
+  )
+)
+
+# check failures
+permutation_summary_df |>
+  distinct(
+    season,
+    change_after_year,
+    success,
+    n_attempted,
+    n_successful,
+    n_failed,
+    failure_rate,
+    error_stage,
+    error_message
+  ) |>
+  arrange(
+    season,
+    change_after_year
+  )
+
+# create plots for every season
+permutation_scan_plots <- lapply(
+  permutation_scan_tidy,
+  plot_permutation_scan,
+  plot_ce_parameters = TRUE,
+  variable_names = c(
+    X1 = "Maximum temperature",
+    X2 = "Drought"
+  )
 )
 
 # save
-saveRDS(perm_test_res, "data/02_app/spain_small_perm_test_diff.rds")
+plot_directory <- "plots/permutation_scan"
 
-# load
-# perm_test_res <- readRDS("data/02_app/spain_small_perm_test_diff.rds")
+dir.create(
+  plot_directory,
+  recursive = TRUE,
+  showWarnings = FALSE
+)
 
-# function to pull out important information from permutation test results
-preprocess_fun <- \(x, grid_vals = NULL, n_per_block = NULL) {
-  bind_rows(lapply(seq_along(x), \(j) {
-    ret <- with(
-      x[[j]],
-      data.frame(
-        norm_value = c(perm_norms_inf, perm_norms_frob),
-        norm_orig = c(
-          rep(norm_orig_inf, length(perm_norms_inf)),
-          rep(norm_orig_spec, length(perm_norms_spec)),
-          rep(norm_orig_frob, length(perm_norms_frob)),
-          rep(norm_orig_ln_spd, length(perm_norms_ln_spd))
-        ),
-        p_value = c(
-          rep(p_value_inf, length(perm_norms_inf)),
-          rep(p_value_spec, length(perm_norms_spec)),
-          rep(p_value_frob, length(perm_norms_frob)),
-          rep(p_value_ln_spd, length(perm_norms_ln_spd))
-        ),
-        # norm_type = rep(c("Infinity", "Frobenius"), each = length(perm_norms_inf)) # ,
-        norm_type = rep(c("Infinity", "Frobenius", "Spectral", "Log SPD"), each = length(perm_norms_inf)) # ,
-        # method = names(perm_test_res)[i],
-        # grid_val = grid_vals[[j]]
+for (season_name in names(permutation_scan_plots)) {
+  season_plots <-
+    permutation_scan_plots[[season_name]]
+
+  filename_prefix <- paste0(
+    tolower(season_name),
+    "_",
+    n_years_per_block,
+    "yr_",
+    n_perm_screen,
+    "perm"
+  )
+
+  ggsave(
+    filename = file.path(
+      plot_directory,
+      paste0(
+        filename_prefix,
+        "_p_value_profile.png"
       )
-    )
-    if (!is.null(grid_vals)) {
-      ret$grid_val <- grid_vals[[j]]
-    }
-    if (!is.null(n_per_block)) {
-      ret$n_per_block <- n_per_block[[j]]
-    }
-    ret
-  }))
-}
-
-# function to produce plots of interest
-plot_fun <- \(perm_test_res, grid_vals, plot_ce_params = TRUE, var_names = NULL) {
-  # pull out important information
-  perm_test_res_df <- preprocess_fun(perm_test_res, grid_vals = grid_vals)
-
-  # points of original norm values
-  cols <- colorRampPalette(brewer.pal(12, "Set3"))
-  myPal <- cols(length(unique(perm_test_res_df$grid_val)))
-  p1 <- perm_test_res_df |>
-    mutate(grid_val_facet = paste0(grid_val, " (p = ", p_value, ")")) |>
-    mutate(
-      grid_val_facet = factor(grid_val_facet, levels = unique(grid_val_facet))
-    ) |>
-    # ggplot(aes(x = norm_value, fill = factor(grid_val))) +
-    ggplot(aes(x = norm_value)) +
-    geom_histogram(
-      aes(y = after_stat(density)),
-      fill = "red",
-      position = "identity",
-      alpha = 0.5,
-      bins = 30
-    ) +
-    geom_vline(
-      # aes(xintercept = norm_orig, colour = factor(grid_val)),
-      aes(xintercept = norm_orig),
-      colour = "black",
-      linetype = "dashed",
-      linewidth = 1
-    ) +
-    labs(x = "Norm", y = "Density") +
-    # scale_fill_manual(values = myPal) +
-    # scale_colour_manual(values = myPal) +
-    # facet_wrap(norm_type ~ grid_val_facet, scales = "free") +
-    facet_wrap(grid_val_facet ~ norm_type, scales = "free") +
-    cecl_theme(nejm_pal = FALSE) +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1),
-    )
-
-  # boxplots
-  p2 <- perm_test_res_df |>
-    ggplot(aes(x = grid_val, y = norm_value)) +
-    geom_boxplot(aes(group = grid_val), width = 2, outliers = TRUE, key_glyph = "rect") +
-    # geom_hline(
-    #   data = perm_test_res_df |>
-    #     distinct(grid_val, norm_orig, norm_type),
-    #   aes(yintercept = norm_orig, group = grid_val),
-    #   linetype = "dashed",
-    #   size = 1
-    # ) +
-    geom_point(aes(y = norm_orig), colour = "blue", size = 3) +
-    # geom_boxplot(aes(group = grid_val)) +
-    # geom_smooth() +
-    facet_wrap(~norm_type, scales = "free") +
-    cecl_theme()
-
-  ret <- list(
-    hist_plot = p1,
-    box_plot = p2
+    ),
+    plot = season_plots$p_value_profile,
+    width = 10,
+    height = 6,
+    dpi = 300
   )
 
-  if (!plot_ce_params) {
-    return(ret)
-  }
-
-  # plot dependence values
-  perm_test_dep_df <- bind_rows(lapply(seq_along(perm_test_res), \(j) {
-    perm_test_res[[j]]$dep_vals |>
-      as.data.frame() |>
-      mutate(grid_val = grid_vals[[j]])
-  }))
-
-  if (!is.null(var_names)) {
-    perm_test_dep_df <- perm_test_dep_df |>
-      mutate(across(c(var, cond_var), \(x) {
-        case_when(
-          x == "X1" ~ var_names[[1]],
-          TRUE ~ var_names[[2]]
-        )
-      }))
-  }
-
-  p3_lst <- mclapply(unique(perm_test_dep_df$name), \(name) {
-    perm_test_dep_df |>
-      filter(name == !!name) |>
-      pivot_longer(cols = c("a", "b", "m", "s", "ll"), names_to = "param", values_to = "value") |>
-      mutate(param = ifelse(param == "ll", "LogLik", param)) |>
-      arrange(name, block, param) |>
-      # mutate(param = paste0(param, ", ", name, ", block ", block)) |>
-      # mutate(param = paste0(param, ", ", var, " | ", cond_var, ", ", name, ", block ", block)) |>
-      # mutate(param = paste0(param, ", ", var, " | ", cond_var, ", ", name)) |>
-      mutate(param = paste0(param, ", ", var, " | ", cond_var)) |>
-      # ggplot(aes(x = grid_val, y = value, colour = name)) +
-      # ggplot(aes(x = grid_val, y = value, colour = paste0(var, " | ", cond_var))) +
-      ggplot(aes(x = grid_val, y = value, colour = block)) +
-      geom_point() +
-      geom_line() +
-      # facet_wrap(param ~ name + block, scales = "free", ncol = 4) +
-      facet_wrap(~param, scales = "free", ncol = 4) +
-      cecl_theme() +
-      ggtitle(name) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  })
-
-
-  return(
-    list(
-      hist_plot      = p1,
-      box_plot       = p2,
-      param_plot_lst = p3_lst
-    )
-  )
-}
-
-plots <- plot_fun(perm_test_res, grid_vals_year, var_names = c("temp", "drought_local"))
-# plots[[1]]
-# plots[[2]]
-
-ggsave("test.png", plots[[1]], width = 14, height = 12)
-ggsave("test2.png", plots[[2]], width = 14, height = 12)
-# ggsave("test3.png", plots[[3]], width = 14, height = 12)
-
-pdf("test3.pdf", width = 12, height = 10)
-plots[[3]]
-dev.off()
-
-# pdf(paste0("hist_diff_", diff, ".pdf"), width = 10, height = 8)
-# # pdf(paste0("hist_diff_", diff, "_not_test.pdf"), width = 10, height = 8)
-# plots[[1]] + ggtitle(paste0("Diff = ", diff))
-# # plots[[1]] + ggtitle(paste0("Diff = ", diff, " (not test case)"))
-# dev.off()
-#
-# pdf(paste0("box_diff_", diff, ".pdf"), width = 10, height = 6)
-# # pdf(paste0("box_diff_", diff, "not_test.pdf"), width = 10, height = 6)
-# plots[[2]] + ggtitle(paste0("Diff = ", diff))
-# # plots[[2]] + ggtitle(paste0("Diff = ", diff, " (not test case)"))
-# dev.off()
-#
-# pdf(paste0("ce_params_", diff, ".pdf"), width = 10, height = 8)
-# # pdf(paste0("ce_params_", diff, "not_test.pdf"), width = 10, height = 8)
-# plots[[3]] + ggtitle(paste0("Diff = ", diff))
-# # plots[[3]] + ggtitle(paste0("Diff = ", diff, " (not test case)"))
-# dev.off()
-
-# conclusion:
-
-# For diff = 0.4;
-
-# For diff = 0.2;
-
-#### Test with equal points in each block ####
-
-# Run again with equal number of points in each block,
-# to check that results are not just due to more points in one block than the
-# other (as this can affect the CE estimation)
-
-# (n_per_block_perm <- min(grid_vals))
-#
-# set.seed(123)
-# perm_test_res_n_per_block <- perm_test_fun(
-#   data = select(data_loc_test, X1, X2, name, block),
-#   grid_vals = grid_vals,
-#   # n_perm = n_perm,
-#   n_perm = n_perm,
-#   n_per_block = n_per_block_perm,
-#   laplace_trans = TRUE,
-#   cond_var = cond_var,
-#   ret_dep = TRUE,
-#   aLow = 0, nruns = 2, use_start = TRUE, # optimal specification of CE
-#   cond_val = dep_val, laplace_sample = laplace_sample # control Laplace sample
-# )
-#
-# saveRDS(perm_test_res_n_per_block, paste0("small_perm_test_diff_", diff, "_n_per_block_", n_per_block_perm, "not_test.rds"))
-#
-# # perm_test_res_n_per_block <- readRDS(paste0("small_perm_test_diff_", diff, "_n_per_block_", n_per_block_perm, ".rds"))
-#
-# plots2 <- plot_fun(perm_test_res_n_per_block, grid_vals)
-#
-# pdf(paste0("hist2_diff_", diff, ".pdf"), width = 10, height = 8)
-# # pdf(paste0("hist2_diff_", diff, "_not_test.pdf"), width = 10, height = 8)
-# plots2[[1]] + ggtitle(paste0("Diff = ", diff, ", npoints = ", n_per_block_perm))
-# # plots2[[1]] + ggtitle(paste0("Diff = ", diff, " (not test case), npoints = ", n_per_block_perm))
-# dev.off()
-#
-# pdf(paste0("box2_diff_", diff, ".pdf"), width = 10, height = 6)
-# # pdf(paste0("box2_diff_", diff, "_not_test.pdf"), width = 10, height = 6)
-# plots2[[2]] + ggtitle(paste0("Diff = ", diff, ", npoints = ", n_per_block_perm))
-# # plots2[[2]] + ggtitle(paste0("Diff = ", diff, " (not test case), npoints = ", n_per_block_perm))
-# dev.off()
-#
-# pdf(paste0("ce_params2_", diff, ".pdf"), width = 10, height = 8)
-# # pdf(paste0("ce_params2_", diff, "_not_test.pdf"), width = 10, height = 8)
-# plots2[[3]] + ggtitle(paste0("Diff = ", diff, ", npoints = ", n_per_block_perm))
-# # plots2[[3]] + ggtitle(paste0("Diff = ", diff, " (not test case), npoints = ", n_per_block_perm))
-# dev.off()
-
-#### Test w/ equal points in each, ENSURING N EXCEEDANCES IN EACH BLOCK ####
-
-# TODO Ensure that threshold taken for both blocks is the same (and max value)
-# (see `use_dth` argument)
-
-# TODO check # thresholded obs in each block is actually the same (and equal to 1 - cond_prob)
-
-# diff <- 0 # try for no difference in correlation (but stochastically different data!
-# diff <- 0.05
-# diff <- 0.1
-# diff <- 0.1
-# diff <- 0.2
-# diff <- 0.4
-# diff <- 0.3
-
-# use_test_case <- FALSE # try for absolutely no difference (i.e. same exact data in both blocks)
-#
-# data_loc <- gen_dat(cor_t_vec, increments, diff)
-#
-# # use same data for both blocks if test case
-# data_loc_test <- data_loc
-# if (diff == 0 && use_test_case) {
-#   data_loc_test <- data_loc |>
-#     filter(block == 1) |>
-#     bind_rows(
-#       data_loc |>
-#         filter(block == 1) |>
-#         mutate(block = 2)
-#     )
-# }
-#
-# (n_per_block_perm <- min(grid_vals))
-# n_perm <- 1000
-# # n_perm <- 100
-#
-# set.seed(123)
-# perm_test_res_thresh_block <- perm_test_fun(
-#   data = select(data_loc_test, X1, X2, name, block),
-#   grid_vals = grid_vals,
-#   n_perm = n_perm,
-#   n_per_block = n_per_block_perm,
-#   laplace_trans = TRUE,
-#   cond_var = cond_var,
-#   # define thresh as m-th largest order statistic s.t. P(X > thresh) = cond_prob, to ensure n exceedances in each block
-#   cond_prob = 0.8,
-#   ret_dep = TRUE,
-#   aLow = 0, nruns = 2, use_start = TRUE, # optimal specification of CE
-#   use_dth = TRUE, # Use different threshold for each block
-#   # cond_val = dep_val,
-#   laplace_sample = laplace_sample # control Laplace sample
-# )
-#
-# saveRDS(perm_test_res_thresh_block, paste0("small_perm_test_diff_", diff, "_n_per_block_", n_per_block_perm, "_thresh_blocks.rds"))
-# # # perm_test_res_thresh_block <- readRDS(paste0("small_perm_test_diff_", diff, "_n_per_block_", n_per_block_perm, ".rds"))
-# plots2 <- plot_fun(perm_test_res_thresh_block, grid_vals)
-#
-# pdf(paste0("hist3_diff_", diff, ".pdf"), width = 10, height = 8)
-# # pdf(paste0("hist2_diff_", diff, "_not_test.pdf"), width = 10, height = 8)
-# plots2[[1]] + ggtitle(paste0("Diff = ", diff, ", npoints = ", n_per_block_perm))
-# # plots2[[1]] + ggtitle(paste0("Diff = ", diff, " (not test case), npoints = ", n_per_block_perm))
-# dev.off()
-#
-# pdf(paste0("box3_diff_", diff, ".pdf"), width = 10, height = 6)
-# # pdf(paste0("box2_diff_", diff, "_not_test.pdf"), width = 10, height = 6)
-# plots2[[2]] + ggtitle(paste0("Diff = ", diff, ", npoints = ", n_per_block_perm))
-# # plots2[[2]] + ggtitle(paste0("Diff = ", diff, " (not test case), npoints = ", n_per_block_perm))
-# dev.off()
-#
-# pdf(paste0("ce_params3_", diff, ".pdf"), width = 10, height = 8)
-# # pdf(paste0("ce_params2_", diff, "_not_test.pdf"), width = 10, height = 8)
-# plots2[[3]] + ggtitle(paste0("Diff = ", diff, ", npoints = ", n_per_block_perm))
-# # plots2[[3]] + ggtitle(paste0("Diff = ", diff, " (not test case), npoints = ", n_per_block_perm))
-# dev.off()
-
-#### Test with different block sizes ####
-
-# run with different values of n_per_perm, for the same
-
-# n_per_block_vals <- seq(200, 900, by = 100)
-n_per_block_vals <- seq(100, 1000, by = 50)
-
-# set.seed(123)
-# perm_test_res_block <- mclapply(n_per_block_vals, \(n_per_block_perm) {
-#   perm_test_fun(
-#     data = select(data_loc_test, X1, X2, name, block),
-#     grid_vals = 1000,
-#     n_perm = n_perm,
-#     n_per_block = n_per_block_perm,
-#     laplace_trans = TRUE,
-#     cond_var = cond_var,
-#     ret_dep = TRUE,
-#     aLow = 0, nruns = 2, use_start = TRUE, # optimal specification of CE
-#     cond_val = dep_val, laplace_sample = laplace_sample # control Laplace sample
-#   )
-# })
-#
-# saveRDS(perm_test_res_block, paste0("small_perm_test_diff_", diff, "_n_per_block_vals.rds"))
-
-
-#### Line plots for all values of diff ####
-
-diff_vals <- c(0, 0.05, 0.075, 0.1, 0.2, 0.3)
-
-## experiment 1 (different grid values) ##
-# files <- list.files(pattern = "small_perm_test_diff", full.names = TRUE)
-# files <- files[!grepl("n_per_block", files)]
-# # extract numeric diff from filename
-# file_diffs <- as.numeric(
-#   sub(".*small_perm_test_diff_([0-9.]+)\\.rds$", "\\1", files)
-# )
-# # reorder files to match diff_vals
-# files <- files[match(diff_vals, file_diffs)]
-#
-# perm_lst <- lapply(files, readRDS)
-# perm_df <- bind_rows(lapply(seq_along(perm_lst), \(i) {
-#   preprocess_fun(perm_lst[[i]], grid_vals = grid_vals) |>
-#     mutate(diff = diff_vals[[i]])
-# }))
-#
-# perm_df |>
-#   filter(norm_type == "Frobenius") |>
-#   ggplot(aes(x = grid_val, y = p_value, colour = as.factor(diff))) +
-#   geom_point() +
-#   geom_line() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Grid value",
-#     y = "p-value",
-#     colour = "Correlation increase"
-#   ) +
-#   cecl_theme() # TODO Do for second experiment
-#
-#
-# ## experiment 2 (different grid values, same block sizes) ##
-# files2 <- list.files(pattern = "small_perm_test_diff_[0-9.]+_n_per_block_[0-9]+\\.rds", full.names = TRUE)
-# file_diffs2 <- as.numeric(
-#   sub(".*small_perm_test_diff_([0-9.]+)_n_per_block_[0-9]+\\.rds$", "\\1", files2)
-# )
-# files2 <- files2[match(diff_vals, file_diffs2)]
-#
-# perm_block_lst <- lapply(files2, readRDS)
-# perm_block_df <- bind_rows(lapply(seq_along(perm_block_lst), \(i) {
-#   preprocess_fun(perm_block_lst[[i]], grid_vals = grid_vals) |>
-#     mutate(diff = diff_vals[[i]])
-# }))
-#
-# perm_block_df |>
-#   filter(norm_type == "Frobenius") |>
-#   ggplot(aes(x = grid_val, y = p_value, colour = as.factor(diff))) +
-#   geom_point() +
-#   geom_line() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Grid value",
-#     y = "p-value",
-#     colour = "Correlation increase"
-#   ) +
-#   cecl_theme()
-#
-# ## experiment 3 (same grid value, vary (same) block size) ##
-#
-# # list files
-# files3 <- list.files(pattern = "n_per_block_vals.rds", full.names = TRUE)
-# file_diffs3 <- as.numeric(
-#   sub(".*small_perm_test_diff_([0-9.]+)_n_per_block_vals\\.rds$", "\\1", files3)
-# )
-# files3 <- files3[match(diff_vals, file_diffs3)]
-#
-# perm_lst_block3 <- lapply(files3, readRDS)
-#
-# # pull out important information and plot (flatten list as only one grid val)
-# perm_lst_block3 <- lapply(perm_lst_block3, \(x) {
-#   preprocess_fun(purrr::flatten(x), n_per_block = n_per_block_vals)
-# })
-#
-# perm_block_df3 <- bind_rows(lapply(seq_along(perm_lst_block3), \(i) {
-#   mutate(perm_lst_block3[[i]], diff = diff_vals[[i]])
-# }))
-#
-# # plot
-# perm_block_df3 |>
-#   filter(norm_type == "Frobenius") |>
-#   ggplot(aes(x = n_per_block, y = p_value, colour = as.factor(diff))) +
-#   geom_point() +
-#   geom_line() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Number of points per block",
-#     y = "p-value",
-#     colour = "Correlation increase"
-#   ) +
-#   ggtitle("Permutation test p-values for different block sizes") +
-#   scale_x_continuous(breaks = n_per_block_vals) +
-#   scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-#   cecl_theme()
-#
-# ## experiment 4 (no difference, different seed numbers)
-#
-# seed_vals <- 123:132
-#
-# files4 <- list.files(pattern = "diff_0_seed_", full.names = TRUE)
-#
-# perm_lst_block4 <- lapply(files4, readRDS)
-#
-# # pull out important information and plot (flatten list as only one grid val)
-# perm_lst_block4 <- lapply(perm_lst_block4, \(x) {
-#   preprocess_fun(purrr::flatten(x), n_per_block = n_per_block_vals)
-# })
-#
-# perm_block_df4 <- bind_rows(lapply(seq_along(perm_lst_block4), \(i) {
-#   # mutate(perm_lst_block4[[i]], diff = diff_vals[[i]])
-#   mutate(perm_lst_block4[[i]], diff = 0, seed = seed_vals[[i]])
-# }))
-#
-# # plot
-# perm_block_df4 |>
-#   filter(norm_type == "Frobenius") |>
-#   # ggplot(aes(x = n_per_block, y = p_value, colour = as.factor(seed))) +
-#   ggplot(aes(x = n_per_block, y = p_value)) +
-#   # geom_point(colour = "red", alpha = 0.3) +
-#   geom_line(aes(group = as.factor(seed)), colour = "red", alpha = 0.3) +
-#   geom_smooth() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Number of points per block",
-#     y = "p-value"
-#   ) +
-#   ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-#   scale_x_continuous(breaks = n_per_block_vals) +
-#   scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-#   cecl_theme(nejm_pal = FALSE)
-
-
-#### Run sliding window test case many times ####
-
-# # n_per_block_vals <- seq(200, 900, by = 100)
-# n_per_block_vals <- seq(100, 1000, by = 50)
-# diff_test <- 0
-#
-# set.seed(123)
-# perm_test_res_loop <- mclapply(1:100, \(i) {
-#   system(sprintf("echo %s", paste("repetition", i)))
-#   data_loc <- gen_dat(cor_t_vec, increments, diff_test)
-#
-#   # use same data for both blocks if test case
-#   data_loc_test <- data_loc
-#   if (diff_test == 0) {
-#     data_loc_test <- data_loc |>
-#       filter(block == 1) |>
-#       bind_rows(
-#         data_loc |>
-#           filter(block == 1) |>
-#           mutate(block = 2)
-#       )
-#   }
-#
-#   lapply(n_per_block_vals, \(n_per_block_perm) {
-#     perm_test_fun(
-#       data = select(data_loc_test, X1, X2, name, block),
-#       grid_vals = 1000,
-#       n_perm = n_perm,
-#       n_per_block = n_per_block_perm,
-#       laplace_trans = TRUE,
-#       cond_var = cond_var,
-#       ret_dep = TRUE,
-#       aLow = 0, nruns = 2, use_start = TRUE, # optimal specification of CE
-#       cond_val = dep_val, laplace_sample = laplace_sample # control Laplace sample
-#     )
-#   })
-# })
-#
-# saveRDS(perm_test_res_loop, "perm_test_res_loop.rds")
-
-#### Plot results of sliding window ####
-
-# load
-# files_slide <- list.files(pattern = "perm_test_res_loop_", full.names = TRUE)
-# files_slide <- files_slide[!grepl("loop2", files_slide)]
-# file_not_test <- files_slide[grepl("not_test", files_slide)]
-# files_slide <- files_slide[files_slide != file_not_test]
-# diffs_slide <- as.numeric(
-#   sub(".*perm_test_res_loop_diff_([0-9.]+)\\.rds$", "\\1", files_slide)
-# )
-# files_slide <- files_slide[match(diff_vals, diffs_slide)]
-# files_slide <- c(file_not_test, files_slide)
-#
-# data_slide <- lapply(files_slide, readRDS)
-#
-# # pull out important information and plot (flatten list as only one grid val)
-# # perm_lst_slide <- lapply(data_slide, \(x) {
-# #   preprocess_fun(purrr::flatten(x), n_per_block = n_per_block_vals)
-# # })
-# # names(data_slide) <- c("not_test", diff_vals)
-# names(data_slide) <- c("0", "Exact Same", diff_vals[2:length(diff_vals)])
-# diff_vals_name <- names(data_slide)
-# # x <- data_slide[[1]]
-# data_slide_df <- bind_rows(lapply(seq_along(data_slide), \(i) {
-#   x <- data_slide[[i]]
-#   bind_rows(lapply(x, \(y) {
-#     preprocess_fun(purrr::flatten(y), n_per_block = n_per_block_vals)
-#   }), .id = "rep") |>
-#     mutate(diff = diff_vals_name[[i]])
-# })) |>
-#   relocate(rep, .after = n_per_block) |>
-#   mutate(diff = factor(diff, levels = c("Exact Same", "0", as.character(diff_vals[2:length(diff_vals)]))))
-#
-# readr::write_csv(
-#   data_slide_df,
-#   "data_slide_df.csv"
-# )
-#
-# # plot
-# p <- data_slide_df |>
-#   filter(norm_type == "Frobenius") |>
-#   ggplot(aes(x = n_per_block, y = p_value)) +
-#   geom_line(aes(group = as.factor(rep)), colour = "red", alpha = 0.3) +
-#   geom_smooth() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Number of points per block",
-#     y = "p-value"
-#   ) +
-#   ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-#   # scale_x_continuous(breaks = n_per_block_vals) +
-#   scale_x_continuous(breaks = n_per_block_vals[seq(1, length(n_per_block_vals), by = 2)]) +
-#   scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-#   cecl_theme(nejm_pal = FALSE) +
-#   theme(
-#     axis.text.x = element_text(angle = 45, hjust = 1)
-#   ) +
-#   facet_wrap(~diff)
-# ggsave(plot = p, filename = "plot_not_test.png", height = 10, width = 12)
-#
-# # also plot smooth lines for each, without red lines in the background
-# p2 <- data_slide_df |>
-#   # filter(norm_type == "Frobenius") |>
-#   # group_by(diff, n_per_block) |>
-#   # slice(1:10) |>
-#   # ungroup() |>
-#   ggplot(aes(x = n_per_block, y = p_value, colour = diff, group = diff)) +
-#   geom_smooth() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Number of points per block",
-#     y = "p-value",
-#     colour = "Correlation increase"
-#   ) +
-#   scale_x_continuous(breaks = n_per_block_vals) +
-#   scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-#   ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-#   cecl_theme() +
-#   guides(colour = guide_legend(override.aes = list(linewidth = 8))) +
-#   theme(
-#     axis.text.x = element_text(angle = 45, hjust = 1)
-#   )
-# ggsave(plot = p2, filename = "plot2_not_test.png", height = 10, width = 12)
-#
-# rm(p1, p2, data_slide)
-# gc()
-
-
-### Run sliding window test case many times (WITH SAME DATA!!) ####
-
-# # n_per_block_vals <- seq(200, 900, by = 100)
-# n_per_block_vals <- seq(100, 1000, by = 50)
-# # n_per_block_vals <- seq(950, 1000, by = 50)
-# # diff_test <- 0
-# # diff_test <- 0.05
-# # diff_test <- 0.075
-# diff_test <- 0.1
-# # diff_test <- 0.2
-#
-# set.seed(123)
-# data_loc <- gen_dat(cor_t_vec, increments, diff_test)
-#
-# # use same data for both blocks if test case
-# data_loc_test <- data_loc
-# if (diff_test == 0) {
-#   data_loc_test <- data_loc |>
-#     filter(block == 1) |>
-#     bind_rows(
-#       data_loc |>
-#         filter(block == 1) |>
-#         mutate(block = 2)
-#     )
-# }
-#
-# # perm_test_res_loop_same <- mclapply(1:100, \(i) {
-# perm_test_res_loop_same <- mclapply(1:2, \(i) {
-#   system(sprintf("echo %s", paste("repetition", i)))
-#
-#   lapply(n_per_block_vals, \(n_per_block_perm) {
-#     perm_test_fun(
-#       data = select(data_loc_test, X1, X2, name, block),
-#       grid_vals = 1000,
-#       n_perm = n_perm,
-#       n_per_block = n_per_block_perm,
-#       laplace_trans = TRUE,
-#       cond_var = cond_var,
-#       ret_dep = TRUE,
-#       aLow = 0, nruns = 2, use_start = TRUE, # optimal specification of CE
-#       cond_val = dep_val, laplace_sample = laplace_sample # control Laplace sample
-#     )
-#   })
-# })
-#
-# # saveRDS(perm_test_res_loop, "perm_test_res_loop.rds")
-# saveRDS(perm_test_res_loop_same, paste0("perm_test_res_loop2_diff_", diff_test, ".rds"))
-
-# check that they've run properly!!
-# perm_test_res_loop_same_test <- readRDS(
-#   # "perm_test_res_loop2_diff_0.05.rds" # fine
-#   "perm_test_res_loop2_diff_0.075.rds"  # error
-# )
-
-#### Plot ####
-
-# # load
-# files_slide2 <- list.files(pattern = "perm_test_res_loop2", full.names = TRUE)
-# file_not_test2 <- files_slide2[grepl("not_test", files_slide2)]
-# files_slide2 <- files_slide2[files_slide2 != file_not_test2]
-# # TODO temp, remove afterwards (also fix, not running!)
-# # files_slide2 <- files_slide2[grepl("diff_0.rds", files_slide2)]
-# # files_slide2 <- files_slide2[!grepl("0.05", files_slide2)]
-# files_slide2 <- files_slide2[!grepl("0.075", files_slide2)]
-# diffs_slide2 <- as.numeric(
-#   sub(".*perm_test_res_loop2_diff_([0-9.]+)\\.rds$", "\\1", files_slide2)
-# )
-# matches <- match(diff_vals, diffs_slide2)
-# files_slide2 <- files_slide2[matches]
-# # use regular expressions to extract number
-# # (diff_vals_spec <- diff_vals[sort(matches[!is.na(matches)])])
-# diff_vals_spec <- as.numeric(
-#   sub(".*perm_test_res_loop2_diff_([0-9.]+)\\.rds$", "\\1", files_slide2)
-# )
-# (diff_vals_spec <- diff_vals_spec[!is.na(diff_vals_spec)])
-#
-# # add back in non-test file
-# files_slide2 <- c(file_not_test2, files_slide2)
-# (files_slide2 <- files_slide2[!is.na(files_slide2)]) # rm diffs not ran
-#
-# # load data
-# data_slide2 <- lapply(files_slide2, readRDS)
-#
-# # pull out important information and plot (flatten list as only one grid val)
-# # perm_lst_slide <- lapply(data_slide2, \(x) {
-# #   preprocess_fun(purrr::flatten(x), n_per_block = n_per_block_vals)
-# # })
-# # names(data_slide2) <- c("not_test", diff_vals)
-# # TODO Temp, remove afterwards (also fix, not running!)
-# # names(data_slide2) <- c("0", "Exact Same", diff_vals_spec[2:length(diff_vals_spec)])
-# names(data_slide2) <- c("0", "Exact Same", diff_vals_spec[2:length(diff_vals_spec)])
-# # names(data_slide2) <- c("0", "Exact Same")
-# (diff_vals_name2 <- names(data_slide2))
-# # x <- data_slide2[[1]]
-#
-# data_slide2_df <- bind_rows(lapply(seq_along(data_slide2), \(i) {
-#   print(i)
-#   print(diff_vals_name2[[i]])
-#   x <- data_slide2[[i]]
-#   bind_rows(lapply(x, \(y) {
-#     preprocess_fun(purrr::flatten(y), n_per_block = n_per_block_vals)
-#   }), .id = "rep") |>
-#     mutate(diff = diff_vals_name2[[i]])
-# })) |>
-#   relocate(rep, .after = n_per_block) |>
-#   mutate(diff = factor(diff, levels = c("Exact Same", "0", as.character(diff_vals[2:length(diff_vals)]))))
-# readr::write_csv(
-#   data_slide2_df,
-#   "data_slide2_df.csv"
-# )
-#
-# # plot
-# p <- data_slide2_df |>
-#   filter(norm_type == "Frobenius") |>
-#   ggplot(aes(x = n_per_block, y = p_value)) +
-#   geom_line(aes(group = as.factor(rep)), colour = "red", alpha = 0.3) +
-#   geom_smooth() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Number of points per block",
-#     y = "p-value"
-#   ) +
-#   ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-#   # scale_x_continuous(breaks = n_per_block_vals) +
-#   scale_x_continuous(breaks = n_per_block_vals[seq(1, length(n_per_block_vals), by = 2)]) +
-#   scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-#   cecl_theme(nejm_pal = FALSE) +
-#   theme(
-#     axis.text.x = element_text(angle = 45, hjust = 1)
-#   ) +
-#   facet_wrap(~diff)
-# ggsave(plot = p, filename = "plot_same.png", height = 10, width = 12)
-#
-# # also plot smooth lines for each, without red lines in the background
-# p2 <- data_slide2_df |>
-#   # filter(norm_type == "Frobenius") |>
-#   # group_by(diff, n_per_block) |>
-#   # slice(1:10) |>
-#   # ungroup() |>
-#   ggplot(aes(x = n_per_block, y = p_value, colour = diff, group = diff)) +
-#   geom_smooth() +
-#   geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-#   labs(
-#     x = "Number of points per block",
-#     y = "p-value",
-#     colour = "Correlation increase"
-#   ) +
-#   scale_x_continuous(breaks = n_per_block_vals) +
-#   scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-#   ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-#   cecl_theme() +
-#   guides(colour = guide_legend(override.aes = list(linewidth = 8))) +
-#   theme(
-#     axis.text.x = element_text(angle = 45, hjust = 1)
-#   )
-# ggsave(plot = p2, filename = "plot_same2.png", height = 10, width = 12)
-
-#### Run sliding window test case many times (W/ SAME DATA, SAME EXCEEDANCES) ####
-
-n_per_block_vals <- seq(100, 1000, by = 50)
-diff_test <- 0
-diff_test <- 0.05
-diff_test <- 0.075
-diff_test <- 0.1
-diff_test <- 0.2
-diff_test <- 0.3
-use_test_case <- FALSE
-
-set.seed(123)
-perm_test_res_loop_thresh_blocks <- mclapply(1:100, \(i) {
-  system(sprintf("echo %s", paste("repetition", i)))
-  data_loc <- gen_dat(cor_t_vec, increments, diff_test)
-
-  # use same data for both blocks if test case
-  data_loc_test <- data_loc
-  if (diff_test == 0 && use_test_case == TRUE) {
-    data_loc_test <- data_loc |>
-      filter(block == 1) |>
-      bind_rows(
-        data_loc |>
-          filter(block == 1) |>
-          mutate(block = 2)
+  ggsave(
+    filename = file.path(
+      plot_directory,
+      paste0(
+        filename_prefix,
+        "_observed_vs_permuted.png"
       )
-  }
+    ),
+    plot =
+      season_plots$permutation_boxplots,
+    width = 11,
+    height = 7,
+    dpi = 300
+  )
 
-  lapply(n_per_block_vals, \(n_per_block_perm) {
-    perm_test_fun(
-      data = select(data_loc_test, X1, X2, name, block),
-      grid_vals = 1000,
-      n_perm = n_perm,
-      n_per_block = n_per_block_perm,
-      laplace_trans = TRUE,
-      cond_var = cond_var,
-      cond_prob = 0.8, # define thresh as m-th largest order statistic s.t. P(X > thresh) = cond_prob, to ensure n exceedances in each block
-      ret_dep = TRUE,
-      use_dth = TRUE,
-      aLow = 0, nruns = 2, use_start = TRUE, # optimal specification of CE
-      # cond_val = dep_val,
-      laplace_sample = laplace_sample # control Laplace sample
-    )
-  })
-})
-
-# saveRDS(perm_test_res_loop_thresh_blocks, "perm_test_res_loop_thresh_blocks.rds")
-saveRDS(
-  perm_test_res_loop_thresh_blocks,
-  # "perm_test_res_loop_thresh_blocks.rds"
-  paste0("perm_test_res_loop3_thresh_blocks_diff_", diff_test, ".rds")
-)
-
-#### Plot ####
-
-# TODO Functionalise, repeated throughout!
-
-# load
-files_slide3 <- list.files(pattern = "perm_test_res_loop3", full.names = TRUE)
-file_not_test3 <- files_slide3[grepl("not_test", files_slide3)]
-if (length(file_not_test3) > 0) {
-  files_slide3 <- files_slide3[files_slide3 != file_not_test3]
+  ggsave(
+    filename = file.path(
+      plot_directory,
+      paste0(
+        filename_prefix,
+        "_permutation_histograms.png"
+      )
+    ),
+    plot =
+      season_plots$permutation_histograms,
+    width = 12,
+    height = 4 *
+      ceiling(
+        length(
+          permutation_scan_results[[season_name]]$candidate_years
+        ) / 3
+      ),
+    dpi = 300,
+    limitsize = FALSE
+  )
 }
-# TODO temp, remove afterwards (also fix, not running!)
-# files_slide3 <- files_slide3[grepl("diff_0.rds", files_slide3)]
-# files_slide3 <- files_slide3[!grepl("0.05", files_slide3)]
-# files_slide3 <- files_slide3[!grepl("0.075", files_slide3)]
-# files_slide3 <- files_slide3[!grepl("0.rds", files_slide3)]
-diffs_slide3 <- as.numeric(
-  # sub(".*perm_test_res_loop3_diff_([0-9.]+)\\.rds$", "\\1", files_slide3)
-  sub(".*perm_test_res_loop3_thresh_blocks_diff_([0-9.]+)\\.rds$", "\\1", files_slide3)
-)
-matches <- match(diff_vals, diffs_slide3)
-files_slide3 <- files_slide3[matches]
-# use regular expressions to extract number
-# (diff_vals_spec <- diff_vals[sort(matches[!is.na(matches)])])
-diff_vals_spec <- as.numeric(
-  # sub(".*perm_test_res_loop3_diff_([0-9.]+)\\.rds$", "\\1", files_slide3)
-  sub(".*perm_test_res_loop3_thresh_blocks_diff_([0-9.]+)\\.rds$", "\\1", files_slide3)
-)
-(diff_vals_spec <- diff_vals_spec[!is.na(diff_vals_spec)])
-
-# add back in non-test file
-files_slide3 <- c(file_not_test3, files_slide3)
-(files_slide3 <- files_slide3[!is.na(files_slide3)]) # rm diffs not ran
-
-# load data
-data_slide3 <- lapply(files_slide3, readRDS)
-
-# pull out important information and plot (flatten list as only one grid val)
-# perm_lst_slide <- lapply(data_slide3, \(x) {
-#   preprocess_fun(purrr::flatten(x), n_per_block = n_per_block_vals)
-# })
-# names(data_slide3) <- c("not_test", diff_vals)
-# TODO Temp, remove afterwards (also fix, not running!)
-# names(data_slide3) <- c("0", "Exact Same", diff_vals_spec[3:length(diff_vals_spec)])
-# names(data_slide3) <- c("0", "Exact Same", diff_vals_spec[3:length(diff_vals_spec)])
-# names(data_slide3) <- c("0", diff_vals_spec[3:length(diff_vals_spec)])
-names(data_slide3) <- diff_vals_spec
-# names(data_slide3) <- c("0", "Exact Same")
-(diff_vals_name3 <- names(data_slide3))
-# x <- data_slide3[[1]]
-
-data_slide3_df <- bind_rows(lapply(seq_along(data_slide3), \(i) {
-  print(i)
-  print(diff_vals_name3[[i]])
-  x <- data_slide3[[i]]
-  bind_rows(lapply(x, \(y) {
-    preprocess_fun(purrr::flatten(y), n_per_block = n_per_block_vals)
-  }), .id = "rep") |>
-    mutate(diff = diff_vals_name3[[i]])
-})) |>
-  relocate(rep, .after = n_per_block) |>
-  # mutate(diff = factor(diff, levels = c("Exact Same", "0", as.character(diff_vals[3:length(diff_vals)]))))
-  mutate(diff = factor(diff, levels = as.character(diff_vals_spec)))
-readr::write_csv(
-  data_slide3_df,
-  paste0("data_slide3_df.csv")
-)
-
-# plot
-p <- data_slide3_df |>
-  filter(norm_type == "Frobenius") |>
-  ggplot(aes(x = n_per_block, y = p_value)) +
-  geom_line(aes(group = as.factor(rep)), colour = "red", alpha = 0.3) +
-  geom_smooth() +
-  geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-  labs(
-    x = "Number of points per block",
-    y = "p-value"
-  ) +
-  ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-  # scale_x_continuous(breaks = n_per_block_vals) +
-  scale_x_continuous(breaks = n_per_block_vals[seq(1, length(n_per_block_vals), by = 2)]) +
-  scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-  cecl_theme(nejm_pal = FALSE) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  facet_wrap(~diff)
-ggsave(plot = p, filename = "plot_thresh_blocks.png", height = 10, width = 13)
-
-# also plot smooth lines for each, without red lines in the background
-p2 <- data_slide3_df |>
-  # filter(norm_type == "Frobenius") |>
-  # group_by(diff, n_per_block) |>
-  # slice(1:10) |>
-  # ungroup() |>
-  ggplot(aes(x = n_per_block, y = p_value, colour = diff, group = diff)) +
-  geom_smooth() +
-  geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-  labs(
-    x = "Number of points per block",
-    y = "p-value",
-    colour = "Correlation increase"
-  ) +
-  scale_x_continuous(breaks = n_per_block_vals) +
-  scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-  ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-  cecl_theme() +
-  guides(colour = guide_legend(override.aes = list(linewidth = 8))) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-ggsave(plot = p2, filename = "plot_thresh_blocks2.png", height = 10, width = 12)
-
-#### Comparison plot ####
-
-
-# TODO Also compare with output from previous method (different # exceedances)
-df_compare <- bind_rows(
-  readr::read_csv("data_slide_df.csv") |> mutate(test = "Different lengths, different exceedances"),
-  readr::read_csv("data_slide2_df.csv") |> mutate(test = "Same length, different exceedances"),
-  readr::read_csv("data_slide3_df.csv") |>
-    mutate(
-      test = "Same length, same exceedances",
-      diff = as.character(diff)
-    )
-) |>
-  filter(norm_type == "Frobenius")
-
-p_compare <- df_compare |>
-  ggplot(aes(x = n_per_block, y = p_value, colour = test, group = test)) +
-  # geom_line(aes(group = as.factor(rep)), colour = "red", alpha = 0.3) +
-  geom_smooth() +
-  geom_hline(yintercept = 0.05, linetype = "dashed", colour = "red") +
-  facet_wrap(~diff) +
-  labs(
-    x = "Number of points per block",
-    y = "p-value"
-  ) +
-  # ggtitle("Permutation test p-values for control case, for different block sizes and seeds") +
-  # scale_x_continuous(breaks = n_per_block_vals) +
-  scale_x_continuous(breaks = n_per_block_vals[seq(1, length(n_per_block_vals), by = 2)]) +
-  scale_y_continuous(breaks = seq(0, 1, by = 0.1)) +
-  cecl_theme() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-ggsave(
-  plot = p_compare,
-  filename = "plot_compare.png",
-  height = 10,
-  width = 13
-)
