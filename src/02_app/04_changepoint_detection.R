@@ -2,7 +2,7 @@
 
 # Things to check from writing retreat!
 # TODO - When does it happen that # years on LHS > RHS, or vice versa??
-# TODO - 
+# TODO -
 
 # Save plots from screening (done)
 # TODO Write up summary of screening results
@@ -139,8 +139,8 @@ screen_one_setting <- \(
 
   if (
     is.list(start_fit) &&
-      isTRUE(start_fit$success) &&
-      !is.null(start_fit$dep)
+    isTRUE(start_fit$success) &&
+    !is.null(start_fit$dep)
   ) {
     candidate_start_vals <- tryCatch(
       lapply(start_fit$dep, coef),
@@ -304,7 +304,7 @@ screen_one_setting <- \(
           change_after_year = block_vec[[candidate_index]],
           change_before_year = if (
             is.list(block_info) &&
-              !is.null(block_info$split_before)
+            !is.null(block_info$split_before)
           ) {
             as.integer(block_info$split_before)
           } else {
@@ -314,7 +314,7 @@ screen_one_setting <- \(
           },
           n_left_dates = if (
             is.list(block_info) &&
-              !is.null(block_info$n_left)
+            !is.null(block_info$n_left)
           ) {
             as.integer(block_info$n_left)
           } else {
@@ -322,7 +322,7 @@ screen_one_setting <- \(
           },
           n_right_dates = if (
             is.list(block_info) &&
-              !is.null(block_info$n_right)
+            !is.null(block_info$n_right)
           ) {
             as.integer(block_info$n_right)
           } else {
@@ -655,17 +655,17 @@ plot_permutation_scan <- \(
   summary_df <- scan_tidy$summary
   permutation_df <- scan_tidy$permutations
   dependence_df <- scan_tidy$dependence
-  
+
   season_name <- unique(
     summary_df$season
   )
-  
+
   year_breaks <- sort(
     unique(summary_df$change_after_year)
   )
-  
+
   #### Pointwise p-value profile ####
-  
+
   p_value_profile <- summary_df |>
     ggplot(
       aes(
@@ -738,9 +738,9 @@ plot_permutation_scan <- \(
       ),
       legend.position = "bottom"
     )
-  
+
   #### Observed statistics against permutation distributions ####
-  
+
   permutation_boxplots <- permutation_df |>
     ggplot(
       aes(
@@ -800,9 +800,9 @@ plot_permutation_scan <- \(
         hjust = 1
       )
     )
-  
+
   #### Permutation histograms ####
-  
+
   histogram_labels <- summary_df |>
     transmute(
       change_after_year,
@@ -825,7 +825,7 @@ plot_permutation_scan <- \(
         )
       )
     )
-  
+
   permutation_histogram_data <- permutation_df |>
     left_join(
       histogram_labels,
@@ -834,7 +834,7 @@ plot_permutation_scan <- \(
         "norm"
       )
     )
-  
+
   histogram_observed_data <- summary_df |>
     filter(success) |>
     left_join(
@@ -844,7 +844,7 @@ plot_permutation_scan <- \(
         "norm"
       )
     )
-  
+
   permutation_histograms <- permutation_histogram_data |>
     ggplot(
       aes(x = permutation_value)
@@ -883,7 +883,7 @@ plot_permutation_scan <- \(
     cecl_theme(
       nejm_pal = FALSE
     )
-  
+
   plots <- list(
     p_value_profile = p_value_profile,
     permutation_boxplots =
@@ -891,9 +891,9 @@ plot_permutation_scan <- \(
     permutation_histograms =
       permutation_histograms
   )
-  
+
   #### CE parameter plots ####
-  
+
   if (
     plot_ce_parameters &&
     nrow(dependence_df) > 0L
@@ -909,7 +909,7 @@ plot_permutation_scan <- \(
           !!!variable_names
         )
       )
-    
+
     parameter_columns <- intersect(
       c(
         "a",
@@ -920,11 +920,11 @@ plot_permutation_scan <- \(
       ),
       names(dependence_df)
     )
-    
+
     station_ids <- unique(
       dependence_df$name
     )
-    
+
     ce_parameter_plots <- lapply(
       station_ids,
       \(station_id) {
@@ -983,14 +983,14 @@ plot_permutation_scan <- \(
           )
       }
     )
-    
+
     names(ce_parameter_plots) <-
       station_ids
-    
+
     plots$ce_parameter_plots <-
       ce_parameter_plots
   }
-  
+
   plots
 }
 
@@ -1374,7 +1374,7 @@ year_breaks <- seq(
 plot_frob <- \(df, spec_year = NULL) {
   df_plot <- df
   if (!is.null(spec_year)) {
-    df_plot <- df_plot |> 
+    df_plot <- df_plot |>
       filter(n_years_per_block == spec_year)
   }
   df_plot |>
@@ -1529,7 +1529,7 @@ top_local_peaks_all <- candidate_peaks_all |>
 plot_all_norms <- \(df, spec_year = NULL) {
   df_plot <- df
   if (!is.null(spec_year)) {
-    df_plot <- df_plot |> 
+    df_plot <- df_plot |>
       filter(n_years_per_block == spec_year)
   }
   df_plot |>
@@ -1608,13 +1608,15 @@ ggsave("p_all_norms_25.png", p_all_norms_25, width = 12, height = 8)
 #### Permutation tests across full feasible range ####
 
 # run initially for just 100 permutations across full range
+# TODO Change names, no need to call "screen", right??
 # n_perm_screen <- 100L
-n_perm_screen <- 1000L
+# n_perm_screen <- 1000L
+n_perm_screen <- 200L
 n_years_per_block <- 25L # best choice, from screening round
 
 sink(paste0(
-  "sink_perm_output_nperm_", 
-  n_perm_screen, "_n_years_", 
+  "sink_perm_output_nperm_",
+  n_perm_screen, "_n_years_",
   n_years_per_block, ".txt"
 ))
 
@@ -1723,7 +1725,8 @@ permutation_scan_plots <- lapply(
 )
 
 # save
-plot_directory <- "plots/permutation_scan"
+# plot_directory <- "plots/permutation_scan"
+plot_directory <- paste0("plots/permutation_scan_n_perm_", n_perm_screen)
 
 dir.create(
   plot_directory,
