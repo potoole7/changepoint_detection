@@ -1,0 +1,80 @@
+[1] "6.25% of setups done"
+[1] "season = Autumn"
+[1] "n_years_per_block = 15"
+[1] "12.5% of setups done"
+[1] "season = Autumn"
+[1] "n_years_per_block = 20"
+[1] "18.75% of setups done"
+[1] "season = Autumn"
+[1] "n_years_per_block = 25"
+[1] "25% of setups done"
+[1] "season = Autumn"
+[1] "n_years_per_block = 30"
+[1] "31.25% of setups done"
+[1] "season = Spring"
+[1] "n_years_per_block = 15"
+[1] "37.5% of setups done"
+[1] "season = Spring"
+[1] "n_years_per_block = 20"
+[1] "43.75% of setups done"
+[1] "season = Spring"
+[1] "n_years_per_block = 25"
+[1] "50% of setups done"
+[1] "season = Spring"
+[1] "n_years_per_block = 30"
+[1] "56.25% of setups done"
+[1] "season = Summer"
+[1] "n_years_per_block = 15"
+[1] "62.5% of setups done"
+[1] "season = Summer"
+[1] "n_years_per_block = 20"
+[1] "68.75% of setups done"
+[1] "season = Summer"
+[1] "n_years_per_block = 25"
+[1] "75% of setups done"
+[1] "season = Summer"
+[1] "n_years_per_block = 30"
+[1] "81.25% of setups done"
+[1] "season = Winter"
+[1] "n_years_per_block = 15"
+[1] "87.5% of setups done"
+[1] "season = Winter"
+[1] "n_years_per_block = 20"
+[1] "93.75% of setups done"
+[1] "season = Winter"
+[1] "n_years_per_block = 25"
+[1] "100% of setups done"
+[1] "season = Winter"
+[1] "n_years_per_block = 30"
+Warning messages:
+1: 17 CE fit(s) have fewer than 20 exceedances. Minimum = 11 at location Burgos Aeropuerto, block 2, conditioning variable X2.
+2: `calc_dist()` returned NA at candidate 1992.
+3: No valid common starting values for season Autumn with 15-year windows; screening candidates using default starts.
+4: 4 CE fit(s) have fewer than 20 exceedances. Minimum = 15 at location Avila, block 1, conditioning variable X2.
+5: `calc_dist()` returned NA at candidate 1991.
+6: No valid common starting values for season Spring with 15-year windows; screening candidates using default starts.
+7: 8 CE fit(s) have fewer than 20 exceedances. Minimum = 14 at location Alacant/Alicante, block 1, conditioning variable X1.
+8: `calc_dist()` returned NA at candidate 1992.
+9: No valid common starting values for season Summer with 15-year windows; screening candidates using default starts.
+10: 1 CE fit(s) have fewer than 20 exceedances. Minimum = 17 at location San Javier Aeropuerto, block 1, conditioning variable X2.
+11: `calc_dist()` returned NA at candidate 1992.
+12: No valid common starting values for season Summer with 20-year windows; screening candidates using default starts.
+# A tibble: 16 × 6
+   season n_years_per_block n_candidates n_successful n_failed failure_rate
+   <chr>              <int>        <int>        <int>    <int>        <dbl>
+ 1 Autumn                15           33            0       33        1    
+ 2 Autumn                20           23            5       18        0.783
+ 3 Autumn                25           13           13        0        0    
+ 4 Autumn                30            3            3        0        0    
+ 5 Spring                15           34            4       30        0.882
+ 6 Spring                20           24           15        9        0.375
+ 7 Spring                25           14           14        0        0    
+ 8 Spring                30            4            4        0        0    
+ 9 Summer                15           32            0       32        1    
+10 Summer                20           22           13        9        0.409
+11 Summer                25           12           12        0        0    
+12 Summer                30            2            2        0        0    
+13 Winter                15           35           15       20        0.571
+14 Winter                20           25           24        1        0.04 
+15 Winter                25           15           15        0        0    
+16 Winter                30            5            5        0        0    
