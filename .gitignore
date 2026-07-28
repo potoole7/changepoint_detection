@@ -1,0 +1,10 @@
+# ignore plots and data in top level of directory
+/*.png
+/*.csv
+/*.rds
+
+Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user
