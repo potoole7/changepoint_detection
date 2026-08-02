@@ -1,0 +1,118 @@
+\begin{thebibliography}{}
+
+\bibitem [\protect \citeauthoryear {%
+Elbaum%
+, Malishevsky%
+\BCBL {}\ \BBA {} Rothermel%
+}{%
+Elbaum%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {February 2002}}%
+}]{%
+Elbaum2002}
+\APACinsertmetastar {%
+Elbaum2002}%
+\begin{APACrefauthors}%
+Elbaum, S.%
+, Malishevsky, A\BPBI G.%
+\BCBL {}\ \BBA {} Rothermel, G.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{February 2002}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Test case prioritization: a family of empirical studies}
+  {Test case prioritization: a family of empirical studies}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{IEEE {T}ransactions on {S}oftware
+  {E}ngineering}{28}{2}{159--182}.
+\newblock
+\begin{APACrefDOI} 12345.2345 \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{European Climate Assessment \& Dataset (ECA\&D)}%
+}{%
+{European Climate Assessment \& Dataset (ECA\&D)}%
+}{%
+{\protect \APACyear {{\protect \bibnodate {}}}}%
+}]{%
+ECADdaily}
+\APACinsertmetastar {%
+ECADdaily}%
+\begin{APACrefauthors}%
+{European Climate Assessment \& Dataset (ECA\&D)}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{{\protect \bibnodate {}}}{}{}.
+\newblock
+\APACrefbtitle {Predefined Subsets of Daily Station Data in {ASCII} Format.}
+  {Predefined subsets of daily station data in {ASCII} format.}
+\newblock
+\APAChowpublished {\url{https://www.ecad.eu/dailydata/predefinedseries.php}}.
+\newblock
+\APACrefnote{Accessed 30 June 2026}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Heffernan%
+\ \BBA {} Tawn%
+}{%
+Heffernan%
+\ \BBA {} Tawn%
+}{%
+{\protect \APACyear {2004}}%
+}]{%
+Heffernan2004}
+\APACinsertmetastar {%
+Heffernan2004}%
+\begin{APACrefauthors}%
+Heffernan, J\BPBI E.%
+\BCBT {}\ \BBA {} Tawn, J\BPBI A.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2004}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A conditional approach for multivariate extreme values
+  (with discussion)} {A conditional approach for multivariate extreme values
+  (with discussion)}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Journal of the Royal Statistical Society Series B:
+  Statistical Methodology}{66}{3}{497--546}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+McKee%
+, Doesken%
+\BCBL {}\ \BBA {} Kleist%
+}{%
+McKee%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {1993}}%
+}]{%
+McKee1993}
+\APACinsertmetastar {%
+McKee1993}%
+\begin{APACrefauthors}%
+McKee, T\BPBI B.%
+, Doesken, N\BPBI J.%
+\BCBL {}\ \BBA {} Kleist, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{1993}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {The Relationship of Drought Frequency and Duration to
+  Time Scales} {The relationship of drought frequency and duration to time
+  scales}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {Proceedings of the Eighth Conference on Applied
+  Climatology} {Proceedings of the eighth conference on applied climatology}\
+  (\BPGS\ 179--184).
+\newblock
+\APACaddressPublisher{Anaheim, California}{American Meteorological Society}.
+\PrintBackRefs{\CurrentBib}
+
+\end{thebibliography}
