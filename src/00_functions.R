@@ -1,5 +1,175 @@
 #### Functions ####
 
+#### Chi related ####
+
+# function to calc chi, chibar at quantile q (or closest q) at each  site
+calc_chi <- \(data, var1, var2, chi_q) {
+  stations <- unique(data$station_id)
+  chi_95_df <- bind_rows(lapply(stations, \(x) {
+    chi <- data %>%
+      filter(station_id == x) |>
+      dplyr::select(!!var1, !!var2) %>%
+      texmex::chi()
+
+    # whether to show chi or not, based on whether chibar upper extend crosses 1
+    show_chi <- !prod(tail(chi$chibar[, 3]) < 1)
+
+    loc <- which.min(abs(chi$quantile - chi_q))
+    return(data.frame(
+      "station_id" = x,
+      "chi" = chi$chi[loc, 2, drop = TRUE],
+      "chibar" = chi$chibar[loc, 2, drop = TRUE],
+      "show_chi" = show_chi
+    ))
+  }))
+  rownames(chi_95_df) <- NULL
+
+  # join in area statistics
+  chi_95_df %>%
+    pivot_longer(c("chi", "chibar"), names_to = "var") %>%
+    # always show chibar plot
+    mutate(show_chi = ifelse(value == "chibar", TRUE, show_chi)) %>%
+    left_join(
+      distinct(data, station_id, station_name, lon, lat)
+    ) %>%
+    st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas), remove = FALSE)
+}
+
+# function to join both chi and chibar plots together
+join_chi_plots <- \(chi_95_sf, areas, fill_fun1, fill_fun2) {
+  # plot chibar and chi
+  chibar_p <- chi_map_plot(chi_95_sf, areas, "chibar", rm_axis = FALSE) +
+    # scale_fill_gradientn(
+    #   colours = rev(heat.colors(7)),
+    #   # breaks = scales,
+    #   # labels = as.character(scales),
+    #   guide = "legend"
+    # )
+    diff_fill_fun()
+
+  # chi_p <- chi_map_plot(chi_95_sf, "chi") +
+  chi_p <- chi_map_plot(chi_95_sf, areas, "chi", rm_axis = FALSE) +
+    # scale_fill_gradientn(
+    #   colours = RColorBrewer::brewer.pal(name = "Blues", n = 7),
+    #   # breaks = scales,
+    #   # labels = as.character(scales),
+    #   guide = "legend"
+    # ) +
+    diff_fill_fun()
+
+  chibar_p + chi_p
+}
+
+# function to plot chi and chibar statistics on map
+chi_map_plot <- \(
+  chi_95_sf,
+  areas,
+  var = c("chi", "chibar"),
+  # scales = seq(-0.1, 0.6, by = 0.1),
+  # point_ranges = c(2, 6),
+  spec_locs = NULL,
+  locs_nudge_x = 0.1,
+  locs_nudge_y = 0.1,
+  rm_axis = TRUE
+) {
+  # lab <- ifelse(var == "chi", expression(chi(u)), expression(bar(chi)(u)))
+  lab <- ifelse(
+    var == "chi",
+    expression(chi(0.95)),
+    expression(bar(chi)(0.95))
+  )
+
+  plot_data <- filter(chi_95_sf, var == !!var)
+  if (var == "chi") {
+    plot_data <- plot_data %>%
+      mutate(show_chi = factor(ifelse(show_chi == TRUE, "yes", "no")))
+  }
+
+  p <- ggplot(areas) +
+    geom_sf(colour = "black", fill = NA) +
+    geom_sf(
+      # geom_sf_pattern(
+      data = plot_data,
+      aes(fill = value, size = value),
+      # aes(fill = value, size = value, pattern = show_chi),
+      pch = 21,
+      stroke = 1
+    )
+
+  # add numbers for specific locations, if desired
+  if (!is.null(spec_locs)) {
+    # plot_data <- plot_data |>
+    #   mutate(spec_name = ifelse(name %in% spec_locs, TRUE, FALSE))
+
+    plot_data_num <- plot_data %>%
+      filter(name %in% spec_locs) |>
+      # arrange by inputted spec_locs
+      slice(match(spec_locs, name)) %>%
+      mutate(label_num = row_number())
+
+    p <- p +
+      geom_sf(
+        data = plot_data_num,
+        aes(fill = value, size = value),
+        colour = "red",
+        pch = 21,
+        stroke = 1,
+        show.legend = FALSE
+      ) +
+      # add numbers beside points
+      geom_sf_text(
+        data = plot_data_num,
+        aes(label = label_num),
+        nudge_x = locs_nudge_x,
+        nudge_y = locs_nudge_y,
+        # size = 5,
+        size = 6,
+        fontface = "bold",
+        colour = "red",
+        show.legend = FALSE
+      )
+  }
+
+  p <- p +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    # add colour scheme afterwards
+    # scale_fill_gradientn(
+    #   colours = RColorBrewer::brewer.pal(name = "Blues", n = 7),
+    #   breaks = scales_chi,
+    #   labels = as.character(scales_chi),
+    #   guide = "legend"
+    # ) +
+    # scale_size_continuous(
+    #   range  = point_ranges,
+    #   breaks = scales,
+    #   labels = as.character(scales),
+    #   guide  = "legend"
+    # ) +
+    # scale_pattern_manual(values = c("stripe", "none")) +
+    # maximise plot within frame
+    coord_sf(expand = FALSE) +
+    labs(fill = lab, size = lab, x = "", y = "") +
+    guides(fill = guide_legend(), size = guide_legend(), pattern = "none") +
+    # CeCl::cecl_theme(legend.position = "right") +
+    CeCl::cecl_theme() +
+    theme(legend.key = element_blank())
+
+  # remove axis text and ticks if required
+  if (rm_axis == TRUE) {
+    p <- p +
+      theme(
+        axis.text  = element_blank(),
+        axis.ticks = element_blank()
+      )
+  }
+
+  return(p)
+}
+
+
+#### Map plots ####
+
 # function for plotting alpha, beta estimates
 plot_ab_map <- \(
   ab_df, data, areas, n_breaks = 8, range = c(1, 6), elev_df = NULL
@@ -110,15 +280,246 @@ plot_ab_map <- \(
 }
 
 
+#' #' @title Plot clustering solution on map
+#' #' @description Plot clustering solution on map
+#' #' @param pts Spatial points object
+#' #' @param areas Spatial polygons object
+#' #' @param clust_obj Clustering object
+#' #' @return ggplot object
+#' #' @rdname plt_clust_map
+#' #' @export
+#' # TODO: Could make this plot/ggplot method for object
+#' plt_clust_map <- \(
+#'   pts,
+#'   areas,
+#'   clust_obj,
+#'   plot_medoids = TRUE,
+#'   elev_df = NULL,
+#'   rm_elev_leg = TRUE,
+#'   pt_size = 4
+#' ) {
+#'   name <- clust <- medoid <- NULL
+#'
+#'   if (inherits(clust_obj, "kmeans")) {
+#'     clust_element <- "cluster"
+#'     medoid_locs <- NA
+#'   } else if (inherits(clust_obj, "pam")) {
+#'     clust_element <- "clustering"
+#'     medoids <- clust_obj$medoids
+#'     medoid_locs <- NA
+#'     if (inherits(clust_obj$medoids, "character")) {
+#'       medoid_locs <- medoids
+#'     } else if (!is.null(rownames(medoids))) {
+#'       medoid_locs <- rownames(medoids)
+#'     }
+#'   } else {
+#'     stop("Clustering class not currently supported")
+#'   }
+#'
+#'   # reorder alphabetically
+#'   # TODO: Look into this, required??
+#'   # clust_names <- names(clust_obj[[clust_element]])
+#'   # if (!is.null(clust_names)) {
+#'   #   clust_obj[[clust_element]] <- clust_obj[[clust_element]][order(clust_names)]
+#'   # }
+#'
+#'   # TODO: Medoids doesn#t work as rows are named, fix!
+#'   # pts_plt <- cbind(pts, data.frame("clust" = clust_obj[[clust_elementement]])) |>
+#'   #   dplyr::mutate(
+#'   #     medoid = ifelse(name %in% medoid_locs, TRUE, FALSE),
+#'   #     medoid = factor(medoid, levels = c(FALSE, TRUE))
+#'   #   )
+#'
+#'   # extract cluster membership for each site
+#'   clust_df <- dplyr::tibble(
+#'     "name" = names(clust_obj[[clust_element]]),
+#'     "clust" = clust_obj[[clust_element]]
+#'   )
+#'   # join to location data
+#'   pts_plt <- pts |>
+#'     dplyr::left_join(clust_df, by = "name") |>
+#'     dplyr::mutate(
+#'       medoid = ifelse(name %in% medoid_locs, TRUE, FALSE),
+#'       medoid = factor(medoid, levels = c(FALSE, TRUE))
+#'     )
+#'
+#'   point_cols <- ggsci::pal_nejm()(sum(!is.na(unique(pts_plt$clust))))
+#'   any_na <- FALSE
+#'   if (any(is.na(pts_plt$clust))) {
+#'     any_na <- TRUE
+#'     #   pts_plt <- pts_plt |>
+#'     #     dplyr::mutate(
+#'     #       clust = ifelse(is.na(clust), 4, clust)
+#'     #     )
+#'     #
+#'     #   point_cols <- c(point_cols, "white")
+#'     pts_plt_na <- pts_plt |>
+#'       dplyr::filter(is.na(clust))
+#'     pts_plt <- pts_plt |>
+#'       dplyr::filter(!is.na(clust))
+#'   }
+#'
+#'   # plot locations on map, colouring by cluster
+#'   p <- ggplot2::ggplot()
+#'
+#'   if (!is.null(elev_df)) {
+#'     # plot bins if available, if not plot directly (less distinct colours)
+#'     if ("elev_bin" %in% names(elev_df)) {
+#'       p <- p + geom_tile(
+#'         data = elev_df,
+#'         aes(x = x, y = y, fill = elev_bin),
+#'         width = diff(range(elev_df$x)) / length(unique(elev_df$x)),
+#'         height = diff(range(elev_df$y)) / length(unique(elev_df$y))
+#'       ) +
+#'         # scale_fill_viridis_d(
+#'         #   name = "Elevation",
+#'         #   option = "D",
+#'         #   direction = 1
+#'         # )
+#'         scico::scale_fill_scico_d(
+#'           name = "Elevation",
+#'           # palette = "lajolla",
+#'           palette = "bilbao",
+#'           direction = -1
+#'         )
+#'       # scale_fill_manual(
+#'       #   values = c(
+#'       #     "#FFFFFF", "#C5C2B2", "#B19E68",
+#'       #     "#A6785B", "#9B5352", "#6D1F23"
+#'       #     # "#FFFFFF", "#CBC9C0", "#BBB287",
+#'       #     # "#AC8F60", "#A4745A", "#914249"
+#'       #   ),
+#'       #   name = "Elevation"
+#'       # )
+#'     } else {
+#'       p <- p +
+#'         geom_tile(
+#'           data = elev_df,
+#'           aes(x = x, y = y, fill = elevation)
+#'         ) +
+#'         scale_fill_viridis(
+#'           name = "Elevation\n(m)",
+#'           option = "D",
+#'           limits = c(0, 1500)
+#'         )
+#'     }
+#'
+#'     # remove legend for elevation; handy if joining plots with patchwork!
+#'     if (rm_elev_leg) {
+#'       p <- p +
+#'         guides(fill = "none")
+#'     }
+#'
+#'     # p <- p + geom_sf(data = areas, fill = NA, colour = "white")
+#'     # } else {
+#'     #   p <- p + geom_sf(data = areas, fill = NA, colour = "black")
+#'   }
+#'   p <- p +
+#'     geom_sf(data = areas, fill = NA, colour = "black") +
+#'     coord_sf(expand = FALSE) + # remove padding around plot
+#'     ggnewscale::new_scale_fill() +
+#'     # ggnewscale::new_scale_colour() +
+#'     NULL
+#'   # p <- ggplot2::ggplot(areas) +
+#'   # p <- p +
+#'   # ggplot2::geom_sf(colour = "black", fill = NA) +
+#'   # ggplot2::geom_sf(areas, colour = "black", fill = NA)
+#'   # ggplot2::geom_sf(
+#'   #   data = pts_plt,
+#'   #   ggplot2::aes(
+#'   #     colour = factor(clust), shape = medoid, size = as.numeric(medoid)
+#'   #   ),
+#'   #   alpha = 0.8
+#'   # ) +
+#'
+#'   if (plot_medoids == TRUE) {
+#'     p <- p +
+#'       ggplot2::geom_sf(
+#'         data = pts_plt,
+#'         ggplot2::aes(
+#'           # colour = factor(clust),
+#'           fill = factor(clust),
+#'           shape = medoid,
+#'           size = as.numeric(medoid)
+#'         ),
+#'         alpha = 0.8,
+#'         # alpha = 0.9,
+#'         stroke = 1,
+#'         pch = 21
+#'       ) +
+#'       ggplot2::scale_shape_discrete(breaks = c(1, 15)) +
+#'       # ggplot2::scale_size_continuous(range = c(4, 8)) +
+#'       ggplot2::scale_size_continuous(range = c(pt_size, pt_size * 2)) +
+#'       ggplot2::guides(shape = "none", size = "none")
+#'   } else {
+#'     p <- p +
+#'       ggplot2::geom_sf(
+#'         data = pts_plt,
+#'         # ggplot2::aes(colour = factor(clust)),
+#'         ggplot2::aes(fill = factor(clust)),
+#'         alpha = 0.8,
+#'         # alpha = 0.9,
+#'         # size = 4,
+#'         size = pt_size,
+#'         stroke = 1,
+#'         pch = 21
+#'       )
+#'   }
+#'
+#'   # Add white (i.e. missing) pts on top, to make sure they're visible
+#'   if (any_na) {
+#'     p <- p +
+#'       ggplot2::geom_sf(
+#'         data = pts_plt_na |>
+#'           dplyr::mutate(clust = 1),
+#'         # ggplot2::aes(colour = factor(clust)),
+#'         # ggplot2::aes(fill = factor(clust)),
+#'         fill = "white",
+#'         alpha = 0.8,
+#'         # alpha = 0.9,
+#'         # size = 4,
+#'         size = pt_size,
+#'         stroke = 1,
+#'         pch = 21
+#'       )
+#'   }
+#'
+#'   p <- p +
+#'     # ggplot2::labs(colour = "Cluster") +
+#'     # ggplot2::labs(fill = "Cluster") +
+#'     guides(fill = "none") +
+#'     coord_sf(expand = FALSE) + # remove padding around plot
+#'     # evc_theme(nejm_pal = FALSE) +
+#'     cecl_theme(nejm_pal = FALSE) +
+#'     # ggsci::scale_colour_nejm()
+#'     # ggsci::scale_fill_nejm() +
+#'     scale_fill_manual(
+#'       values = point_cols
+#'     ) +
+#'     labs(x = "", y = "")
+#'
+#'   return(p)
+#' }
+
 #' @title Plot clustering solution on map
-#' @description Plot clustering solution on map
-#' @param pts Spatial points object
-#' @param areas Spatial polygons object
-#' @param clust_obj Clustering object
-#' @return ggplot object
+#'
+#' @description Plot a clustering solution on a map.
+#'
+#' @param pts Spatial points object containing a `name` column.
+#' @param areas Spatial polygons object.
+#' @param clust_obj A PAM or k-means clustering object.
+#' @param plot_medoids Logical; highlight PAM medoids.
+#' @param elev_df Optional elevation data frame containing `x`, `y`, and
+#'   either `elev_bin` or `elevation`.
+#' @param rm_elev_leg Logical; remove the elevation legend.
+#' @param pt_size Size of station points.
+#' @param point_cols Optional vector of cluster colours. This can be named
+#'   using the cluster labels or unnamed in cluster order.
+#'
+#' @return A ggplot object.
+#'
 #' @rdname plt_clust_map
 #' @export
-# TODO: Could make this plot/ggplot method for object
 plt_clust_map <- \(
   pts,
   areas,
@@ -126,210 +527,319 @@ plt_clust_map <- \(
   plot_medoids = TRUE,
   elev_df = NULL,
   rm_elev_leg = TRUE,
-  pt_size = 4
+  pt_size = 4,
+  point_cols = NULL,
+  alpha = 0.8
 ) {
+  # Avoid R CMD check notes
+  x <- y <- elevation <- elev_bin <- NULL
   name <- clust <- medoid <- NULL
 
+  # Extract cluster membership
   if (inherits(clust_obj, "kmeans")) {
-    clust_element <- "cluster"
-    medoid_locs <- NA
+    clust_membership <- clust_obj$cluster
+    medoid_locs <- character()
+
   } else if (inherits(clust_obj, "pam")) {
-    clust_element <- "clustering"
+    clust_membership <- clust_obj$clustering
     medoids <- clust_obj$medoids
-    medoid_locs <- NA
-    if (inherits(clust_obj$medoids, "character")) {
+
+    if (inherits(medoids, "character")) {
       medoid_locs <- medoids
     } else if (!is.null(rownames(medoids))) {
       medoid_locs <- rownames(medoids)
+    } else {
+      medoid_locs <- character()
     }
+
   } else {
-    stop("Clustering class not currently supported")
+    stop(
+      "`clust_obj` must inherit from either \"pam\" or \"kmeans\".",
+      call. = FALSE
+    )
   }
 
-  # reorder alphabetically
-  # TODO: Look into this, required??
-  # clust_names <- names(clust_obj[[clust_element]])
-  # if (!is.null(clust_names)) {
-  #   clust_obj[[clust_element]] <- clust_obj[[clust_element]][order(clust_names)]
-  # }
+  # Cluster membership must be named so it can be joined to pts
+  if (is.null(names(clust_membership))) {
+    stop(
+      "The cluster-membership vector must be named using station names.",
+      call. = FALSE
+    )
+  }
 
-  # TODO: Medoids doesn#t work as rows are named, fix!
-  # pts_plt <- cbind(pts, data.frame("clust" = clust_obj[[clust_elementement]])) |>
-  #   dplyr::mutate(
-  #     medoid = ifelse(name %in% medoid_locs, TRUE, FALSE),
-  #     medoid = factor(medoid, levels = c(FALSE, TRUE))
-  #   )
+  if (anyDuplicated(names(clust_membership))) {
+    stop(
+      "Station names in the cluster-membership vector must be unique.",
+      call. = FALSE
+    )
+  }
 
-  # extract cluster membership for each site
+  if (!"name" %in% names(pts)) {
+    stop(
+      "`pts` must contain a column named `name`.",
+      call. = FALSE
+    )
+  }
+
+  # Establish a deterministic ordering of cluster labels
+  if (is.factor(clust_membership)) {
+    clust_levels <- levels(droplevels(clust_membership))
+  } else if (is.numeric(clust_membership)) {
+    clust_levels <- sort(unique(clust_membership))
+  } else {
+    clust_levels <- sort(unique(as.character(clust_membership)))
+  }
+
+  clust_levels <- as.character(clust_levels)
+  n_clust <- length(clust_levels)
+
+  # Create or validate the cluster palette
+  if (is.null(point_cols)) {
+    point_cols <- ggsci::pal_nejm()(n_clust)
+  }
+
+  if (length(point_cols) < n_clust) {
+    stop(
+      "`point_cols` must contain at least one colour per cluster.",
+      call. = FALSE
+    )
+  }
+
+  # Explicitly associate every colour with a cluster label
+  if (is.null(names(point_cols))) {
+    point_cols <- stats::setNames(
+      point_cols[seq_len(n_clust)],
+      clust_levels
+    )
+  } else {
+    missing_cols <- setdiff(clust_levels, names(point_cols))
+
+    if (length(missing_cols) > 0L) {
+      stop(
+        "`point_cols` has no colour for cluster(s): ",
+        paste(missing_cols, collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    point_cols <- point_cols[clust_levels]
+  }
+
+  # Extract cluster membership for each station
   clust_df <- dplyr::tibble(
-    "name" = names(clust_obj[[clust_element]]),
-    "clust" = clust_obj[[clust_element]]
+    name = names(clust_membership),
+    clust = as.character(clust_membership)
   )
-  # join to location data
+
+  # Join membership to station locations
   pts_plt <- pts |>
     dplyr::left_join(clust_df, by = "name") |>
     dplyr::mutate(
-      medoid = ifelse(name %in% medoid_locs, TRUE, FALSE),
-      medoid = factor(medoid, levels = c(FALSE, TRUE))
+      clust = factor(clust, levels = clust_levels),
+      medoid = factor(
+        name %in% medoid_locs,
+        levels = c(FALSE, TRUE)
+      )
     )
 
-  point_cols <- ggsci::pal_nejm()(sum(!is.na(unique(pts_plt$clust))))
-  any_na <- FALSE
-  if (any(is.na(pts_plt$clust))) {
-    any_na <- TRUE
-    #   pts_plt <- pts_plt |>
-    #     dplyr::mutate(
-    #       clust = ifelse(is.na(clust), 4, clust)
-    #     )
-    #
-    #   point_cols <- c(point_cols, "white")
-    pts_plt_na <- pts_plt |>
-      dplyr::filter(is.na(clust))
-    pts_plt <- pts_plt |>
-      dplyr::filter(!is.na(clust))
-  }
+  # Separate stations without cluster membership
+  pts_plt_na <- pts_plt |>
+    dplyr::filter(is.na(clust))
 
-  # plot locations on map, colouring by cluster
+  pts_plt <- pts_plt |>
+    dplyr::filter(!is.na(clust))
+
+  # Initialise plot
   p <- ggplot2::ggplot()
 
+  # Optionally add elevation background
   if (!is.null(elev_df)) {
-    # plot bins if available, if not plot directly (less distinct colours)
+    required_elev_cols <- c("x", "y")
+    missing_elev_cols <- setdiff(required_elev_cols, names(elev_df))
+
+    if (length(missing_elev_cols) > 0L) {
+      stop(
+        "`elev_df` is missing required column(s): ",
+        paste(missing_elev_cols, collapse = ", "),
+        call. = FALSE
+      )
+    }
+
     if ("elev_bin" %in% names(elev_df)) {
-      p <- p + geom_tile(
-        data = elev_df,
-        aes(x = x, y = y, fill = elev_bin),
-        width = diff(range(elev_df$x)) / length(unique(elev_df$x)),
-        height = diff(range(elev_df$y)) / length(unique(elev_df$y))
-      ) +
-        # scale_fill_viridis_d(
-        #   name = "Elevation",
-        #   option = "D",
-        #   direction = 1
-        # )
-        scico::scale_fill_scico_d(
-          name = "Elevation",
-          # palette = "lajolla",
-          palette = "bilbao",
-          direction = -1
+      # Match the setup used in plot_locs()
+      elev_df_plt <- elev_df |>
+        dplyr::mutate(
+          elev_bin = factor(
+            elev_bin,
+            levels = unique(.data[["elev_bin"]])
+          )
         )
-      # scale_fill_manual(
-      #   values = c(
-      #     "#FFFFFF", "#C5C2B2", "#B19E68",
-      #     "#A6785B", "#9B5352", "#6D1F23"
-      #     # "#FFFFFF", "#CBC9C0", "#BBB287",
-      #     # "#AC8F60", "#A4745A", "#914249"
-      #   ),
-      #   name = "Elevation"
-      # )
-    } else {
+
       p <- p +
-        geom_tile(
-          data = elev_df,
-          aes(x = x, y = y, fill = elevation)
+        ggplot2::geom_tile(
+          data = elev_df_plt,
+          ggplot2::aes(
+            x = x,
+            y = y,
+            fill = elev_bin
+          ),
+          width = diff(range(elev_df$x)) /
+            length(unique(elev_df$x)),
+          height = diff(range(elev_df$y)) /
+            length(unique(elev_df$y))
         ) +
-        scale_fill_viridis(
+        ggplot2::scale_fill_manual(
+          values = c(
+            "<200"      = "#2E8B57",
+            "200–600"   = "#9ACD66",
+            "600–1000"  = "#F7E56B",
+            "1000–1500" = "#F29E38",
+            "1500–2000" = "#C46A3A",
+            ">2000"     = "#7A3B1E"
+          ),
+          drop = FALSE,
+          name = "Elevation (m)"
+        )
+
+    } else if ("elevation" %in% names(elev_df)) {
+      p <- p +
+        ggplot2::geom_tile(
+          data = elev_df,
+          ggplot2::aes(
+            x = x,
+            y = y,
+            fill = elevation
+          ),
+          width = diff(range(elev_df$x)) /
+            length(unique(elev_df$x)),
+          height = diff(range(elev_df$y)) /
+            length(unique(elev_df$y))
+        ) +
+        ggplot2::scale_fill_viridis_c(
           name = "Elevation\n(m)",
           option = "D",
-          limits = c(0, 1500)
+          limits = c(0, 1500),
+          oob = scales::squish
         )
+
+    } else {
+      stop(
+        "`elev_df` must contain either `elev_bin` or `elevation`.",
+        call. = FALSE
+      )
     }
 
-    # remove legend for elevation; handy if joining plots with patchwork!
-    if (rm_elev_leg) {
+    if (isTRUE(rm_elev_leg)) {
       p <- p +
-        guides(fill = "none")
+        ggplot2::guides(fill = "none")
     }
 
-    # p <- p + geom_sf(data = areas, fill = NA, colour = "white")
-    # } else {
-    #   p <- p + geom_sf(data = areas, fill = NA, colour = "black")
+    # Start a new fill scale for station clusters
+    p <- p +
+      ggnewscale::new_scale_fill()
   }
-  p <- p +
-    geom_sf(data = areas, fill = NA, colour = "black") +
-    coord_sf(expand = FALSE) + # remove padding around plot
-    ggnewscale::new_scale_fill() +
-    # ggnewscale::new_scale_colour() +
-    NULL
-  # p <- ggplot2::ggplot(areas) +
-  # p <- p +
-  # ggplot2::geom_sf(colour = "black", fill = NA) +
-  # ggplot2::geom_sf(areas, colour = "black", fill = NA)
-  # ggplot2::geom_sf(
-  #   data = pts_plt,
-  #   ggplot2::aes(
-  #     colour = factor(clust), shape = medoid, size = as.numeric(medoid)
-  #   ),
-  #   alpha = 0.8
-  # ) +
 
-  if (plot_medoids == TRUE) {
+  # Plot administrative boundaries over the elevation layer
+  p <- p +
+    ggplot2::geom_sf(
+      data = areas,
+      fill = NA,
+      colour = "black"
+    )
+
+  # Plot clustered stations
+  if (isTRUE(plot_medoids) && inherits(clust_obj, "pam")) {
     p <- p +
       ggplot2::geom_sf(
         data = pts_plt,
         ggplot2::aes(
-          # colour = factor(clust),
-          fill = factor(clust),
+          fill = clust,
           shape = medoid,
-          size = as.numeric(medoid)
+          size = medoid
         ),
-        alpha = 0.8,
-        # alpha = 0.9,
-        stroke = 1,
-        pch = 21
+        # alpha = 0.8,
+        alpha = alpha,
+        colour = "black",
+        stroke = 1
       ) +
-      ggplot2::scale_shape_discrete(breaks = c(1, 15)) +
-      # ggplot2::scale_size_continuous(range = c(4, 8)) +
-      ggplot2::scale_size_continuous(range = c(pt_size, pt_size * 2)) +
-      ggplot2::guides(shape = "none", size = "none")
+      ggplot2::scale_shape_manual(
+        values = c(
+          "FALSE" = 21,
+          "TRUE"  = 23
+        )
+      ) +
+      ggplot2::scale_size_manual(
+        values = c(
+          "FALSE" = pt_size,
+          "TRUE"  = pt_size * 2
+        )
+      ) +
+      ggplot2::guides(
+        shape = "none",
+        size = "none"
+      )
+
   } else {
     p <- p +
       ggplot2::geom_sf(
         data = pts_plt,
-        # ggplot2::aes(colour = factor(clust)),
-        ggplot2::aes(fill = factor(clust)),
-        alpha = 0.8,
-        # alpha = 0.9,
-        # size = 4,
+        ggplot2::aes(fill = clust),
+        shape = 21,
         size = pt_size,
-        stroke = 1,
-        pch = 21
+        # alpha = 0.8,
+        alpha = alpha,
+        colour = "black",
+        stroke = 1
       )
   }
 
-  # Add white (i.e. missing) pts on top, to make sure they're visible
-  if (any_na) {
+  # Plot stations without cluster membership in white
+  if (nrow(pts_plt_na) > 0L) {
     p <- p +
       ggplot2::geom_sf(
-        data = pts_plt_na |>
-          dplyr::mutate(clust = 1),
-        # ggplot2::aes(colour = factor(clust)),
-        # ggplot2::aes(fill = factor(clust)),
-        fill = "white",
-        alpha = 0.8,
-        # alpha = 0.9,
-        # size = 4,
+        data = pts_plt_na,
+        shape = 21,
         size = pt_size,
-        stroke = 1,
-        pch = 21
+        fill = "white",
+        colour = "black",
+        # alpha = 0.8,
+        alpha = alpha,
+        stroke = 1
       )
   }
 
+  # Apply a fixed mapping between cluster labels and colours
   p <- p +
-    # ggplot2::labs(colour = "Cluster") +
-    # ggplot2::labs(fill = "Cluster") +
-    guides(fill = "none") +
-    coord_sf(expand = FALSE) + # remove padding around plot
-    # evc_theme(nejm_pal = FALSE) +
-    cecl_theme(nejm_pal = FALSE) +
-    # ggsci::scale_colour_nejm()
-    # ggsci::scale_fill_nejm() +
-    scale_fill_manual(
-      values = point_cols
+    ggplot2::scale_fill_manual(
+      values = point_cols,
+      limits = clust_levels,
+      breaks = clust_levels,
+      drop = FALSE,
+      guide = "none",
+      name = "Cluster"
     ) +
-    labs(x = "", y = "")
+    ggplot2::coord_sf(expand = FALSE) +
+    ggplot2::labs(x = "", y = "")
 
-  return(p)
+  # Match the theme setup used for the individual station maps
+  if (!is.null(elev_df)) {
+    p <- p +
+      cecl_theme(
+        nejm_pal = FALSE,
+        legend.position = "right"
+      ) +
+      ggplot2::theme(
+        legend.text = ggplot2::element_text(hjust = 1)
+      )
+  } else {
+    p <- p +
+      cecl_theme(nejm_pal = FALSE)
+  }
+
+  p
 }
+
+#### Simulation ####
 
 # Function to generate multivariate t data with specified correlation
 gen_t <- \(cor_t, n, n_vars = 2, df_t = 3, laplace_trans = FALSE) {
@@ -420,6 +930,108 @@ trans_fun <- \(data, n_vars, laplace_trans = FALSE) {
   marg_loc <- lapply(data_laplace_loc, as_cecl_marg)
 }
 
+
+#### Marginal trasnformation ####
+
+# function to remove yearly trend from data
+detrend_monthly <- \(data, var) {
+  data |>
+    group_by(name, month) |>
+    group_modify(~ {
+      fit <- lm(
+        reformulate("year", response = var),
+        data = .x
+      )
+
+      beta <- coef(fit)[["year"]]
+      year_bar <- mean(.x$year, na.rm = TRUE)
+
+      .x |>
+        mutate(
+          !!var := .data[[var]] -
+            beta * (.data$year - year_bar)
+        )
+    }) |>
+    ungroup()
+}
+
+
+# function to transform by season to Laplace margins using rank transform
+trans_fun_season <- \(df, var) {
+  dep_laplace_season <- df |>
+    # group_by(name, season) |>
+    group_by(name, month) |>
+    mutate(
+      n_nonmissing = sum(!is.na(.data[[var]])),
+      F_hat = rank(
+        .data[[var]],
+        ties.method = "average",
+        na.last = "keep"
+      ) / (n_nonmissing + 1),
+      laplace = qlaplace(F_hat)
+    ) |>
+    ungroup() |>
+    select(-n_nonmissing)
+}
+
+
+# functino to transform to CeCl marginal object
+trans_to_cecl <- \(laplace_season, var_dep) {
+  marg_season_roll_emp <- laplace_season |>
+  select(name, date, season, temp, all_of(var_dep)) |>
+  mutate(
+    name = factor(name),
+    season = factor(season, levels = seasons)
+  ) |>
+  group_split(season) |>
+  lapply(\(x) {
+    station_groups <- x |>
+      group_by(name)
+
+    ret_names <- station_groups |>
+      group_keys() |>
+      pull(name) |>
+      as.character()
+
+    station_data <- station_groups |>
+      group_split()
+
+    original_dates <- lapply(
+      station_data,
+      \(y) {
+        y |>
+          arrange(date) |>
+          pull(date)
+      }
+    )
+
+    ret <- mclapply(
+      station_data,
+      \(y) {
+        ret1 <- y |>
+          arrange(date) |>
+          select(temp, all_of(var_dep)) |>
+          as.matrix()
+
+        colnames(ret1) <- c("temp", var_dep)
+        ret1
+      }
+    )
+
+    names(ret) <- ret_names
+    names(original_dates) <- ret_names
+
+    ret <- as_cecl_marg(ret)
+    # keep dates and season to ensure we can match later
+    ret$dates <- original_dates
+    ret$season <- as.character(x$season[[1]])
+
+    ret
+  })
+  return(marg_season_roll_emp)
+}
+
+
 #### CE and divergence validation helpers ####
 
 validate_ce_dep <- \(
@@ -429,7 +1041,7 @@ validate_ce_dep <- \(
   parameter_tol = 1e-7
 ) {
   problems <- character()
-  
+
   coef_list <- lapply(
     seq_along(dep),
     \(block_index) {
@@ -437,7 +1049,7 @@ validate_ce_dep <- \(
         coef(dep[[block_index]]),
         error = \(e) NULL
       )
-      
+
       if (is.null(coef_attempt)) {
         problems <<- c(
           problems,
@@ -447,19 +1059,19 @@ validate_ce_dep <- \(
             "."
           )
         )
-        
+
         return(NULL)
       }
-      
+
       coef_df <- as.data.frame(
         coef_attempt
       )
-      
+
       coef_df$block <- block_index
       coef_df
     }
   )
-  
+
   if (any(vapply(coef_list, is.null, logical(1)))) {
     return(
       list(
@@ -469,9 +1081,9 @@ validate_ce_dep <- \(
       )
     )
   }
-  
+
   coef_df <- bind_rows(coef_list)
-  
+
   numeric_columns <- names(coef_df)[
     vapply(
       coef_df,
@@ -479,7 +1091,7 @@ validate_ce_dep <- \(
       logical(1)
     )
   ]
-  
+
   if (length(numeric_columns) > 0L) {
     numeric_values <- as.matrix(
       coef_df[
@@ -488,13 +1100,13 @@ validate_ce_dep <- \(
         drop = FALSE
       ]
     )
-    
+
     nonfinite_rows <- apply(
       !is.finite(numeric_values),
       1,
       any
     )
-    
+
     if (any(nonfinite_rows)) {
       problems <- c(
         problems,
@@ -506,15 +1118,15 @@ validate_ce_dep <- \(
       )
     }
   }
-  
+
   if ("a" %in% names(coef_df)) {
     invalid_a <- (
       coef_df$a < -1 - parameter_tol |
         coef_df$a > 1 + parameter_tol
     )
-    
+
     invalid_a[is.na(invalid_a)] <- TRUE
-    
+
     if (any(invalid_a)) {
       problems <- c(
         problems,
@@ -525,14 +1137,14 @@ validate_ce_dep <- \(
       )
     }
   }
-  
+
   if ("b" %in% names(coef_df)) {
     invalid_b <- (
       coef_df$b > 1 + parameter_tol
     )
-    
+
     invalid_b[is.na(invalid_b)] <- TRUE
-    
+
     if (any(invalid_b)) {
       problems <- c(
         problems,
@@ -543,13 +1155,13 @@ validate_ce_dep <- \(
       )
     }
   }
-  
+
   if ("s" %in% names(coef_df)) {
     invalid_scale <- (
       !is.finite(coef_df$s) |
         coef_df$s <= min_scale
     )
-    
+
     if (any(invalid_scale)) {
       problems <- c(
         problems,
@@ -562,12 +1174,12 @@ validate_ce_dep <- \(
       )
     }
   }
-  
+
   structural_parameters <- intersect(
     c("a", "b", "m"),
     names(coef_df)
   )
-  
+
   if (length(structural_parameters) > 0L) {
     structural_values <- abs(
       as.matrix(
@@ -578,16 +1190,16 @@ validate_ce_dep <- \(
         ]
       )
     )
-    
+
     extreme_rows <- apply(
       structural_values >
         max_abs_parameter,
       1,
       any
     )
-    
+
     extreme_rows[is.na(extreme_rows)] <- TRUE
-    
+
     if (any(extreme_rows)) {
       problems <- c(
         problems,
@@ -600,7 +1212,7 @@ validate_ce_dep <- \(
       )
     }
   }
-  
+
   list(
     valid = length(problems) == 0L,
     problems = problems,
@@ -618,12 +1230,12 @@ validate_distance_matrix <- \(
   max_distance = 1e6
 ) {
   problems <- character()
-  
+
   M <- tryCatch(
     as.matrix(M),
     error = \(e) NULL
   )
-  
+
   if (is.null(M)) {
     return(
       list(
@@ -633,21 +1245,21 @@ validate_distance_matrix <- \(
       )
     )
   }
-  
+
   if (nrow(M) != ncol(M)) {
     problems <- c(
       problems,
       "Dissimilarity matrix is not square."
     )
   }
-  
+
   if (any(!is.finite(M))) {
     problems <- c(
       problems,
       "Dissimilarity matrix contains non-finite values."
     )
   }
-  
+
   if (
     nrow(M) == ncol(M) &&
     all(is.finite(M))
@@ -656,11 +1268,11 @@ validate_distance_matrix <- \(
       1,
       max(abs(M))
     )
-    
+
     symmetry_error <- max(
       abs(M - t(M))
     )
-    
+
     if (
       symmetry_error >
       symmetry_tol * matrix_scale
@@ -674,11 +1286,11 @@ validate_distance_matrix <- \(
         )
       )
     }
-    
+
     diagonal_error <- max(
       abs(diag(M))
     )
-    
+
     if (
       diagonal_error >
       diagonal_tol * matrix_scale
@@ -693,9 +1305,9 @@ validate_distance_matrix <- \(
         )
       )
     }
-    
+
     minimum_value <- min(M)
-    
+
     if (minimum_value < -negative_tol) {
       problems <- c(
         problems,
@@ -708,7 +1320,7 @@ validate_distance_matrix <- \(
       )
     }
   }
-  
+
   observed_max <- if (
     any(is.finite(M))
   ) {
@@ -716,7 +1328,7 @@ validate_distance_matrix <- \(
   } else {
     NA_real_
   }
-  
+
   if (
     is.finite(observed_max) &&
     is.finite(max_distance) &&
@@ -733,7 +1345,7 @@ validate_distance_matrix <- \(
       )
     )
   }
-  
+
   if (!is.null(expected_names)) {
     if (
       is.null(rownames(M)) ||
@@ -761,7 +1373,7 @@ validate_distance_matrix <- \(
       }
     }
   }
-  
+
   list(
     valid = length(problems) == 0L,
     problems = problems,
@@ -794,7 +1406,7 @@ validate_distance_result <- \(
       )
     )
   }
-  
+
   valid_structure <- vapply(
     dist,
     \(x) {
@@ -803,7 +1415,7 @@ validate_distance_result <- \(
     },
     logical(1)
   )
-  
+
   if (!all(valid_structure)) {
     return(
       list(
@@ -813,7 +1425,7 @@ validate_distance_result <- \(
       )
     )
   }
-  
+
   checks <- lapply(
     seq_along(dist),
     \(block_index) {
@@ -826,12 +1438,12 @@ validate_distance_result <- \(
         negative_tol = negative_tol,
         max_distance = max_distance
       )
-      
+
       check$block <- block_index
       check
     }
   )
-  
+
   problems <- unlist(
     lapply(
       checks,
@@ -839,7 +1451,7 @@ validate_distance_result <- \(
         if (length(x$problems) == 0L) {
           return(character())
         }
-        
+
         paste0(
           "Block ",
           x$block,
@@ -850,7 +1462,7 @@ validate_distance_result <- \(
     ),
     use.names = FALSE
   )
-  
+
   list(
     valid = length(problems) == 0L,
     problems = problems,
@@ -892,10 +1504,10 @@ calc_dist <- \(
         call. = FALSE
       )
     }
-    
+
     NA
   }
-  
+
   if (!is.list(marg) || length(marg) != 2L) {
     return(
       fail(
@@ -903,7 +1515,7 @@ calc_dist <- \(
       )
     )
   }
-  
+
   if (
     length(start) <
     length(marg)
@@ -914,27 +1526,27 @@ calc_dist <- \(
       )
     )
   }
-  
+
   if (!is.null(cond_val)) {
     cond_prob <- NULL
   }
-  
+
   #### Validate marginal structures and exceedance counts ####
-  
+
   # expected_names <- lapply(
   #   seq_along(marg),
   #   \(block_index) {
   #     transformed <- marg[
   #       [block_index]
   #     ]$transformed
-  #     
+  #
   #     if (
   #       is.null(transformed) ||
   #       !is.list(transformed)
   #     ) {
   #       return(NULL)
   #     }
-  #     
+  #
   #     names(transformed)
   #   }
   # )
@@ -942,18 +1554,18 @@ calc_dist <- \(
     seq_along(marg),
     \(block_index) {
       transformed <- marg[[block_index]]$transformed
-      
+
       if (
         is.null(transformed) ||
         !is.list(transformed)
       ) {
         return(NULL)
       }
-      
+
       names(transformed)
     }
   )
-  
+
   if (
     any(
       vapply(
@@ -969,7 +1581,7 @@ calc_dist <- \(
       )
     )
   }
-  
+
   if (
     !setequal(
       expected_names[[1]],
@@ -982,16 +1594,16 @@ calc_dist <- \(
       )
     )
   }
-  
+
   if (!is.null(min_exceedances)) {
     exceedance_rows <- list()
-    
+
     for (
       block_index in
       seq_along(marg)
     ) {
       transformed <- marg[[block_index]]$transformed
-      
+
       for (
         location in
         names(transformed)
@@ -999,7 +1611,7 @@ calc_dist <- \(
         Y <- as.matrix(
           transformed[[location]]
         )
-        
+
         conditioning_variables <- if (
           is.null(cond_var)
         ) {
@@ -1007,13 +1619,13 @@ calc_dist <- \(
         } else {
           cond_var
         }
-        
+
         missing_conditioning_variables <-
           setdiff(
             conditioning_variables,
             colnames(Y)
           )
-        
+
         if (
           length(
             missing_conditioning_variables
@@ -1034,7 +1646,7 @@ calc_dist <- \(
             )
           )
         }
-        
+
         for (
           conditioning_variable in
           conditioning_variables
@@ -1043,7 +1655,7 @@ calc_dist <- \(
             ,
             conditioning_variable
           ]
-          
+
           threshold <- if (
             !is.null(cond_val)
           ) {
@@ -1056,12 +1668,12 @@ calc_dist <- \(
               names = FALSE
             )
           }
-          
+
           n_exc <- sum(
             values > threshold,
             na.rm = TRUE
           )
-          
+
           exceedance_rows[[length(exceedance_rows) + 1L]] <- tibble(
             block = block_index,
             name = location,
@@ -1073,22 +1685,22 @@ calc_dist <- \(
         }
       }
     }
-    
+
     exceedance_df <- bind_rows(
       exceedance_rows
     )
-    
+
     insufficient <- exceedance_df |>
       filter(
         n_exceedances <
           min_exceedances
       )
-    
+
     if (nrow(insufficient) > 0L) {
       worst <- insufficient |>
         arrange(n_exceedances) |>
         slice(1)
-      
+
       return(
         fail(
           paste0(
@@ -1111,9 +1723,9 @@ calc_dist <- \(
   } else {
     exceedance_df <- NULL
   }
-  
+
   #### Fit CE models ####
-  
+
   if (!use_evgam) {
     dep <- lapply(
       seq_along(marg),
@@ -1151,21 +1763,21 @@ calc_dist <- \(
         )
       }
     )
-    
+
     fit_errors <- vapply(
       dep,
       inherits,
       logical(1),
       what = "ce_fit_error"
     )
-    
+
     if (any(fit_errors)) {
       messages <- vapply(
         dep[fit_errors],
         \(x) x$message,
         character(1)
       )
-      
+
       return(
         fail(
           paste0(
@@ -1178,7 +1790,7 @@ calc_dist <- \(
         )
       )
     }
-    
+
     ce_check <- validate_ce_dep(
       dep,
       min_scale =
@@ -1186,7 +1798,7 @@ calc_dist <- \(
       max_abs_parameter =
         max_abs_parameter
     )
-    
+
     if (!ce_check$valid) {
       return(
         fail(
@@ -1200,7 +1812,7 @@ calc_dist <- \(
         )
       )
     }
-    
+
   } else {
     if (is.null(data_loc)) {
       return(
@@ -1209,12 +1821,12 @@ calc_dist <- \(
         )
       )
     }
-    
+
     marg_join_lst <- lapply(
       seq_along(marg),
       \(block_index) {
         x <- marg[[block_index]]
-        
+
         bind_rows(
           lapply(
             seq_along(
@@ -1253,13 +1865,13 @@ calc_dist <- \(
           select(-name)
       }
     )
-    
+
     dep <- lapply(
       marg_join_lst,
       \(x) {
         x1_cond <- NULL
         x2_cond <- NULL
-        
+
         if (
           is.null(cond_var) ||
           cond_var == "X1"
@@ -1271,7 +1883,7 @@ calc_dist <- \(
             cond_var = "X1"
           )
         }
-        
+
         if (
           is.null(cond_var) ||
           cond_var == "X2"
@@ -1283,7 +1895,7 @@ calc_dist <- \(
             cond_var = "X2"
           )
         }
-        
+
         predictions <- bind_rows(
           if (!is.null(x1_cond)) {
             x1_cond$predictions
@@ -1297,13 +1909,13 @@ calc_dist <- \(
             var,
             cond_var
           )
-        
+
         rownames(predictions) <- NULL
-        
+
         as_cecl_dep(predictions)
       }
     )
-    
+
     ce_check <- validate_ce_dep(
       dep,
       min_scale =
@@ -1311,7 +1923,7 @@ calc_dist <- \(
       max_abs_parameter =
         max_abs_parameter
     )
-    
+
     if (!ce_check$valid) {
       return(
         fail(
@@ -1326,11 +1938,11 @@ calc_dist <- \(
       )
     }
   }
-  
+
   #### Determine common comparison threshold ####
-  
+
   thresh_max <- NULL
-  
+
   if (use_dth) {
     threshold_attempt <- tryCatch(
       {
@@ -1343,7 +1955,7 @@ calc_dist <- \(
             )
           }
         )
-        
+
         max(
           unlist(thresh)
         )
@@ -1352,7 +1964,7 @@ calc_dist <- \(
         NA_real_
       }
     )
-    
+
     if (
       length(threshold_attempt) != 1L ||
       !is.finite(threshold_attempt)
@@ -1363,12 +1975,12 @@ calc_dist <- \(
         )
       )
     }
-    
+
     thresh_max <- threshold_attempt
   }
-  
+
   #### Calculate dissimilarity matrices ####
-  
+
   dist <- lapply(
     seq_along(dep),
     \(block_index) {
@@ -1395,21 +2007,21 @@ calc_dist <- \(
       )
     }
   )
-  
+
   dist_errors <- vapply(
     dist,
     inherits,
     logical(1),
     what = "ce_dist_error"
   )
-  
+
   if (any(dist_errors)) {
     messages <- vapply(
       dist[dist_errors],
       \(x) x$message,
       character(1)
     )
-    
+
     return(
       fail(
         paste0(
@@ -1422,9 +2034,9 @@ calc_dist <- \(
       )
     )
   }
-  
+
   #### Validate dissimilarity matrices ####
-  
+
   dist_check <- validate_distance_result(
     dist,
     expected_names =
@@ -1438,7 +2050,7 @@ calc_dist <- \(
     max_distance =
       max_distance
   )
-  
+
   if (!dist_check$valid) {
     return(
       fail(
@@ -1452,9 +2064,9 @@ calc_dist <- \(
       )
     )
   }
-  
+
   #### Return ####
-  
+
   if (ret_dep) {
     return(
       list(
@@ -1471,7 +2083,7 @@ calc_dist <- \(
       )
     )
   }
-  
+
   attr(
     dist,
     "validation"
@@ -1483,7 +2095,7 @@ calc_dist <- \(
     distance =
       dist_check
   )
-  
+
   dist
 }
 
@@ -2468,13 +3080,13 @@ perm_test_prep <- \(
   ...
 ) {
   #### Validate input ####
-  
+
   if (length(data_laplace_loc) != 2L) {
     stop(
       "`data_laplace_loc` must contain exactly two blocks."
     )
   }
-  
+
   if (use_evgam) {
     stop(
       "The rewritten permutation function does not currently ",
@@ -2482,26 +3094,26 @@ perm_test_prep <- \(
       "must also be reassigned to the permuted blocks."
     )
   }
-  
+
   if (!is.null(cond_val)) {
     cond_prob <- NULL
   }
-  
+
   transformed_blocks <- lapply(
     data_laplace_loc,
     \(x) x$transformed
   )
-  
+
   location_names <- names(
     transformed_blocks[[1]]
   )
-  
+
   if (is.null(location_names)) {
     stop(
       "The transformed matrices in block 1 are not named by location."
     )
   }
-  
+
   if (
     !setequal(
       location_names,
@@ -2512,15 +3124,15 @@ perm_test_prep <- \(
       "The two blocks contain different locations."
     )
   }
-  
+
   # Put locations into identical order in both blocks.
   transformed_blocks <- lapply(
     transformed_blocks,
     \(x) x[location_names]
   )
-  
+
   #### Check row counts within each block ####
-  
+
   block_sizes <- vapply(
     transformed_blocks,
     \(block) {
@@ -2529,23 +3141,23 @@ perm_test_prep <- \(
         nrow,
         integer(1)
       )
-      
+
       if (length(unique(sizes)) != 1L) {
         stop(
           "Locations have different numbers of observations ",
           "within the same block."
         )
       }
-      
+
       sizes[[1]]
     },
     integer(1)
   )
-  
+
   n_blocks <- length(transformed_blocks)
-  
+
   #### Construct permutation groups ####
-  
+
   if (is.null(permutation_groups)) {
     # Each observation is its own group. Prefixing by the original
     # block makes the identifiers unique after pooling.
@@ -2560,7 +3172,7 @@ perm_test_prep <- \(
         )
       }
     )
-    
+
     permutation_unit <- "observation"
   } else {
     if (
@@ -2571,11 +3183,11 @@ perm_test_prep <- \(
         "`permutation_groups` must be NULL or a list of length two."
       )
     }
-    
+
     group_lengths <- lengths(
       permutation_groups
     )
-    
+
     if (!identical(
       as.integer(group_lengths),
       as.integer(block_sizes)
@@ -2589,7 +3201,7 @@ perm_test_prep <- \(
         "."
       )
     }
-    
+
     if (
       any(
         vapply(
@@ -2603,7 +3215,7 @@ perm_test_prep <- \(
         "`permutation_groups` cannot contain missing values."
       )
     }
-    
+
     # Prefix groups by the original block. This prevents accidental
     # collisions if the same label appears in both blocks.
     permutation_groups <- Map(
@@ -2618,25 +3230,25 @@ perm_test_prep <- \(
       permutation_groups,
       seq_len(n_blocks)
     )
-    
+
     permutation_unit <- "group"
   }
-  
+
   #### Convert both blocks to one long data frame ####
-  
+
   data_laplace_combined <- bind_rows(
     lapply(
       seq_len(n_blocks),
       \(block_index) {
         block <- transformed_blocks[[block_index]]
-        
+
         bind_rows(
           Map(
             \(matrix_data, location) {
               matrix_data <- as.data.frame(
                 matrix_data
               )
-              
+
               if (
                 !all(
                   c("X1", "X2") %in%
@@ -2648,7 +3260,7 @@ perm_test_prep <- \(
                   "columns `X1` and `X2`."
                 )
               }
-              
+
               matrix_data |>
                 transmute(
                   X1,
@@ -2667,27 +3279,27 @@ perm_test_prep <- \(
       }
     )
   )
-  
+
   #### Generate one common permutation ####
-  
+
   group_table <- data_laplace_combined |>
     distinct(
       permutation_group,
       original_block
     )
-  
+
   n_groups_block_1 <- group_table |>
     filter(original_block == 1L) |>
     nrow()
-  
+
   n_groups_block_2 <- group_table |>
     filter(original_block == 2L) |>
     nrow()
-  
+
   pooled_groups <- sample(
     group_table$permutation_group
   )
-  
+
   block_assignment <- tibble(
     permutation_group = pooled_groups,
     block = c(
@@ -2701,7 +3313,7 @@ perm_test_prep <- \(
       )
     )
   )
-  
+
   # Apply the same group assignment to every location.
   data_perm <- data_laplace_combined |>
     select(
@@ -2717,15 +3329,15 @@ perm_test_prep <- \(
       by = "permutation_group",
       relationship = "many-to-one"
     )
-  
+
   if (anyNA(data_perm$block)) {
     stop(
       "At least one permutation group was not assigned to a block."
     )
   }
-  
+
   #### Validate common assignment across locations ####
-  
+
   assignment_check <- data_perm |>
     distinct(
       permutation_group,
@@ -2736,7 +3348,7 @@ perm_test_prep <- \(
       permutation_group,
       name = "n_assignments"
     )
-  
+
   if (any(
     assignment_check$n_assignments !=
     length(location_names)
@@ -2745,7 +3357,7 @@ perm_test_prep <- \(
       "A permutation group was not represented at every location."
     )
   }
-  
+
   block_check <- data_perm |>
     distinct(
       permutation_group,
@@ -2755,21 +3367,21 @@ perm_test_prep <- \(
       permutation_group,
       name = "n_blocks"
     )
-  
+
   if (any(block_check$n_blocks != 1L)) {
     stop(
       "A permutation group was assigned to multiple blocks."
     )
   }
-  
+
   #### Reconstruct cecl_marg objects ####
-  
+
   permuted_blocks <- lapply(
     c("1", "2"),
     \(new_block) {
       block_data <- data_perm |>
         filter(block == new_block)
-      
+
       location_data <- lapply(
         location_names,
         \(location) {
@@ -2788,31 +3400,31 @@ perm_test_prep <- \(
             as.data.frame()
         }
       )
-      
+
       names(location_data) <- location_names
-      
+
       # Every location must have the same number of rows.
       location_sizes <- vapply(
         location_data,
         nrow,
         integer(1)
       )
-      
+
       if (length(unique(location_sizes)) != 1L) {
         stop(
           "The common permutation produced unequal location ",
           "sample sizes within pseudo-block ", new_block, "."
         )
       }
-      
+
       as_cecl_marg(location_data)
     }
   )
-  
+
   names(permuted_blocks) <- c("1", "2")
-  
+
   #### Fit CE models and calculate divergence matrices ####
-  
+
   dist_perm <- calc_dist(
     marg = permuted_blocks,
     n_mc = n_mc,
@@ -2827,7 +3439,7 @@ perm_test_prep <- \(
     start = start,
     ...
   )
-  
+
   # Preserve the existing convention that a failed CE fit returns NA.
   if (
     is.atomic(dist_perm) &&
@@ -2836,12 +3448,12 @@ perm_test_prep <- \(
   ) {
     return(NA)
   }
-  
+
   attr(
     dist_perm,
     "permutation_unit"
   ) <- permutation_unit
-  
+
   attr(
     dist_perm,
     "n_groups"
@@ -2849,7 +3461,7 @@ perm_test_prep <- \(
     block_1 = n_groups_block_1,
     block_2 = n_groups_block_2
   )
-  
+
   dist_perm
 }
 
@@ -2872,14 +3484,14 @@ perm_test_prep <- \(
 #   if (!is.null(cond_val)) {
 #     cond_prob <- NULL
 #   }
-# 
+#
 #   # combine data into single data.frame with block indicator
 #   data_laplace_combined <- bind_rows(lapply(seq_along(data_laplace_loc), \(i) {
 #     bind_rows(lapply(data_laplace_loc[[i]]$transformed, as.data.frame), .id = "name") %>%
 #       mutate(block = i)
 #   })) |>
 #     select(X1, X2, name, block)
-# 
+#
 #   # permute rows within each location
 #   data_perm <- data_laplace_combined %>%
 #     group_by(name) %>%
@@ -2887,12 +3499,12 @@ perm_test_prep <- \(
 #       # original block sizes for this location
 #       n1 <- sum(df$block == levels(factor(df$block))[1])
 #       n2 <- sum(df$block == levels(factor(df$block))[2])
-# 
+#
 #       # pool rows and randomly split
 #       idx <- sample.int(nrow(df))
 #       idx1 <- idx[seq_len(n1)]
 #       idx2 <- idx[-seq_len(n1)]
-# 
+#
 #       df |>
 #         mutate(
 #           row = row_number(),
@@ -2904,9 +3516,9 @@ perm_test_prep <- \(
 #     }) %>%
 #     ungroup() |>
 #     select(-row)
-# 
+#
 #   locs <- unique(data_perm$name)
-# 
+#
 #   # convert to cecl_marg objects (UNCHANGED)
 #   data_laplace_perm <- data_perm %>%
 #     mutate(block = factor(block, levels = unique(block))) %>%
@@ -2920,9 +3532,9 @@ perm_test_prep <- \(
 #       ret
 #     })
 #   names(data_laplace_perm) <- levels(data_perm$block)
-# 
+#
 #   marg_perm <- lapply(data_laplace_perm, as_cecl_marg)
-# 
+#
 #   # fit CE
 #   # TODO Change!!
 #   # dep_perm <- lapply(
@@ -2963,7 +3575,7 @@ perm_test_prep <- \(
 #     if (is.null(data_loc)) {
 #       stop("data_loc must be provided when use_evgam = TRUE")
 #     }
-# 
+#
 #     # first, put marginal data into form for evgam fitting
 #     marg_join_lst <- lapply(seq_along(marg_perm), \(k) {
 #       x <- marg_perm[[k]]
@@ -2980,7 +3592,7 @@ perm_test_prep <- \(
 #         rename(x = x_loc, y = y_loc) |>
 #         select(-name)
 #     })
-# 
+#
 #     dep_perm <- lapply(marg_join_lst, \(x) {
 #       x1_cond <- fit_evgam(
 #         df = x,
@@ -2988,14 +3600,14 @@ perm_test_prep <- \(
 #         var = "X2",
 #         cond_var = "X1"
 #       )
-# 
+#
 #       x2_cond <- fit_evgam(
 #         df = x,
 #         dep_val = cond_val,
 #         var = "X1",
 #         cond_var = "X2"
 #       )
-# 
+#
 #       # join and change to `cecl_dep` format
 #       coef_evgam <- bind_rows(x1_cond$predictions, x2_cond$predictions) |>
 #         arrange(name, var, cond_var)
@@ -3005,8 +3617,8 @@ perm_test_prep <- \(
 #   } else {
 #     stop("Invalid value for use_evgam")
 #   }
-# 
-# 
+#
+#
 #   thresh_max <- NULL
 #   if (use_dth == TRUE) {
 #     thresh <- lapply(dep_perm, \(x) {
@@ -3015,9 +3627,9 @@ perm_test_prep <- \(
 #     # take max
 #     thresh_max <- max(unlist(thresh))
 #   }
-# 
+#
 #   # compute distances
-# 
+#
 #   dist_perm <- lapply(seq_along(dep_perm), \(i) {
 #     cecl_dist(
 #       dep_perm[[i]],
@@ -3306,7 +3918,7 @@ perm_test_fun <- \(
   ...
 ) {
   #### Validate arguments ####
-  
+
   if (
     !is.null(n_per_block) &&
     !is.null(n_years_per_block)
@@ -3316,13 +3928,13 @@ perm_test_fun <- \(
       "`n_years_per_block`."
     )
   }
-  
+
   if (length(grid_vals) == 0L) {
     stop(
       "`grid_vals` must contain at least one candidate boundary."
     )
   }
-  
+
   if (
     length(n_perm) != 1L ||
     is.na(n_perm) ||
@@ -3330,13 +3942,13 @@ perm_test_fun <- \(
   ) {
     stop("`n_perm` must be a positive integer.")
   }
-  
+
   n_perm <- as.integer(n_perm)
-  
+
   if (is.null(max_perm_attempts)) {
     max_perm_attempts <- 5L * n_perm
   }
-  
+
   if (
     length(max_perm_attempts) != 1L ||
     is.na(max_perm_attempts) ||
@@ -3346,11 +3958,11 @@ perm_test_fun <- \(
       "`max_perm_attempts` must be at least `n_perm`."
     )
   }
-  
+
   max_perm_attempts <- as.integer(
     max_perm_attempts
   )
-  
+
   if (
     length(max_failure_rate) != 1L ||
     is.na(max_failure_rate) ||
@@ -3361,12 +3973,12 @@ perm_test_fun <- \(
       "`max_failure_rate` must lie in [0, 1)."
     )
   }
-  
+
   row_window_mode <- !is.null(n_per_block)
   year_window_mode <- !is.null(
     n_years_per_block
   )
-  
+
   if (row_window_mode) {
     if (
       length(n_per_block) != 1L ||
@@ -3377,10 +3989,10 @@ perm_test_fun <- \(
         "`n_per_block` must be a positive integer."
       )
     }
-    
+
     n_per_block <- as.integer(n_per_block)
   }
-  
+
   if (year_window_mode) {
     required_columns <- c(
       "name",
@@ -3389,12 +4001,12 @@ perm_test_fun <- \(
       "X1",
       "X2"
     )
-    
+
     missing_columns <- setdiff(
       required_columns,
       names(data)
     )
-    
+
     if (length(missing_columns) > 0L) {
       stop(
         "Year-based windows require: ",
@@ -3404,7 +4016,7 @@ perm_test_fun <- \(
         )
       )
     }
-    
+
     if (
       length(n_years_per_block) != 1L ||
       is.na(n_years_per_block) ||
@@ -3414,15 +4026,15 @@ perm_test_fun <- \(
         "`n_years_per_block` must be a positive integer."
       )
     }
-    
+
     n_years_per_block <- as.integer(
       n_years_per_block
     )
-    
+
     all_years <- sort(
       unique(data$season_year)
     )
-    
+
     if (
       length(all_years) <
       2L * n_years_per_block
@@ -3435,12 +4047,12 @@ perm_test_fun <- \(
         " are required."
       )
     }
-    
+
     invalid_grid_vals <- setdiff(
       grid_vals,
       all_years
     )
-    
+
     if (length(invalid_grid_vals) > 0L) {
       stop(
         "These grid values are absent from `season_year`: ",
@@ -3451,23 +4063,23 @@ perm_test_fun <- \(
       )
     }
   }
-  
+
   dots <- list(...)
-  
+
   if ("start" %in% names(dots)) {
     stop(
       "Do not supply `start` through `...`."
     )
   }
-  
+
   #### Generic helpers ####
-  
+
   is_failed_result <- \(x) {
     is.atomic(x) &&
       length(x) == 1L &&
       is.na(x)
   }
-  
+
   run_calc_dist <- \(
     marginal_data,
     start_values,
@@ -3488,18 +4100,18 @@ perm_test_fun <- \(
       validation_warnings =
         show_validation_warnings
     )
-    
+
     if (!is.null(laplace_sample)) {
       args$laplace_sample <-
         laplace_sample
     }
-    
+
     do.call(
       calc_dist,
       c(args, dots)
     )
   }
-  
+
   run_perm_test_prep <- \(
     marginal_data,
     permutation_groups,
@@ -3521,18 +4133,18 @@ perm_test_fun <- \(
       validation_warnings =
         permutation_validation_warnings
     )
-    
+
     if (!is.null(laplace_sample)) {
       args$laplace_sample <-
         laplace_sample
     }
-    
+
     do.call(
       perm_test_prep,
       c(args, dots)
     )
   }
-  
+
   make_failed_result <- \(
     block_info,
     stage,
@@ -3543,11 +4155,11 @@ perm_test_fun <- \(
     ret <- list(
       success = FALSE,
       block_info = block_info,
-      
+
       p_value_frob = NA_real_,
       p_value_inf = NA_real_,
       p_value_spec = NA_real_,
-      
+
       norm_orig_frob = if (
         is.null(norm_orig)
       ) {
@@ -3555,7 +4167,7 @@ perm_test_fun <- \(
       } else {
         norm_orig$frob
       },
-      
+
       norm_orig_inf = if (
         is.null(norm_orig)
       ) {
@@ -3563,7 +4175,7 @@ perm_test_fun <- \(
       } else {
         norm_orig$inf
       },
-      
+
       norm_orig_spec = if (
         is.null(norm_orig)
       ) {
@@ -3571,55 +4183,55 @@ perm_test_fun <- \(
       } else {
         norm_orig$spec
       },
-      
+
       perm_norms_frob = numeric(),
       perm_norms_inf = numeric(),
       perm_norms_spec = numeric(),
-      
+
       n_attempted = 0L,
       n_successful = 0L,
       n_failed = 0L,
       failure_rate = NA_real_,
-      
+
       error_stage = stage,
       error_message = message
     )
-    
+
     if (!is.null(permutation_info)) {
       ret$perm_norms_frob <-
         permutation_info$perm_norms_frob
-      
+
       ret$perm_norms_inf <-
         permutation_info$perm_norms_inf
-      
+
       ret$perm_norms_spec <-
         permutation_info$perm_norms_spec
-      
+
       ret$n_attempted <-
         permutation_info$n_attempted
-      
+
       ret$n_successful <-
         permutation_info$n_successful
-      
+
       ret$n_failed <-
         permutation_info$n_failed
-      
+
       ret$failure_rate <-
         permutation_info$failure_rate
     }
-    
+
     ret
   }
-  
+
   #### Construct blocks for one candidate ####
-  
+
   make_blocks <- \(i) {
     if (year_window_mode) {
       year_position <- match(
         i,
         all_years
       )
-      
+
       if (is.na(year_position)) {
         stop(
           "Candidate year ",
@@ -3627,7 +4239,7 @@ perm_test_fun <- \(
           " is absent from `season_year`."
         )
       }
-      
+
       if (
         year_position <
         n_years_per_block
@@ -3638,7 +4250,7 @@ perm_test_fun <- \(
           " has insufficient years on the left."
         )
       }
-      
+
       if (
         length(all_years) -
         year_position <
@@ -3650,7 +4262,7 @@ perm_test_fun <- \(
           " has insufficient years on the right."
         )
       }
-      
+
       left_years <- all_years[
         (
           year_position -
@@ -3659,7 +4271,7 @@ perm_test_fun <- \(
         ):
           year_position
       ]
-      
+
       right_years <- all_years[
         (year_position + 1L):
           (
@@ -3667,7 +4279,7 @@ perm_test_fun <- \(
               n_years_per_block
           )
       ]
-      
+
       data_block <- data |>
         filter(
           season_year %in% c(
@@ -3687,7 +4299,7 @@ perm_test_fun <- \(
           name,
           date
         )
-      
+
       year_check <- data_block |>
         distinct(
           season_year,
@@ -3697,13 +4309,13 @@ perm_test_fun <- \(
           season_year,
           name = "n_blocks"
         )
-      
+
       if (any(year_check$n_blocks != 1L)) {
         stop(
           "At least one seasonal year was split between blocks."
         )
       }
-      
+
       station_block_sizes <- data_block |>
         distinct(
           name,
@@ -3715,7 +4327,7 @@ perm_test_fun <- \(
           block,
           name = "n_dates"
         )
-      
+
       coverage_check <- station_block_sizes |>
         group_by(block) |>
         summarise(
@@ -3723,27 +4335,27 @@ perm_test_fun <- \(
             n_distinct(n_dates),
           .groups = "drop"
         )
-      
+
       if (any(coverage_check$n_sizes != 1L)) {
         stop(
           "Stations have unequal date coverage within a block."
         )
       }
-      
+
       n_left <- data_block |>
         filter(block == "1") |>
         summarise(
           n = n_distinct(date)
         ) |>
         pull(n)
-      
+
       n_right <- data_block |>
         filter(block == "2") |>
         summarise(
           n = n_distinct(date)
         ) |>
         pull(n)
-      
+
       block_info <- list(
         mode = "season_year",
         split_after = i,
@@ -3754,7 +4366,7 @@ perm_test_fun <- \(
         n_left = n_left,
         n_right = n_right
       )
-      
+
       permutation_groups <- data_block |>
         distinct(
           block,
@@ -3772,10 +4384,10 @@ perm_test_fun <- \(
         lapply(
           \(x) x$season_year
         )
-      
+
     } else {
       data_ordered <- data
-      
+
       if ("date" %in% names(data_ordered)) {
         data_ordered <- data_ordered |>
           arrange(
@@ -3783,19 +4395,19 @@ perm_test_fun <- \(
             date
           )
       }
-      
+
       n_by_station <- data_ordered |>
         count(
           name,
           name = "n_observations"
         )
-      
+
       if (i < 1L) {
         stop(
           "Row-based grid values must be positive."
         )
       }
-      
+
       if (
         any(
           i >=
@@ -3808,7 +4420,7 @@ perm_test_fun <- \(
           " does not leave data on both sides."
         )
       }
-      
+
       data_block <- data_ordered |>
         group_by(name) |>
         mutate(
@@ -3819,7 +4431,7 @@ perm_test_fun <- \(
           )
         ) |>
         ungroup()
-      
+
       if (row_window_mode) {
         if (i < n_per_block) {
           stop(
@@ -3828,7 +4440,7 @@ perm_test_fun <- \(
             "."
           )
         }
-        
+
         if (
           any(
             n_by_station$n_observations -
@@ -3842,7 +4454,7 @@ perm_test_fun <- \(
             "."
           )
         }
-        
+
         left_block <- data_block |>
           filter(block == "1") |>
           group_by(name) |>
@@ -3850,7 +4462,7 @@ perm_test_fun <- \(
             n = n_per_block
           ) |>
           ungroup()
-        
+
         right_block <- data_block |>
           filter(block == "2") |>
           group_by(name) |>
@@ -3858,12 +4470,12 @@ perm_test_fun <- \(
             n = n_per_block
           ) |>
           ungroup()
-        
+
         data_block <- bind_rows(
           left_block,
           right_block
         )
-        
+
         block_info <- list(
           mode = "fixed_rows",
           split_after = i,
@@ -3873,7 +4485,7 @@ perm_test_fun <- \(
           n_left = n_per_block,
           n_right = n_per_block
         )
-        
+
       } else {
         block_info <- list(
           mode = "cumulative_rows",
@@ -3888,10 +4500,10 @@ perm_test_fun <- \(
           )
         )
       }
-      
+
       permutation_groups <- NULL
     }
-    
+
     if ("date" %in% names(data_block)) {
       alignment_check <- data_block |>
         distinct(
@@ -3904,11 +4516,11 @@ perm_test_fun <- \(
           date,
           name = "n_locations"
         )
-      
+
       expected_locations <- n_distinct(
         data_block$name
       )
-      
+
       if (
         any(
           alignment_check$n_locations !=
@@ -3920,7 +4532,7 @@ perm_test_fun <- \(
         )
       }
     }
-    
+
     list(
       data = data_block,
       block_info = block_info,
@@ -3928,24 +4540,24 @@ perm_test_fun <- \(
         permutation_groups
     )
   }
-  
+
   #### Starting values ####
-  
+
   start <- replicate(
     2L,
     c(a = 0.01, b = 0.01),
     simplify = FALSE
   )
-  
+
   if (use_start) {
     middle_grid <- grid_vals[
       ceiling(length(grid_vals) / 2)
     ]
-    
+
     start_blocks <- make_blocks(
       middle_grid
     )
-    
+
     start_marg <- trans_fun(
       start_blocks$data |>
         select(
@@ -3957,7 +4569,7 @@ perm_test_fun <- \(
       n_vars,
       laplace_trans
     )
-    
+
     start_fit <- suppressMessages(
       run_calc_dist(
         marginal_data = start_marg,
@@ -3967,26 +4579,26 @@ perm_test_fun <- \(
           validation_warnings
       )
     )
-    
+
     if (is_failed_result(start_fit)) {
       stop(
         "The CE fit used to calculate starting values failed."
       )
     }
-    
+
     start <- lapply(
       start_fit$dep,
       coef
     )
   }
-  
+
   #### Parallelisation ####
-  
+
   parallel_grid <- (
     length(grid_vals) >
       n_perm
   )
-  
+
   grid_apply <- \(X, FUN) {
     if (parallel_grid) {
       parallel::mclapply(
@@ -4007,7 +4619,7 @@ perm_test_fun <- \(
   #     FUN
   #   )
   # }
-  # 
+  #
   permutation_apply <- \(X, FUN) {
     if (!parallel_grid) {
       parallel::mclapply(
@@ -4022,17 +4634,17 @@ perm_test_fun <- \(
       )
     }
   }
-  
+
   #### Test one candidate ####
-  
+
   test_candidate <- \(i) {
     grid_position <- match(
       i,
       grid_vals
     )
-    
+
     # browser()
-    
+
     if (verbose) {
       message(
         "\nCandidate ",
@@ -4043,7 +4655,7 @@ perm_test_fun <- \(
         i
       )
     }
-    
+
     block_attempt <- tryCatch(
       make_blocks(i),
       error = \(e) {
@@ -4056,7 +4668,7 @@ perm_test_fun <- \(
         )
       }
     )
-    
+
     if (inherits(block_attempt, "block_error")) {
       return(
         make_failed_result(
@@ -4066,12 +4678,12 @@ perm_test_fun <- \(
         )
       )
     }
-    
+
     data_block <- block_attempt$data
     block_info <- block_attempt$block_info
     permutation_groups <-
       block_attempt$permutation_groups
-    
+
     data_laplace_block <- trans_fun(
       data_block |>
         select(
@@ -4083,9 +4695,9 @@ perm_test_fun <- \(
       n_vars,
       laplace_trans
     )
-    
+
     #### Observed fit ####
-    
+
     observed_attempt <- tryCatch(
       {
         suppressMessages(
@@ -4109,7 +4721,7 @@ perm_test_fun <- \(
         )
       }
     )
-    
+
     if (
       inherits(
         observed_attempt,
@@ -4125,7 +4737,7 @@ perm_test_fun <- \(
         )
       )
     }
-    
+
     if (is_failed_result(observed_attempt)) {
       return(
         make_failed_result(
@@ -4136,7 +4748,7 @@ perm_test_fun <- \(
         )
       )
     }
-    
+
     if (ret_dep) {
       dep <- observed_attempt$dep
       dist <- observed_attempt$dist
@@ -4144,9 +4756,9 @@ perm_test_fun <- \(
       dep <- NULL
       dist <- observed_attempt
     }
-    
+
     #### Observed statistics ####
-    
+
     observed_norms <- tryCatch(
       {
         list(
@@ -4177,7 +4789,7 @@ perm_test_fun <- \(
         )
       }
     )
-    
+
     if (inherits(observed_norms, "norm_error")) {
       return(
         make_failed_result(
@@ -4188,9 +4800,9 @@ perm_test_fun <- \(
         )
       )
     }
-    
+
     #### One permutation ####
-    
+
     run_one_permutation <- \(attempt_number) {
       if (verbose) {
         message(
@@ -4202,7 +4814,7 @@ perm_test_fun <- \(
           attempt_number
         )
       }
-      
+
       dist_perm <- tryCatch(
         {
           run_perm_test_prep(
@@ -4217,14 +4829,14 @@ perm_test_fun <- \(
           NULL
         }
       )
-      
+
       if (
         is.null(dist_perm) ||
         is_failed_result(dist_perm)
       ) {
         return(NULL)
       }
-      
+
       tryCatch(
         {
           list(
@@ -4250,12 +4862,12 @@ perm_test_fun <- \(
         }
       )
     }
-    
+
     #### Obtain successful permutations ####
-    
+
     norm_vals <- list()
     n_attempted <- 0L
-    
+
     while (
       length(norm_vals) < n_perm &&
       n_attempted <
@@ -4263,23 +4875,23 @@ perm_test_fun <- \(
     ) {
       n_needed <- n_perm -
         length(norm_vals)
-      
+
       n_remaining <- max_perm_attempts -
         n_attempted
-      
+
       batch_size <- min(
         n_needed,
         n_remaining
       )
-      
+
       attempt_numbers <- n_attempted +
         seq_len(batch_size)
-      
+
       batch_results <- permutation_apply(
         attempt_numbers,
         run_one_permutation
       )
-      
+
       norm_vals <- c(
         norm_vals,
         Filter(
@@ -4287,15 +4899,15 @@ perm_test_fun <- \(
           batch_results
         )
       )
-      
+
       n_attempted <- n_attempted +
         batch_size
     }
-    
+
     n_successful <- length(norm_vals)
     n_failed <- n_attempted -
       n_successful
-    
+
     failure_rate <- if (
       n_attempted > 0L
     ) {
@@ -4303,7 +4915,7 @@ perm_test_fun <- \(
     } else {
       NA_real_
     }
-    
+
     message(
       "Candidate ",
       i,
@@ -4320,20 +4932,20 @@ perm_test_fun <- \(
       ),
       "%)."
     )
-    
+
     if (n_successful > 0L) {
       perm_norms_frob <- vapply(
         norm_vals,
         \(x) x$frob,
         numeric(1)
       )
-      
+
       perm_norms_inf <- vapply(
         norm_vals,
         \(x) x$inf,
         numeric(1)
       )
-      
+
       perm_norms_spec <- vapply(
         norm_vals,
         \(x) x$spec,
@@ -4344,7 +4956,7 @@ perm_test_fun <- \(
       perm_norms_inf <- numeric()
       perm_norms_spec <- numeric()
     }
-    
+
     permutation_info <- list(
       perm_norms_frob =
         perm_norms_frob,
@@ -4361,7 +4973,7 @@ perm_test_fun <- \(
       failure_rate =
         failure_rate
     )
-    
+
     if (n_successful == 0L) {
       return(
         make_failed_result(
@@ -4375,7 +4987,7 @@ perm_test_fun <- \(
         )
       )
     }
-    
+
     if (
       is.finite(failure_rate) &&
       failure_rate >
@@ -4397,7 +5009,7 @@ perm_test_fun <- \(
         "%. No p-value will be reported.",
         call. = FALSE
       )
-      
+
       return(
         make_failed_result(
           block_info = block_info,
@@ -4414,7 +5026,7 @@ perm_test_fun <- \(
         )
       )
     }
-    
+
     if (n_successful < n_perm) {
       warning(
         "Only ",
@@ -4425,9 +5037,9 @@ perm_test_fun <- \(
         call. = FALSE
       )
     }
-    
+
     #### Corrected Monte Carlo p-values ####
-    
+
     p_value_frob <- (
       1 +
         sum(
@@ -4437,7 +5049,7 @@ perm_test_fun <- \(
     ) / (
       n_successful + 1
     )
-    
+
     p_value_inf <- (
       1 +
         sum(
@@ -4447,7 +5059,7 @@ perm_test_fun <- \(
     ) / (
       n_successful + 1
     )
-    
+
     p_value_spec <- (
       1 +
         sum(
@@ -4457,7 +5069,7 @@ perm_test_fun <- \(
     ) / (
       n_successful + 1
     )
-    
+
     message(
       "Candidate ",
       i,
@@ -4487,34 +5099,34 @@ perm_test_fun <- \(
       n_attempted,
       ")."
     )
-    
+
     #### Successful result ####
-    
+
     ret <- list(
       success = TRUE,
       block_info = block_info,
-      
+
       p_value_frob =
         p_value_frob,
       p_value_inf =
         p_value_inf,
       p_value_spec =
         p_value_spec,
-      
+
       norm_orig_frob =
         observed_norms$frob,
       norm_orig_inf =
         observed_norms$inf,
       norm_orig_spec =
         observed_norms$spec,
-      
+
       perm_norms_frob =
         perm_norms_frob,
       perm_norms_inf =
         perm_norms_inf,
       perm_norms_spec =
         perm_norms_spec,
-      
+
       permutation_unit = if (
         year_window_mode
       ) {
@@ -4522,7 +5134,7 @@ perm_test_fun <- \(
       } else {
         "observation"
       },
-      
+
       n_attempted =
         n_attempted,
       n_successful =
@@ -4531,13 +5143,13 @@ perm_test_fun <- \(
         n_failed,
       failure_rate =
         failure_rate,
-      
+
       error_stage =
         NA_character_,
       error_message =
         NA_character_
     )
-    
+
     if (ret_dep) {
       ret$dep_vals <- lapply(
         dep,
@@ -4547,10 +5159,10 @@ perm_test_fun <- \(
           .id = "block"
         )
     }
-    
+
     ret
   }
-  
+
   grid_apply(
     grid_vals,
     test_candidate
@@ -4774,4 +5386,508 @@ fit_evgam <- \(df, dep_val, var, cond_var, k = 10) {
       ) |>
       select(name, var, cond_var, a, b, m, s, ll, dth)
   ))
+}
+
+#### Changepoint visualisation ####
+
+# function to preprocess permutation test results
+preprocess_permutation_scan <- \(scan_result) {
+  season_name <- scan_result$season
+  candidate_years <- scan_result$candidate_years
+  permutation_results <- scan_result$results
+
+  norm_names <- c(
+    frob = "Frobenius",
+    # inf = "Maximum",
+    inf = "Infinity",
+    spec = "Spectral"
+  )
+
+  summary_rows <- vector(
+    "list",
+    length(permutation_results)
+  )
+
+  permutation_rows <- vector(
+    "list",
+    length(permutation_results)
+  )
+
+  dependence_rows <- vector(
+    "list",
+    length(permutation_results)
+  )
+
+  for (i in seq_along(permutation_results)) {
+    result <- permutation_results[[i]]
+    candidate_year <- candidate_years[[i]]
+
+    summary_rows[[i]] <- tibble(
+      season = season_name,
+      n_years_per_block =
+        scan_result$n_years_per_block,
+      change_after_year = candidate_year,
+      change_before_year = if (
+        !is.null(result$block_info$split_before)
+      ) {
+        result$block_info$split_before
+      } else {
+        NA_integer_
+      },
+      norm = unname(norm_names),
+      observed = c(
+        result$norm_orig_frob,
+        result$norm_orig_inf,
+        result$norm_orig_spec
+      ),
+      p_value = c(
+        result$p_value_frob,
+        result$p_value_inf,
+        result$p_value_spec
+      ),
+      success = isTRUE(result$success),
+      n_attempted = result$n_attempted,
+      n_successful = result$n_successful,
+      n_failed = result$n_failed,
+      failure_rate = result$failure_rate,
+      error_stage = result$error_stage,
+      error_message = result$error_message
+    )
+
+    permutation_values <- list(
+      Frobenius = result$perm_norms_frob,
+      Maximum = result$perm_norms_inf,
+      Spectral = result$perm_norms_spec
+    )
+
+    permutation_rows[[i]] <- bind_rows(
+      lapply(
+        names(permutation_values),
+        \(norm_name) {
+          values <- permutation_values[[norm_name]]
+
+          if (length(values) == 0L) {
+            return(NULL)
+          }
+
+          tibble(
+            season = season_name,
+            n_years_per_block =
+              scan_result$n_years_per_block,
+            change_after_year =
+              candidate_year,
+            norm = norm_name,
+            permutation = seq_along(values),
+            permutation_value = values
+          )
+        }
+      )
+    )
+
+    if (!is.null(result$dep_vals)) {
+      dependence_rows[[i]] <- result$dep_vals |>
+        as.data.frame() |>
+        mutate(
+          season = season_name,
+          n_years_per_block =
+            scan_result$n_years_per_block,
+          change_after_year =
+            candidate_year,
+          .before = 1
+        )
+    }
+  }
+
+  summary_df <- bind_rows(summary_rows) |>
+    mutate(
+      norm = factor(
+        norm,
+        levels = c(
+          "Frobenius",
+          # "Maximum",
+          "Infinity",
+          "Spectral"
+        )
+      )
+    ) |>
+    arrange(
+      change_after_year,
+      norm
+    )
+
+  permutation_df <- bind_rows(
+    permutation_rows
+  ) |>
+    mutate(
+      norm = factor(
+        norm,
+        levels = c(
+          "Frobenius",
+          # "Maximum",
+          "Infinity",
+          "Spectral"
+        )
+      )
+    )
+
+  dependence_df <- bind_rows(
+    dependence_rows
+  )
+
+  list(
+    summary = summary_df, # one row per candidate year and norm
+    permutations = permutation_df, # individual successful perm stats
+    dependence = dependence_df # fitted CE parameters from obs blocks
+  )
+}
+
+# function to plot permutation test results
+plot_permutation_scan <- \(
+  scan_tidy,
+  plot_ce_parameters = TRUE,
+  variable_names = c(
+    X1 = "Maximum temperature",
+    X2 = "Drought"
+  )
+) {
+  summary_df <- scan_tidy$summary
+  permutation_df <- scan_tidy$permutations
+  dependence_df <- scan_tidy$dependence
+
+  season_name <- unique(
+    summary_df$season
+  )
+
+  year_breaks <- sort(
+    unique(summary_df$change_after_year)
+  )
+
+  #### Pointwise p-value profile ####
+
+  p_value_profile <- summary_df |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = p_value,
+        colour = norm
+      )
+    ) +
+    geom_hline(
+      yintercept = 0.05,
+      colour = "grey40",
+      linetype = "dashed"
+    ) +
+    geom_line(
+      data = \(x) filter(x, success),
+      aes(group = norm)
+    ) +
+    geom_point(
+      data = \(x) filter(x, success),
+      size = 2
+    ) +
+    geom_rug(
+      data = \(x) {
+        x |>
+          distinct(
+            change_after_year,
+            success
+          ) |>
+          filter(!success)
+      },
+      aes(x = change_after_year),
+      inherit.aes = FALSE,
+      sides = "b",
+      colour = "red"
+    ) +
+    scale_x_continuous(
+      breaks = year_breaks
+    ) +
+    scale_y_continuous(
+      limits = c(0, 1),
+      breaks = seq(0, 1, by = 0.1)
+    ) +
+    scale_colour_brewer(
+      palette = "Dark2"
+    ) +
+    labs(
+      title = paste(
+        season_name,
+        "pointwise permutation p-values"
+      ),
+      # subtitle = paste0(
+      #   unique(summary_df$n_years_per_block),
+      #   "-year blocks"
+      # ),
+      # x = "Candidate change after seasonal year",
+      x = "Season Year",
+      # y = "Pointwise permutation p-value",
+      y = "p-value",
+      colour = "Norm",
+      # caption = paste(
+      #   "Dashed line indicates p = 0.05.",
+      #   "Red axis marks indicate failed candidates."
+      # )
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      ),
+      legend.position = "bottom"
+    )
+
+  #### Observed statistics against permutation distributions ####
+
+  permutation_boxplots <- permutation_df |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = permutation_value
+      )
+    ) +
+    geom_boxplot(
+      aes(
+        group = interaction(
+          norm,
+          change_after_year
+        )
+      ),
+      width = 0.6,
+      outliers = TRUE
+    ) +
+    geom_point(
+      data = summary_df |>
+        filter(success),
+      aes(
+        x = change_after_year,
+        y = observed
+      ),
+      inherit.aes = FALSE,
+      colour = "red",
+      size = 2.5
+    ) +
+    facet_wrap(
+      ~norm,
+      scales = "free_y"
+    ) +
+    scale_x_continuous(
+      breaks = year_breaks
+    ) +
+    labs(
+      title = paste(
+        season_name,
+        "observed and permuted discrepancies"
+      ),
+      # subtitle = paste0(
+      #   unique(summary_df$n_years_per_block),
+      #   "-year blocks"
+      # ),
+      # x = "Candidate change after seasonal year",
+      x = "season year",
+      y = "Test Statistic",
+      # caption = paste(
+      #   "Boxplots show permutation distributions;",
+      #   "red points show observed discrepancies."
+      # )
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      )
+    )
+
+  #### Permutation histograms ####
+
+  histogram_labels <- summary_df |>
+    transmute(
+      change_after_year,
+      norm,
+      histogram_panel = paste0(
+        change_after_year,
+        # "\n",
+        ", ",
+        norm,
+        # "\np = ",
+        ", ",
+        if_else(
+          is.na(p_value),
+          "NA",
+          format(
+            p_value,
+            digits = 3,
+            nsmall = 2
+          )
+        )
+      )
+    )
+
+  permutation_histogram_data <- permutation_df |>
+    left_join(
+      histogram_labels,
+      by = c(
+        "change_after_year",
+        "norm"
+      )
+    )
+
+  histogram_observed_data <- summary_df |>
+    filter(success) |>
+    left_join(
+      histogram_labels,
+      by = c(
+        "change_after_year",
+        "norm"
+      )
+    )
+
+  permutation_histograms <- permutation_histogram_data |>
+    ggplot(
+      aes(x = permutation_value)
+    ) +
+    geom_histogram(
+      aes(y = after_stat(density)),
+      bins = 25,
+      fill = "firebrick2",
+      alpha = 0.6
+    ) +
+    geom_vline(
+      data = histogram_observed_data,
+      aes(xintercept = observed),
+      inherit.aes = FALSE,
+      colour = "black",
+      linetype = "dashed",
+      linewidth = 0.8
+    ) +
+    facet_wrap(
+      ~histogram_panel,
+      scales = "free",
+      ncol = 3
+    ) +
+    labs(
+      title = paste(
+        season_name,
+        "permutation distributions"
+      ),
+      x = "D",
+      y = "Density",
+      # caption = paste(
+      #   "Dashed lines show observed discrepancies.",
+      #   "Facet labels give pointwise p-values."
+      # )
+    ) +
+    cecl_theme(
+      nejm_pal = FALSE
+    )
+
+  plots <- list(
+    p_value_profile = p_value_profile,
+    permutation_boxplots =
+      permutation_boxplots,
+    permutation_histograms =
+      permutation_histograms
+  )
+
+  #### CE parameter plots ####
+
+  if (
+    plot_ce_parameters &&
+    nrow(dependence_df) > 0L
+  ) {
+    dependence_df <- dependence_df |>
+      mutate(
+        var = recode(
+          var,
+          !!!variable_names
+        ),
+        cond_var = recode(
+          cond_var,
+          !!!variable_names
+        )
+      )
+
+    parameter_columns <- intersect(
+      c(
+        "a",
+        "b",
+        "m",
+        "s",
+        "ll"
+      ),
+      names(dependence_df)
+    )
+
+    station_ids <- unique(
+      dependence_df$name
+    )
+
+    ce_parameter_plots <- lapply(
+      station_ids,
+      \(station_id) {
+        dependence_df |>
+          filter(name == station_id) |>
+          pivot_longer(
+            cols = all_of(
+              parameter_columns
+            ),
+            names_to = "parameter",
+            values_to = "value"
+          ) |>
+          mutate(
+            parameter = recode(
+              parameter,
+              ll = "LogLik"
+            ),
+            panel = paste0(
+              parameter,
+              ", ",
+              var,
+              " | ",
+              cond_var
+            )
+          ) |>
+          ggplot(
+            aes(
+              x = change_after_year,
+              y = value,
+              colour = block
+            )
+          ) +
+          geom_line() +
+          geom_point() +
+          facet_wrap(
+            ~panel,
+            scales = "free_y",
+            ncol = 4
+          ) +
+          labs(
+            title = paste(
+              season_name,
+              "CE parameters:",
+              station_id
+            ),
+            x = "Candidate change after seasonal year",
+            y = "Parameter value",
+            colour = "Block"
+          ) +
+          cecl_theme() +
+          theme(
+            axis.text.x = element_text(
+              angle = 45,
+              hjust = 1
+            )
+          )
+      }
+    )
+
+    names(ce_parameter_plots) <-
+      station_ids
+
+    plots$ce_parameter_plots <-
+      ce_parameter_plots
+  }
+
+  plots
 }

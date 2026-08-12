@@ -139,8 +139,8 @@ screen_one_setting <- \(
 
   if (
     is.list(start_fit) &&
-    isTRUE(start_fit$success) &&
-    !is.null(start_fit$dep)
+      isTRUE(start_fit$success) &&
+      !is.null(start_fit$dep)
   ) {
     candidate_start_vals <- tryCatch(
       lapply(start_fit$dep, coef),
@@ -304,7 +304,7 @@ screen_one_setting <- \(
           change_after_year = block_vec[[candidate_index]],
           change_before_year = if (
             is.list(block_info) &&
-            !is.null(block_info$split_before)
+              !is.null(block_info$split_before)
           ) {
             as.integer(block_info$split_before)
           } else {
@@ -314,7 +314,7 @@ screen_one_setting <- \(
           },
           n_left_dates = if (
             is.list(block_info) &&
-            !is.null(block_info$n_left)
+              !is.null(block_info$n_left)
           ) {
             as.integer(block_info$n_left)
           } else {
@@ -322,7 +322,7 @@ screen_one_setting <- \(
           },
           n_right_dates = if (
             is.list(block_info) &&
-            !is.null(block_info$n_right)
+              !is.null(block_info$n_right)
           ) {
             as.integer(block_info$n_right)
           } else {
@@ -495,504 +495,6 @@ run_season_permutation_scan <- \(
   )
 }
 
-# function to preprocess permutation test results
-preprocess_permutation_scan <- \(scan_result) {
-  season_name <- scan_result$season
-  candidate_years <- scan_result$candidate_years
-  permutation_results <- scan_result$results
-
-  norm_names <- c(
-    frob = "Frobenius",
-    inf = "Maximum",
-    spec = "Spectral"
-  )
-
-  summary_rows <- vector(
-    "list",
-    length(permutation_results)
-  )
-
-  permutation_rows <- vector(
-    "list",
-    length(permutation_results)
-  )
-
-  dependence_rows <- vector(
-    "list",
-    length(permutation_results)
-  )
-
-  for (i in seq_along(permutation_results)) {
-    result <- permutation_results[[i]]
-    candidate_year <- candidate_years[[i]]
-
-    summary_rows[[i]] <- tibble(
-      season = season_name,
-      n_years_per_block =
-        scan_result$n_years_per_block,
-      change_after_year = candidate_year,
-      change_before_year = if (
-        !is.null(result$block_info$split_before)
-      ) {
-        result$block_info$split_before
-      } else {
-        NA_integer_
-      },
-      norm = unname(norm_names),
-      observed = c(
-        result$norm_orig_frob,
-        result$norm_orig_inf,
-        result$norm_orig_spec
-      ),
-      p_value = c(
-        result$p_value_frob,
-        result$p_value_inf,
-        result$p_value_spec
-      ),
-      success = isTRUE(result$success),
-      n_attempted = result$n_attempted,
-      n_successful = result$n_successful,
-      n_failed = result$n_failed,
-      failure_rate = result$failure_rate,
-      error_stage = result$error_stage,
-      error_message = result$error_message
-    )
-
-    permutation_values <- list(
-      Frobenius = result$perm_norms_frob,
-      Maximum = result$perm_norms_inf,
-      Spectral = result$perm_norms_spec
-    )
-
-    permutation_rows[[i]] <- bind_rows(
-      lapply(
-        names(permutation_values),
-        \(norm_name) {
-          values <- permutation_values[[norm_name]]
-
-          if (length(values) == 0L) {
-            return(NULL)
-          }
-
-          tibble(
-            season = season_name,
-            n_years_per_block =
-              scan_result$n_years_per_block,
-            change_after_year =
-              candidate_year,
-            norm = norm_name,
-            permutation = seq_along(values),
-            permutation_value = values
-          )
-        }
-      )
-    )
-
-    if (!is.null(result$dep_vals)) {
-      dependence_rows[[i]] <- result$dep_vals |>
-        as.data.frame() |>
-        mutate(
-          season = season_name,
-          n_years_per_block =
-            scan_result$n_years_per_block,
-          change_after_year =
-            candidate_year,
-          .before = 1
-        )
-    }
-  }
-
-  summary_df <- bind_rows(summary_rows) |>
-    mutate(
-      norm = factor(
-        norm,
-        levels = c(
-          "Frobenius",
-          "Maximum",
-          "Spectral"
-        )
-      )
-    ) |>
-    arrange(
-      change_after_year,
-      norm
-    )
-
-  permutation_df <- bind_rows(
-    permutation_rows
-  ) |>
-    mutate(
-      norm = factor(
-        norm,
-        levels = c(
-          "Frobenius",
-          "Maximum",
-          "Spectral"
-        )
-      )
-    )
-
-  dependence_df <- bind_rows(
-    dependence_rows
-  )
-
-  list(
-    summary = summary_df, # one row per candidate year and norm
-    permutations = permutation_df, # individual successful perm stats
-    dependence = dependence_df # fitted CE parameters from obs blocks
-  )
-}
-
-# function to plot permutation test results
-plot_permutation_scan <- \(
-  scan_tidy,
-  plot_ce_parameters = TRUE,
-  variable_names = c(
-    X1 = "Maximum temperature",
-    X2 = "Drought"
-  )
-) {
-  summary_df <- scan_tidy$summary
-  permutation_df <- scan_tidy$permutations
-  dependence_df <- scan_tidy$dependence
-
-  season_name <- unique(
-    summary_df$season
-  )
-
-  year_breaks <- sort(
-    unique(summary_df$change_after_year)
-  )
-
-  #### Pointwise p-value profile ####
-
-  p_value_profile <- summary_df |>
-    ggplot(
-      aes(
-        x = change_after_year,
-        y = p_value,
-        colour = norm
-      )
-    ) +
-    geom_hline(
-      yintercept = 0.05,
-      colour = "grey40",
-      linetype = "dashed"
-    ) +
-    geom_line(
-      data = \(x) filter(x, success),
-      aes(group = norm)
-    ) +
-    geom_point(
-      data = \(x) filter(x, success),
-      size = 2
-    ) +
-    geom_rug(
-      data = \(x) {
-        x |>
-          distinct(
-            change_after_year,
-            success
-          ) |>
-          filter(!success)
-      },
-      aes(x = change_after_year),
-      inherit.aes = FALSE,
-      sides = "b",
-      colour = "red"
-    ) +
-    scale_x_continuous(
-      breaks = year_breaks
-    ) +
-    scale_y_continuous(
-      limits = c(0, 1),
-      breaks = seq(0, 1, by = 0.1)
-    ) +
-    scale_colour_brewer(
-      palette = "Dark2"
-    ) +
-    labs(
-      title = paste(
-        season_name,
-        "pointwise permutation p-values"
-      ),
-      # subtitle = paste0(
-      #   unique(summary_df$n_years_per_block),
-      #   "-year blocks"
-      # ),
-      # x = "Candidate change after seasonal year",
-      x = "season year",
-      # y = "Pointwise permutation p-value",
-      y = "p-value",
-      colour = "Norm",
-      # caption = paste(
-      #   "Dashed line indicates p = 0.05.",
-      #   "Red axis marks indicate failed candidates."
-      # )
-    ) +
-    cecl_theme() +
-    theme(
-      axis.text.x = element_text(
-        angle = 45,
-        hjust = 1
-      ),
-      legend.position = "bottom"
-    )
-
-  #### Observed statistics against permutation distributions ####
-
-  permutation_boxplots <- permutation_df |>
-    ggplot(
-      aes(
-        x = change_after_year,
-        y = permutation_value
-      )
-    ) +
-    geom_boxplot(
-      aes(
-        group = interaction(
-          norm,
-          change_after_year
-        )
-      ),
-      width = 0.6,
-      outliers = TRUE
-    ) +
-    geom_point(
-      data = summary_df |>
-        filter(success),
-      aes(
-        x = change_after_year,
-        y = observed
-      ),
-      inherit.aes = FALSE,
-      colour = "red",
-      size = 2.5
-    ) +
-    facet_wrap(
-      ~norm,
-      scales = "free_y"
-    ) +
-    scale_x_continuous(
-      breaks = year_breaks
-    ) +
-    labs(
-      title = paste(
-        season_name,
-        "observed and permuted discrepancies"
-      ),
-      # subtitle = paste0(
-      #   unique(summary_df$n_years_per_block),
-      #   "-year blocks"
-      # ),
-      # x = "Candidate change after seasonal year",
-      x = "season year",
-      y = "Test Statistic",
-      # caption = paste(
-      #   "Boxplots show permutation distributions;",
-      #   "red points show observed discrepancies."
-      # )
-    ) +
-    cecl_theme() +
-    theme(
-      axis.text.x = element_text(
-        angle = 45,
-        hjust = 1
-      )
-    )
-
-  #### Permutation histograms ####
-
-  histogram_labels <- summary_df |>
-    transmute(
-      change_after_year,
-      norm,
-      histogram_panel = paste0(
-        change_after_year,
-        # "\n",
-        ", ",
-        norm,
-        # "\np = ",
-        ", ",
-        if_else(
-          is.na(p_value),
-          "NA",
-          format(
-            p_value,
-            digits = 3,
-            nsmall = 2
-          )
-        )
-      )
-    )
-
-  permutation_histogram_data <- permutation_df |>
-    left_join(
-      histogram_labels,
-      by = c(
-        "change_after_year",
-        "norm"
-      )
-    )
-
-  histogram_observed_data <- summary_df |>
-    filter(success) |>
-    left_join(
-      histogram_labels,
-      by = c(
-        "change_after_year",
-        "norm"
-      )
-    )
-
-  permutation_histograms <- permutation_histogram_data |>
-    ggplot(
-      aes(x = permutation_value)
-    ) +
-    geom_histogram(
-      aes(y = after_stat(density)),
-      bins = 25,
-      fill = "firebrick2",
-      alpha = 0.6
-    ) +
-    geom_vline(
-      data = histogram_observed_data,
-      aes(xintercept = observed),
-      inherit.aes = FALSE,
-      colour = "black",
-      linetype = "dashed",
-      linewidth = 0.8
-    ) +
-    facet_wrap(
-      ~histogram_panel,
-      scales = "free",
-      ncol = 3
-    ) +
-    labs(
-      title = paste(
-        season_name,
-        "permutation distributions"
-      ),
-      x = "D",
-      y = "Density",
-      # caption = paste(
-      #   "Dashed lines show observed discrepancies.",
-      #   "Facet labels give pointwise p-values."
-      # )
-    ) +
-    cecl_theme(
-      nejm_pal = FALSE
-    )
-
-  plots <- list(
-    p_value_profile = p_value_profile,
-    permutation_boxplots =
-      permutation_boxplots,
-    permutation_histograms =
-      permutation_histograms
-  )
-
-  #### CE parameter plots ####
-
-  if (
-    plot_ce_parameters &&
-    nrow(dependence_df) > 0L
-  ) {
-    dependence_df <- dependence_df |>
-      mutate(
-        var = recode(
-          var,
-          !!!variable_names
-        ),
-        cond_var = recode(
-          cond_var,
-          !!!variable_names
-        )
-      )
-
-    parameter_columns <- intersect(
-      c(
-        "a",
-        "b",
-        "m",
-        "s",
-        "ll"
-      ),
-      names(dependence_df)
-    )
-
-    station_ids <- unique(
-      dependence_df$name
-    )
-
-    ce_parameter_plots <- lapply(
-      station_ids,
-      \(station_id) {
-        dependence_df |>
-          filter(name == station_id) |>
-          pivot_longer(
-            cols = all_of(
-              parameter_columns
-            ),
-            names_to = "parameter",
-            values_to = "value"
-          ) |>
-          mutate(
-            parameter = recode(
-              parameter,
-              ll = "LogLik"
-            ),
-            panel = paste0(
-              parameter,
-              ", ",
-              var,
-              " | ",
-              cond_var
-            )
-          ) |>
-          ggplot(
-            aes(
-              x = change_after_year,
-              y = value,
-              colour = block
-            )
-          ) +
-          geom_line() +
-          geom_point() +
-          facet_wrap(
-            ~panel,
-            scales = "free_y",
-            ncol = 4
-          ) +
-          labs(
-            title = paste(
-              season_name,
-              "CE parameters:",
-              station_id
-            ),
-            x = "Candidate change after seasonal year",
-            y = "Parameter value",
-            colour = "Block"
-          ) +
-          cecl_theme() +
-          theme(
-            axis.text.x = element_text(
-              angle = 45,
-              hjust = 1
-            )
-          )
-      }
-    )
-
-    names(ce_parameter_plots) <-
-      station_ids
-
-    plots$ce_parameter_plots <-
-      ce_parameter_plots
-  }
-
-  plots
-}
 
 
 #### Metadata ####
@@ -1002,10 +504,19 @@ temp_var <- "temp_max"
 decades <- seq(1960, 2010, by = 10)
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
-seed <- 123
-dqu <- 0.8
+seed <- 123 # random seed
+# Conditional threshold and number of samples for Laplace sample used throughout
+# dqu <- 0.8
+dqu <- 0.85
 n_samples <- 500
 # grid_vals <- seq(950, 1050, by = 10) # TODO Add more values once code works
+
+# run initially for just 100 permutations across full range
+# TODO Change names, no need to call "screen", right??
+# n_perm_screen <- 100L
+# n_perm_screen <- 1000L
+n_perm_screen <- 200L
+n_years_per_block <- 25L # best choice, from screening round
 
 
 #### Load Data ####
@@ -1219,7 +730,8 @@ screen_setup_df <- tidyr::crossing(
   n_years_per_block = c(15L, 20L, 25L, 30L)
 )
 
-sink("sink_screening_output.txt")
+# sink("sink_screening_output.txt")
+sink(paste0("sink_screening_output_dqu_", dqu, ".txt"))
 
 screen_res_df <- bind_rows(lapply(seq_len(nrow(screen_setup_df)), \(i) {
   print(paste0(round(i / nrow(screen_setup_df) * 100, 2), "% of setups done"))
@@ -1255,9 +767,11 @@ screen_failure_summary
 sink()
 
 # save
-readr::write_csv(screen_res_df, "data/02_app/screen_res.csv.gz")
+# readr::write_csv(screen_res_df, "data/02_app/screen_res.csv.gz")
+readr::write_csv(screen_res_df, paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
 
-screen_res_df <- readr::read_csv("data/02_app/screen_res.csv.gz")
+# screen_res_df <- readr::read_csv("data/02_app/screen_res.csv.gz")
+screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
 
 
 #### Plotting ####
@@ -1599,25 +1113,29 @@ plot_all_norms <- \(df, spec_year = NULL) {
 p_all_norms <- plot_all_norms(screen_res_long)
 p_all_norms_25 <- plot_all_norms(screen_res_long, spec_year = 25)
 
-ggsave("p_frob.png", p_frob, width = 12, height = 8)
-ggsave("p_frob_25.png", p_frob_25, width = 12, height = 8)
-ggsave("p_all_norms.png", p_all_norms, width = 12, height = 8)
-ggsave("p_all_norms_25.png", p_all_norms_25, width = 12, height = 8)
+p_frob
+p_frob_25
+
+p_all_norms
+p_all_norms_25
+
+ggsave(paste0("plots/02_app/p_frob_dqu_", dqu, ".png"), p_frob, width = 12, height = 8)
+ggsave(paste0("plots/02_app/p_frob_25_dqu_", dqu, ".png"), p_frob_25, width = 12, height = 8)
+ggsave(paste0("plots/02_app/p_all_norms_dqu_", dqu, ".png"), p_all_norms, width = 12, height = 8)
+ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
 
 
 #### Permutation tests across full feasible range ####
 
-# run initially for just 100 permutations across full range
-# TODO Change names, no need to call "screen", right??
-# n_perm_screen <- 100L
-# n_perm_screen <- 1000L
-n_perm_screen <- 200L
-n_years_per_block <- 25L # best choice, from screening round
-
+# sink(paste0(
+#   "sink_perm_output_nperm_",
+#   n_perm_screen, "_n_years_",
+#   n_years_per_block, ".txt"
+# ))
 sink(paste0(
   "sink_perm_output_nperm_",
-  n_perm_screen, "_n_years_",
-  n_years_per_block, ".txt"
+  n_perm_screen, "_dqu_",
+  dqu, ".txt"
 ))
 
 source("src/00_functions.R")
@@ -1646,22 +1164,24 @@ saveRDS(
   permutation_scan_results,
   paste0(
     "data/02_app/",
-    "spain_permutation_scan_",
-    n_years_per_block,
-    "yr_",
+    "spain_perm_test_",
+    "n_perm_",
     n_perm_screen,
-    "perm.rds"
+    "_dqu_",
+    dqu,
+    ".rds"
   )
 )
 
 permutation_scan_results <- readRDS(
   paste0(
     "data/02_app/",
-    "spain_permutation_scan_",
-    n_years_per_block,
-    "yr_",
+    "spain_perm_test_",
+    "n_perm_",
     n_perm_screen,
-    "perm.rds"
+    "_dqu_",
+    dqu,
+    ".rds"
   )
 )
 
