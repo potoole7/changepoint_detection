@@ -144,33 +144,16 @@ data <- data |>
 # pull station names for looping over later
 station_names <- unique(data$name)
 
+
 #### Detrend ####
 
-# TODO Look into to see if this removes much!
-detrend_monthly <- \(data, var) {
-  data |>
-    group_by(name, month) |>
-    group_modify(~ {
-      fit <- lm(
-        reformulate("year", response = var),
-        data = .x
-      )
-
-      beta <- coef(fit)[["year"]]
-      year_bar <- mean(.x$year, na.rm = TRUE)
-
-      .x |>
-        mutate(
-          !!var := .data[[var]] -
-            beta * (.data$year - year_bar)
-        )
-    }) |>
-    ungroup()
-}
-
+# detrend monthly data
 temp_dt <- detrend_monthly(data, "temp")
 # rain_dt <- detrend_monthly(data, "rain")
 dep_dt <- detrend_monthly(data, var_dep)
+
+
+#### Checks ####
 
 # plot detrended data for a single station to check
 wrap_plots(lapply(list(data, temp_dt), \(x) {
@@ -205,7 +188,7 @@ plot(x - y) # okay, apparently not the same!!
 
 # check fitted slopes
 wrap_plots(lapply(c("temp", var_dep), \(x) {
-  data |>
+  p <- data |>
     group_by(name, month) |>
     summarise(
       beta = coef(lm(.data[[x]] ~ year))[2],
@@ -214,8 +197,21 @@ wrap_plots(lapply(c("temp", var_dep), \(x) {
     ggplot(aes(beta)) +
     geom_histogram() +
     cecl_theme() +
-    ggtitle(x)
-}))
+    labs(x = "Coefficient") +
+    scale_y_continuous(breaks = seq(0, 50, by = 10), limits = c(0, 50), expand = c(0, 0)) +
+    ggtitle(x) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  if (x == var_dep) {
+    p <- p +
+      labs(y = "") +
+      theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+  }
+  p
+})) +
+  plot_annotation(
+    title = "Histogram of year trend linear coefficients",
+    theme = theme(plot.title = element_text(size = 16, hjust = 0.5))
+  )
 
 # also overlay trend over a given year
 ggplot(
@@ -224,7 +220,10 @@ ggplot(
 ) +
   geom_point(alpha = 0.2) +
   facet_wrap(~month) +
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm") +
+  ggtitle("Valencia linear trend in temperatures") +
+  cecl_theme() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 # clear positive trend in every month
 
 # and look at the same for "detrended" data
@@ -276,28 +275,11 @@ temp_dt |>
 #   ungroup()
 
 
-# function to transform by season to Laplace margins using rank transform
-trans_fun <- \(df, var) {
-  dep_laplace_season <- df |>
-    # group_by(name, season) |>
-    group_by(name, month) |>
-    mutate(
-      n_nonmissing = sum(!is.na(.data[[var]])),
-      F_hat = rank(
-        .data[[var]],
-        ties.method = "average",
-        na.last = "keep"
-      ) / (n_nonmissing + 1),
-      laplace = qlaplace(F_hat)
-    ) |>
-    ungroup() |>
-    select(-n_nonmissing)
-}
-
-# temp_laplace_season <- trans_fun(df, "temp")
-# dep_laplace_season <- trans_fun(df, var_dep)
-temp_laplace_month <- trans_fun(temp_dt, "temp")
-dep_laplace_month <- trans_fun(dep_dt, var_dep)
+# transform by season to Laplace margins using rank transform
+# temp_laplace_season <- trans_fun_season(df, "temp")
+# dep_laplace_season <- trans_fun_season(df, var_dep)
+temp_laplace_month <- trans_fun_season(temp_dt, "temp")
+dep_laplace_month <- trans_fun_season(dep_dt, var_dep)
 
 
 # join data
@@ -404,57 +386,63 @@ dev.off()
 #   })
 # names(marg_season_roll_emp) <- unique(laplace_season$season)
 # safer version
-marg_season_roll_emp <- laplace_season |>
-  select(name, date, season, temp, all_of(var_dep)) |>
-  mutate(
-    name = factor(name),
-    season = factor(season, levels = seasons)
-  ) |>
-  group_split(season) |>
-  lapply(\(x) {
-    station_groups <- x |>
-      group_by(name)
+trans_to_cecl <- \(laplace_season, var_dep) {
+  marg_season_roll_emp <- laplace_season |>
+    select(name, date, season, temp, all_of(var_dep)) |>
+    mutate(
+      name = factor(name),
+      season = factor(season, levels = seasons)
+    ) |>
+    group_split(season) |>
+    lapply(\(x) {
+      station_groups <- x |>
+        group_by(name)
 
-    ret_names <- station_groups |>
-      group_keys() |>
-      pull(name) |>
-      as.character()
+      ret_names <- station_groups |>
+        group_keys() |>
+        pull(name) |>
+        as.character()
 
-    station_data <- station_groups |>
-      group_split()
-    
-    original_dates <- lapply(
-      station_data,
-      \(y) {
-        y |>
-          arrange(date) |>
-          pull(date)
-      }
-    )
+      station_data <- station_groups |>
+        group_split()
 
-    ret <- mclapply(
-      station_data,
-      \(y) {
-        ret1 <- y |>
-          arrange(date) |>
-          select(temp, all_of(var_dep)) |>
-          as.matrix()
+      original_dates <- lapply(
+        station_data,
+        \(y) {
+          y |>
+            arrange(date) |>
+            pull(date)
+        }
+      )
 
-        colnames(ret1) <- c("temp", var_dep)
-        ret1
-      }
-    )
+      ret <- mclapply(
+        station_data,
+        \(y) {
+          ret1 <- y |>
+            arrange(date) |>
+            select(temp, all_of(var_dep)) |>
+            as.matrix()
 
-    names(ret) <- ret_names
-    names(original_dates) <- ret_names
+          colnames(ret1) <- c("temp", var_dep)
+          ret1
+        }
+      )
 
-    ret <- as_cecl_marg(ret)
-    # keep dates and season to ensure we can match later
-    ret$dates <- original_dates
-    ret$season <- as.character(x$season[[1]])
+      names(ret) <- ret_names
+      names(original_dates) <- ret_names
 
-    ret
-  })
+      ret <- as_cecl_marg(ret)
+      # keep dates and season to ensure we can match later
+      ret$dates <- original_dates
+      ret$season <- as.character(x$season[[1]])
+
+      ret
+    })
+  return(marg_season_roll_emp)
+}
+marg_season_roll_emp <- trans_to_cecl(laplace_season, var_dep)
+
+
 season_names <- laplace_season |>
   mutate(season = factor(season, levels = seasons)) |>
   distinct(season) |>
