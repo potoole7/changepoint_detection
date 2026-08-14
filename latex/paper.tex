@@ -135,7 +135,7 @@
 \item We analyse temperature and precipitation observations from 40 meteorological stations distributed across mainland Spain.
 \item Their locations are shown in the left panel of Figure~\ref{fig}.
 \item The analysis covers the period 1960-2020, inclusive. 
-\item Only stations satisfying the required record-length and data-availability criteria are retained. % \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
+\item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
 \item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment & Dataset (ECA&D) \citep{ECADdaily}. 
 \item The ECA&D provides quality-controlled daily meteorological observations from stations across Europe.
 \item We aggregate the daily observations to a weekly resolution, taking the maximum recorded temperature and total accumulated precipitation within each week. 
@@ -163,7 +163,7 @@ so that larger values correspond to drier conditions.
 \item The right-hand panels of Figure~\ref{fig} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
 \item These stations are highlighted in the map in the left-hand panel.
 \item At both stations, the distribution of weekly maximum temperature differs substantially between seasons. 
-\item The seasonal separation in drought-index values is less pronounced at Daroca, whereas Jerez de la Frontera exhibits clearer seasonal variation in both temperature and drought conditions. % \todo{Mention explicit figures for means/95th quantiles??}
+\item The seasonal separation in drought-index values is less pronounced at Daroca, whereas Jerez de la Frontera exhibits clearer seasonal variation in both temperature and drought conditions. \textcolor{red}{Mention explicit figures for means/95th quantiles??}
 \item These seasonal differences motivate fitting the dependence model and applying the changepoint procedure separately within each season. 
 \item This allows both the marginal behaviour and the extremal dependence structure to vary seasonally.
 \end{itemize}
@@ -228,11 +228,11 @@ Right: Weekly maximum temperature against 13-week drought index, (D=-\mathrm{SPI
 \item The same threshold is used for both variables, at every station, in both temporal blocks and at every candidate changepoint. 
 \item This ensures that exceedances have a common interpretation throughout the analysis.
 \item The 80th-percentile threshold provided a satisfactory empirical compromise between restricting attention to the joint tail and retaining enough exceedances for stable model estimation. 
-\item In particular, the resulting clustering solutions exhibited clear spatial contiguity. % \todo{Add a sensitivity analysis for the dependence threshold.}
+\item In particular, the resulting clustering solutions exhibited clear spatial contiguity. \textcolor{red}{Add a sensitivity analysis for the dependence threshold.}
 \item The Monte Carlo approximation used to construct the pairwise dissimilarities employs the same sample from the standard Laplace distribution in every temporal comparison. 
 \item Holding this sample fixed avoids introducing additional Monte Carlo variation between candidate changepoints.
-\item The conditional fits from the two conditioning directions are combined into the aggregated dissimilarity matrix defined in Section~\ref{sec:method}. % \todo{Test for others}
-\item All screening, testing and clustering calculations reported below use this matrix. % \todo{Confirm terminology and add sensitivity results for the alternative dissimilarity matrices, if required.}
+\item The conditional fits from the two conditioning directions are combined into the aggregated dissimilarity matrix defined in Section~\ref{sec:method}. \textcolor{red}{Test for others}
+\item All screening, testing and clustering calculations reported below use this matrix. \textcolor{red}{Confirm terminology and add sensitivity results for the alternative dissimilarity matrices, if required.}
 \end{itemize}
 
 % Screening and changepoint-test specification
@@ -262,7 +262,7 @@ Right: Weekly maximum temperature against 13-week drought index, (D=-\mathrm{SPI
 \item All candidate comparisons fitted successfully with 25-year blocks. 
 \item Increasing the length to 30 years also produced stable fits, but left only two to five candidate changepoints per season.
 \item We therefore use 25 season-years on either side of each candidate throughout the primary analysis. 
-\item This was the shortest common block length that produced stable fits across all seasons while retaining a useful range of candidate changepoints. % \todo{Present the alternative block lengths as a sensitivity analysis or in the supplementary material(?).}
+\item This was the shortest common block length that produced stable fits across all seasons while retaining a useful range of candidate changepoints. \textcolor{red}{Present the alternative block lengths as a sensitivity analysis or in the supplementary material(?).}
 \end{itemize}
 
 \subsection{Screening}\label{subsec:app_screen}
@@ -303,7 +303,7 @@ The first and final candidate years are not classified as local peaks because th
 \item For Autumn, the screening results are less concentrated around a single candidate year. 
 \item The Frobenius curve has local peaks around 1990 and 1996, while the infinity and spectral curves identify broadly similar candidate regions during the late 1980s or early 1990s and the mid-1990s. 
 \item The precise locations of the peaks are less consistent across norms than for winter, spring or summer.
-\item Across the four seasons, the largest Frobenius norm screening value occurs for summer around 1988. % \todo{Cite exact value}
+\item Across the four seasons, the largest Frobenius norm screening value occurs for summer around 1988. \textcolor{red}{Cite exact value}
 \item The clearest agreement among all three norms occurs around 1992 for spring and around 1998 for winter.
 % \item The screening curves identify periods in which the estimated extremal dependence structure differs most strongly between the two temporal blocks, but they do not provide measures of statistical significance. 
 % \item Moreover, statistics at neighbouring candidate years are strongly dependent because adjacent 25-year windows share almost all of their observations.
@@ -430,7 +430,7 @@ The horizontal dashed line denotes the pointwise 5\% significance level.
 \item For winter, the three norms provide their clearest common evidence at season-year 1998. 
 \item We therefore fit separate models to winter season-years 1960--1998 and 1999--2020.
 
-\item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$. \todo{Confirm or update the selected divisions after completing the multiplicity-adjusted changepoint analysis.}
+\item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$. \textcolor{red}{Confirm or update the selected divisions after completing the multiplicity-adjusted changepoint analysis.}
 \end{itemize}
 
 \begin{itemize}

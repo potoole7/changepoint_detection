@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  31 JUL 2026 14:47
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  13 AUG 2026 10:06
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -1780,11 +1780,7 @@ File: l3backend-pdftex.def 2023-01-16 L3 backend support: PDF output (pdfTeX)
 LaTeX Warning: Unused global option(s):
     [APA,STIX1COL].
 
-(./paper.aux
-
-LaTeX Warning: Label `subsec:app_cp' multiply defined.
-
-)
+(./paper.aux)
 \openout1 = `paper.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 43.
@@ -2095,7 +2091,7 @@ Package pdftex.def Info: plots/screen.png  used on input line 316.
 
 LaTeX Warning: Reference `sec:method' on page 7 undefined on input line 382.
 
-<plots/change.png, id=75, 867.24pt x 578.16pt>
+<plots/change.png, id=74, 867.24pt x 578.16pt>
 File: plots/change.png Graphic file (type png)
 <use plots/change.png>
 Package pdftex.def Info: plots/change.png  used on input line 393.
@@ -2103,210 +2099,8 @@ Package pdftex.def Info: plots/change.png  used on input line 393.
 
 LaTeX Warning: Reference `sec:method' on page 7 undefined on input line 424.
 
-Package hyperref Info: bookmark level for unknown todo defaults to 0 on input l
-ine 433.
-
-Overfull \hbox (41.91277pt too wide) in paragraph at lines 433--433
-[][][]\T1/stix/m/n/10.03749 Confirm 
- []
-
-
-Overfull \hbox (16.58823pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 or 
- []
-
-
-Overfull \hbox (34.98691pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 update 
- []
-
-
-Overfull \hbox (20.57309pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 the 
- []
-
-
-Overfull \hbox (40.5577pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 selected 
- []
-
-
-Overfull \hbox (27.1878pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 divi- 
- []
-
-
-Overfull \hbox (28.86404pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 sions 
- []
-
-
-Overfull \hbox (26.71603pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 after 
- []
-
-
-Overfull \hbox (28.85402pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 com- 
- []
-
-
-Overfull \hbox (26.53535pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 plet- 
- []
-
-
-Overfull \hbox (21.0549pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 ing 
- []
-
-
-Overfull \hbox (20.57309pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 the 
- []
-
-
-Overfull \hbox (58.24376pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 multiplicity- 
- []
-
-
-Overfull \hbox (41.6016pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 adjusted 
- []
-
-
-Overfull \hbox (39.68443pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 change- 
- []
-
-
-Overfull \hbox (28.86406pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 point 
- []
-
-
-Overfull \hbox (28.29192pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 anal- 
- []
-
-
-Overfull \hbox (16.40755pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 y- 
- []
-
-
-Overfull \hbox (21.33594pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 sis.[]  
- []
-
-
-Overfull \hbox (6.69092pt too wide) in paragraph at lines 433--433
-[][][] 
- []
-
-
-Overfull \hbox (41.91277pt too wide) in paragraph at lines 433--433
-[][][]\T1/stix/m/n/10.03749 Confirm 
- []
-
-
-Overfull \hbox (16.58823pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 or 
- []
-
-
-Overfull \hbox (34.98691pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 update 
- []
-
-
-Overfull \hbox (20.57309pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 the 
- []
-
-
-Overfull \hbox (40.5577pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 selected 
- []
-
-
-Overfull \hbox (27.1878pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 divi- 
- []
-
-
-Overfull \hbox (28.86404pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 sions 
- []
-
-
-Overfull \hbox (26.71603pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 after 
- []
-
-
-Overfull \hbox (28.85402pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 com- 
- []
-
-
-Overfull \hbox (26.53535pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 plet- 
- []
-
-
-Overfull \hbox (21.0549pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 ing 
- []
-
-
-Overfull \hbox (20.57309pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 the 
- []
-
-
-Overfull \hbox (58.24376pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 multiplicity- 
- []
-
-
-Overfull \hbox (41.6016pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 adjusted 
- []
-
-
-Overfull \hbox (39.68443pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 change- 
- []
-
-
-Overfull \hbox (28.86406pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 point 
- []
-
-
-Overfull \hbox (28.29192pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 anal- 
- []
-
-
-Overfull \hbox (16.40755pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 y- 
- []
-
-
-Overfull \hbox (21.33594pt too wide) in paragraph at lines 433--433
-\T1/stix/m/n/10.03749 sis.[]  
- []
-
-
-Overfull \hbox (6.69092pt too wide) in paragraph at lines 433--433
-[][][] 
- []
-
 [7] [8 <./plots/change.png>]
-<plots/clust_map_trim.png, id=88, 829.1778pt x 504.4446pt>
+<plots/clust_map_trim.png, id=86, 829.1778pt x 504.4446pt>
 File: plots/clust_map_trim.png Graphic file (type png)
 <use plots/clust_map_trim.png>
 Package pdftex.def Info: plots/clust_map_trim.png  used on input line 459.
@@ -2338,20 +2132,20 @@ LaTeX Font Warning: Size substitutions with differences
 LaTeX Warning: There were undefined references.
 
 
-LaTeX Warning: There were multiply-defined labels.
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
  ) 
 Here is how much of TeX's memory you used:
- 34194 strings out of 477975
- 600077 string characters out of 5839282
+ 34094 strings out of 477975
+ 597755 string characters out of 5839282
  1873330 words of memory out of 5000000
- 53624 multiletter control sequences out of 15000+600000
+ 53525 multiletter control sequences out of 15000+600000
  660391 words of font info for 246 fonts, out of 8000000 for 9000
  85 hyphenation exceptions out of 8191
- 99i,10n,94p,887b,1039s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 99i,10n,94p,887b,582s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-pdfTeX warning (dest): name{subsection.4.6} has been referenced but does not ex
-ist, replaced by a fixed one
+pdfTeX warning (dest): name{figure.caption.5} has been referenced but does not 
+exist, replaced by a fixed one
 
 
 pdfTeX warning (dest): name{Hfootnote.1} has been referenced but does not exist
@@ -2365,10 +2159,10 @@ dy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Regular.pfb></usr/share/texmf/f
 onts/type1/public/cm-super/sftt1000.pfb></home/paddy7wb/texmf/fonts/type1/publi
 c/stix/stix-mathcal.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-math
 it.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathrm.pfb>
-Output written on paper.pdf (10 pages, 3084621 bytes).
+Output written on paper.pdf (10 pages, 3084732 bytes).
 PDF statistics:
- 203 PDF objects out of 1000 (max. 8388607)
- 170 compressed objects within 2 object streams
- 33 named destinations out of 1000 (max. 500000)
+ 202 PDF objects out of 1000 (max. 8388607)
+ 169 compressed objects within 2 object streams
+ 32 named destinations out of 1000 (max. 500000)
  169 words of extra memory for PDF output out of 10000 (max. 10000000)
 
