@@ -116,171 +116,6 @@ plot_pdf <- \(x, x_diff, areas, var, col_lab = NULL) {
   return(c(p_lst, p_diff_lst))
 }
 
-# Function to calc chi, chibar at quantile q (or closest q) at each  site
-calc_chi <- \(data, var1, var2, chi_q) {
-  stations <- unique(data$station_id)
-  chi_95_df <- bind_rows(lapply(stations, \(x) {
-    chi <- data %>%
-      filter(station_id == x) |>
-      dplyr::select(!!var1, !!var2) %>%
-      texmex::chi()
-
-    # whether to show chi or not, based on whether chibar upper extend crosses 1
-    show_chi <- !prod(tail(chi$chibar[, 3]) < 1)
-
-    loc <- which.min(abs(chi$quantile - chi_q))
-    return(data.frame(
-      "station_id" = x,
-      "chi" = chi$chi[loc, 2, drop = TRUE],
-      "chibar" = chi$chibar[loc, 2, drop = TRUE],
-      "show_chi" = show_chi
-    ))
-  }))
-  rownames(chi_95_df) <- NULL
-
-  # join in area statistics
-  chi_95_df %>%
-    pivot_longer(c("chi", "chibar"), names_to = "var") %>%
-    # always show chibar plot
-    mutate(show_chi = ifelse(value == "chibar", TRUE, show_chi)) %>%
-    left_join(
-      distinct(data, station_id, station_name, lon, lat)
-    ) %>%
-    st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas), remove = FALSE)
-}
-
-# Function to plot chi and chibar statistics on map
-chi_map_plot <- \(
-  chi_95_sf,
-  areas,
-  var = c("chi", "chibar"),
-  # scales = seq(-0.1, 0.6, by = 0.1),
-  # point_ranges = c(2, 6),
-  spec_locs = NULL,
-  locs_nudge_x = 0.1,
-  locs_nudge_y = 0.1,
-  rm_axis = TRUE
-) {
-  # lab <- ifelse(var == "chi", expression(chi(u)), expression(bar(chi)(u)))
-  lab <- ifelse(
-    var == "chi",
-    expression(chi(0.95)),
-    expression(bar(chi)(0.95))
-  )
-
-  plot_data <- filter(chi_95_sf, var == !!var)
-  if (var == "chi") {
-    plot_data <- plot_data %>%
-      mutate(show_chi = factor(ifelse(show_chi == TRUE, "yes", "no")))
-  }
-
-  p <- ggplot(areas) +
-    geom_sf(colour = "black", fill = NA) +
-    geom_sf(
-      # geom_sf_pattern(
-      data = plot_data,
-      aes(fill = value, size = value),
-      # aes(fill = value, size = value, pattern = show_chi),
-      pch = 21,
-      stroke = 1
-    )
-
-  # add numbers for specific locations, if desired
-  if (!is.null(spec_locs)) {
-    # plot_data <- plot_data |>
-    #   mutate(spec_name = ifelse(name %in% spec_locs, TRUE, FALSE))
-
-    plot_data_num <- plot_data %>%
-      filter(name %in% spec_locs) |>
-      # arrange by inputted spec_locs
-      slice(match(spec_locs, name)) %>%
-      mutate(label_num = row_number())
-
-    p <- p +
-      geom_sf(
-        data = plot_data_num,
-        aes(fill = value, size = value),
-        colour = "red",
-        pch = 21,
-        stroke = 1,
-        show.legend = FALSE
-      ) +
-      # add numbers beside points
-      geom_sf_text(
-        data = plot_data_num,
-        aes(label = label_num),
-        nudge_x = locs_nudge_x,
-        nudge_y = locs_nudge_y,
-        # size = 5,
-        size = 6,
-        fontface = "bold",
-        colour = "red",
-        show.legend = FALSE
-      )
-  }
-
-  p <- p +
-    scale_x_continuous(expand = c(0, 0)) +
-    scale_y_continuous(expand = c(0, 0)) +
-    # add colour scheme afterwards
-    # scale_fill_gradientn(
-    #   colours = RColorBrewer::brewer.pal(name = "Blues", n = 7),
-    #   breaks = scales_chi,
-    #   labels = as.character(scales_chi),
-    #   guide = "legend"
-    # ) +
-    # scale_size_continuous(
-    #   range  = point_ranges,
-    #   breaks = scales,
-    #   labels = as.character(scales),
-    #   guide  = "legend"
-    # ) +
-    # scale_pattern_manual(values = c("stripe", "none")) +
-    # maximise plot within frame
-    coord_sf(expand = FALSE) +
-    labs(fill = lab, size = lab, x = "", y = "") +
-    guides(fill = guide_legend(), size = guide_legend(), pattern = "none") +
-    # CeCl::cecl_theme(legend.position = "right") +
-    CeCl::cecl_theme() +
-    theme(legend.key = element_blank())
-
-  # remove axis text and ticks if required
-  if (rm_axis == TRUE) {
-    p <- p +
-      theme(
-        axis.text  = element_blank(),
-        axis.ticks = element_blank()
-      )
-  }
-
-  return(p)
-}
-
-# Function to join both chi and chibar plots together
-join_chi_plots <- \(chi_95_sf, areas, fill_fun1, fill_fun2) {
-  # plot chibar and chi
-  chibar_p <- chi_map_plot(chi_95_sf, areas, "chibar", rm_axis = FALSE) +
-    # scale_fill_gradientn(
-    #   colours = rev(heat.colors(7)),
-    #   # breaks = scales,
-    #   # labels = as.character(scales),
-    #   guide = "legend"
-    # )
-    diff_fill_fun()
-
-  # chi_p <- chi_map_plot(chi_95_sf, "chi") +
-  chi_p <- chi_map_plot(chi_95_sf, areas, "chi", rm_axis = FALSE) +
-    # scale_fill_gradientn(
-    #   colours = RColorBrewer::brewer.pal(name = "Blues", n = 7),
-    #   # breaks = scales,
-    #   # labels = as.character(scales),
-    #   guide = "legend"
-    # ) +
-    diff_fill_fun()
-
-  chibar_p + chi_p
-}
-
 
 #### Metadata ####
 
@@ -303,7 +138,7 @@ data <- readr::read_csv("data/02_app/ecad_clean.csv.gz")
 
 # load map of continental Spain to use as background in plots
 # areas <- mapSpain::esp_get_munic_siane(moveCAN = TRUE) |>
-areas <- sf::read_sf("data/02_app/spain_shapefile.geojson") |> 
+areas <- sf::read_sf("data/02_app/spain_shapefile.geojson") |>
   filter(!ine.ccaa.name %in% c("Canarias", "Balears, Illes", "Ceuta", "Melilla"))
 
 
@@ -335,7 +170,7 @@ readr::write_csv(
 #### Means ####
 
 # calculate means
-# TODO How to ignore 0s in rain? 
+# TODO How to ignore 0s in rain?
 data_mean <- data_sf |>
   group_by(station_id, station_name, decade, season) |>
   summarise(
@@ -364,7 +199,7 @@ dev.off()
 # pdf("plots/02_app/01_drought_global_means.pdf", width = 10, height = 8)
 # plot_pdf(data_mean, data_mean_diff, areas_ccaa, "drought_local", "Local Drought Index")
 # dev.off()
-# 
+#
 # pdf("plots/02_app/01_drought_local_means.pdf", width = 10, height = 8)
 # plot_pdf(data_mean, data_mean_diff, areas_ccaa, "drought_global", "Global Drought Index")
 # dev.off()
@@ -404,7 +239,7 @@ dev.off()
 # pdf("plots/02_app/01a_drought_global_q.pdf", width = 10, height = 8)
 # plot_pdf(data_q, data_q_diff, areas_ccaa, "drought_local", "Local Drought Index")
 # dev.off()
-# 
+#
 # pdf("plots/02_app/01a_drought_local_q.pdf", width = 10, height = 8)
 # plot_pdf(data_q, data_q_diff, areas_ccaa, "drought_global", "Global Drought Index")
 # dev.off()
@@ -556,7 +391,7 @@ dev.off()
 # pdf("plots/02_app/01b_chi_maps_temp_drought_global.pdf", width = 10, height = 8)
 # lapply(plot_list[grepl("drought_global", names(plot_list))], `[[`, "plot")
 # dev.off()
-# 
+#
 # pdf("plots/02_app/01b_chi_maps_rain_ws.pdf", width = 10, height = 8)
 # lapply(plot_list[grepl("wind_speed", names(plot_list))], `[[`, "plot")
 # dev.off()
