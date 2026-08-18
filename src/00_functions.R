@@ -539,7 +539,6 @@ plt_clust_map <- \(
   if (inherits(clust_obj, "kmeans")) {
     clust_membership <- clust_obj$cluster
     medoid_locs <- character()
-
   } else if (inherits(clust_obj, "pam")) {
     clust_membership <- clust_obj$clustering
     medoids <- clust_obj$medoids
@@ -551,7 +550,6 @@ plt_clust_map <- \(
     } else {
       medoid_locs <- character()
     }
-
   } else {
     stop(
       "`clust_obj` must inherit from either \"pam\" or \"kmeans\".",
@@ -700,7 +698,6 @@ plt_clust_map <- \(
           drop = FALSE,
           name = "Elevation (m)"
         )
-
     } else if ("elevation" %in% names(elev_df)) {
       p <- p +
         ggplot2::geom_tile(
@@ -721,7 +718,6 @@ plt_clust_map <- \(
           limits = c(0, 1500),
           oob = scales::squish
         )
-
     } else {
       stop(
         "`elev_df` must contain either `elev_bin` or `elevation`.",
@@ -778,7 +774,6 @@ plt_clust_map <- \(
         shape = "none",
         size = "none"
       )
-
   } else {
     p <- p +
       ggplot2::geom_sf(
@@ -978,56 +973,56 @@ trans_fun_season <- \(df, var) {
 # functino to transform to CeCl marginal object
 trans_to_cecl <- \(laplace_season, var_dep) {
   marg_season_roll_emp <- laplace_season |>
-  select(name, date, season, temp, all_of(var_dep)) |>
-  mutate(
-    name = factor(name),
-    season = factor(season, levels = seasons)
-  ) |>
-  group_split(season) |>
-  lapply(\(x) {
-    station_groups <- x |>
-      group_by(name)
+    select(name, date, season, temp, all_of(var_dep)) |>
+    mutate(
+      name = factor(name),
+      season = factor(season, levels = seasons)
+    ) |>
+    group_split(season) |>
+    lapply(\(x) {
+      station_groups <- x |>
+        group_by(name)
 
-    ret_names <- station_groups |>
-      group_keys() |>
-      pull(name) |>
-      as.character()
+      ret_names <- station_groups |>
+        group_keys() |>
+        pull(name) |>
+        as.character()
 
-    station_data <- station_groups |>
-      group_split()
+      station_data <- station_groups |>
+        group_split()
 
-    original_dates <- lapply(
-      station_data,
-      \(y) {
-        y |>
-          arrange(date) |>
-          pull(date)
-      }
-    )
+      original_dates <- lapply(
+        station_data,
+        \(y) {
+          y |>
+            arrange(date) |>
+            pull(date)
+        }
+      )
 
-    ret <- mclapply(
-      station_data,
-      \(y) {
-        ret1 <- y |>
-          arrange(date) |>
-          select(temp, all_of(var_dep)) |>
-          as.matrix()
+      ret <- mclapply(
+        station_data,
+        \(y) {
+          ret1 <- y |>
+            arrange(date) |>
+            select(temp, all_of(var_dep)) |>
+            as.matrix()
 
-        colnames(ret1) <- c("temp", var_dep)
-        ret1
-      }
-    )
+          colnames(ret1) <- c("temp", var_dep)
+          ret1
+        }
+      )
 
-    names(ret) <- ret_names
-    names(original_dates) <- ret_names
+      names(ret) <- ret_names
+      names(original_dates) <- ret_names
 
-    ret <- as_cecl_marg(ret)
-    # keep dates and season to ensure we can match later
-    ret$dates <- original_dates
-    ret$season <- as.character(x$season[[1]])
+      ret <- as_cecl_marg(ret)
+      # keep dates and season to ensure we can match later
+      ret$dates <- original_dates
+      ret$season <- as.character(x$season[[1]])
 
-    ret
-  })
+      ret
+    })
   return(marg_season_roll_emp)
 }
 
@@ -1262,7 +1257,7 @@ validate_distance_matrix <- \(
 
   if (
     nrow(M) == ncol(M) &&
-    all(is.finite(M))
+      all(is.finite(M))
   ) {
     matrix_scale <- max(
       1,
@@ -1275,7 +1270,7 @@ validate_distance_matrix <- \(
 
     if (
       symmetry_error >
-      symmetry_tol * matrix_scale
+        symmetry_tol * matrix_scale
     ) {
       problems <- c(
         problems,
@@ -1293,7 +1288,7 @@ validate_distance_matrix <- \(
 
     if (
       diagonal_error >
-      diagonal_tol * matrix_scale
+        diagonal_tol * matrix_scale
     ) {
       problems <- c(
         problems,
@@ -1331,8 +1326,8 @@ validate_distance_matrix <- \(
 
   if (
     is.finite(observed_max) &&
-    is.finite(max_distance) &&
-    observed_max > max_distance
+      is.finite(max_distance) &&
+      observed_max > max_distance
   ) {
     problems <- c(
       problems,
@@ -1349,7 +1344,7 @@ validate_distance_matrix <- \(
   if (!is.null(expected_names)) {
     if (
       is.null(rownames(M)) ||
-      is.null(colnames(M))
+        is.null(colnames(M))
     ) {
       problems <- c(
         problems,
@@ -1361,10 +1356,10 @@ validate_distance_matrix <- \(
           rownames(M),
           expected_names
         ) ||
-        !setequal(
-          colnames(M),
-          expected_names
-        )
+          !setequal(
+            colnames(M),
+            expected_names
+          )
       ) {
         problems <- c(
           problems,
@@ -1392,7 +1387,7 @@ validate_distance_result <- \(
 ) {
   if (
     !is.list(dist) ||
-    length(dist) != 2L
+      length(dist) != 2L
   ) {
     return(
       list(
@@ -1518,7 +1513,7 @@ calc_dist <- \(
 
   if (
     length(start) <
-    length(marg)
+      length(marg)
   ) {
     return(
       fail(
@@ -1557,7 +1552,7 @@ calc_dist <- \(
 
       if (
         is.null(transformed) ||
-        !is.list(transformed)
+          !is.list(transformed)
       ) {
         return(NULL)
       }
@@ -1812,7 +1807,6 @@ calc_dist <- \(
         )
       )
     }
-
   } else {
     if (is.null(data_loc)) {
       return(
@@ -1874,7 +1868,7 @@ calc_dist <- \(
 
         if (
           is.null(cond_var) ||
-          cond_var == "X1"
+            cond_var == "X1"
         ) {
           x1_cond <- fit_evgam(
             df = x,
@@ -1886,7 +1880,7 @@ calc_dist <- \(
 
         if (
           is.null(cond_var) ||
-          cond_var == "X2"
+            cond_var == "X2"
         ) {
           x2_cond <- fit_evgam(
             df = x,
@@ -1967,7 +1961,7 @@ calc_dist <- \(
 
     if (
       length(threshold_attempt) != 1L ||
-      !is.finite(threshold_attempt)
+        !is.finite(threshold_attempt)
     ) {
       return(
         fail(
@@ -2360,6 +2354,7 @@ single_run_explore <- \(
   n_vars = 2,
   laplace_trans = FALSE,
   skip_failed = TRUE,
+  min_exceedances = 20L,
   ...
 ) {
   #### Validate arguments ####
@@ -2681,6 +2676,7 @@ single_run_explore <- \(
       suppressMessages(
         calc_dist(
           data_laplace_block,
+          min_exceedances = min_exceedances,
           ...
         )
       )
@@ -2880,7 +2876,7 @@ single_run_explore <- \(
           norm_type = "F"
         ),
         inf = NA_real_,
-        spec = NA_real_# ,
+        spec = NA_real_ # ,
         # ln_spd = NA_real_
       )
 
@@ -3177,7 +3173,7 @@ perm_test_prep <- \(
   } else {
     if (
       !is.list(permutation_groups) ||
-      length(permutation_groups) != n_blocks
+        length(permutation_groups) != n_blocks
     ) {
       stop(
         "`permutation_groups` must be NULL or a list of length two."
@@ -3252,7 +3248,7 @@ perm_test_prep <- \(
               if (
                 !all(
                   c("X1", "X2") %in%
-                  names(matrix_data)
+                    names(matrix_data)
                 )
               ) {
                 stop(
@@ -3351,7 +3347,7 @@ perm_test_prep <- \(
 
   if (any(
     assignment_check$n_assignments !=
-    length(location_names)
+      length(location_names)
   )) {
     stop(
       "A permutation group was not represented at every location."
@@ -3443,8 +3439,8 @@ perm_test_prep <- \(
   # Preserve the existing convention that a failed CE fit returns NA.
   if (
     is.atomic(dist_perm) &&
-    length(dist_perm) == 1L &&
-    is.na(dist_perm)
+      length(dist_perm) == 1L &&
+      is.na(dist_perm)
   ) {
     return(NA)
   }
@@ -3913,6 +3909,7 @@ perm_test_fun <- \(
   n_mc = 500,
   aLow = -1,
   nruns = 1,
+  min_exceedances = 15L,
   validation_warnings = TRUE,
   permutation_validation_warnings = FALSE,
   ...
@@ -3921,7 +3918,7 @@ perm_test_fun <- \(
 
   if (
     !is.null(n_per_block) &&
-    !is.null(n_years_per_block)
+      !is.null(n_years_per_block)
   ) {
     stop(
       "Supply only one of `n_per_block` and ",
@@ -3937,8 +3934,8 @@ perm_test_fun <- \(
 
   if (
     length(n_perm) != 1L ||
-    is.na(n_perm) ||
-    n_perm < 1L
+      is.na(n_perm) ||
+      n_perm < 1L
   ) {
     stop("`n_perm` must be a positive integer.")
   }
@@ -3951,8 +3948,8 @@ perm_test_fun <- \(
 
   if (
     length(max_perm_attempts) != 1L ||
-    is.na(max_perm_attempts) ||
-    max_perm_attempts < n_perm
+      is.na(max_perm_attempts) ||
+      max_perm_attempts < n_perm
   ) {
     stop(
       "`max_perm_attempts` must be at least `n_perm`."
@@ -3965,9 +3962,9 @@ perm_test_fun <- \(
 
   if (
     length(max_failure_rate) != 1L ||
-    is.na(max_failure_rate) ||
-    max_failure_rate < 0 ||
-    max_failure_rate >= 1
+      is.na(max_failure_rate) ||
+      max_failure_rate < 0 ||
+      max_failure_rate >= 1
   ) {
     stop(
       "`max_failure_rate` must lie in [0, 1)."
@@ -3982,8 +3979,8 @@ perm_test_fun <- \(
   if (row_window_mode) {
     if (
       length(n_per_block) != 1L ||
-      is.na(n_per_block) ||
-      n_per_block < 1L
+        is.na(n_per_block) ||
+        n_per_block < 1L
     ) {
       stop(
         "`n_per_block` must be a positive integer."
@@ -4019,8 +4016,8 @@ perm_test_fun <- \(
 
     if (
       length(n_years_per_block) != 1L ||
-      is.na(n_years_per_block) ||
-      n_years_per_block < 1L
+        is.na(n_years_per_block) ||
+        n_years_per_block < 1L
     ) {
       stop(
         "`n_years_per_block` must be a positive integer."
@@ -4037,7 +4034,7 @@ perm_test_fun <- \(
 
     if (
       length(all_years) <
-      2L * n_years_per_block
+        2L * n_years_per_block
     ) {
       stop(
         "There are only ",
@@ -4095,6 +4092,7 @@ perm_test_fun <- \(
       cond_var = cond_var,
       aLow = aLow,
       nruns = nruns,
+      min_exceedances = min_exceedances,
       ret_dep = return_dependence,
       start = start_values,
       validation_warnings =
@@ -4130,6 +4128,7 @@ perm_test_fun <- \(
       nruns = nruns,
       n_mc = n_mc,
       start = start_values,
+      min_exceedances = min_exceedances,
       validation_warnings =
         permutation_validation_warnings
     )
@@ -4155,11 +4154,9 @@ perm_test_fun <- \(
     ret <- list(
       success = FALSE,
       block_info = block_info,
-
       p_value_frob = NA_real_,
       p_value_inf = NA_real_,
       p_value_spec = NA_real_,
-
       norm_orig_frob = if (
         is.null(norm_orig)
       ) {
@@ -4167,7 +4164,6 @@ perm_test_fun <- \(
       } else {
         norm_orig$frob
       },
-
       norm_orig_inf = if (
         is.null(norm_orig)
       ) {
@@ -4175,7 +4171,6 @@ perm_test_fun <- \(
       } else {
         norm_orig$inf
       },
-
       norm_orig_spec = if (
         is.null(norm_orig)
       ) {
@@ -4183,16 +4178,13 @@ perm_test_fun <- \(
       } else {
         norm_orig$spec
       },
-
       perm_norms_frob = numeric(),
       perm_norms_inf = numeric(),
       perm_norms_spec = numeric(),
-
       n_attempted = 0L,
       n_successful = 0L,
       n_failed = 0L,
       failure_rate = NA_real_,
-
       error_stage = stage,
       error_message = message
     )
@@ -4242,7 +4234,7 @@ perm_test_fun <- \(
 
       if (
         year_position <
-        n_years_per_block
+          n_years_per_block
       ) {
         stop(
           "Candidate ",
@@ -4253,8 +4245,8 @@ perm_test_fun <- \(
 
       if (
         length(all_years) -
-        year_position <
-        n_years_per_block
+          year_position <
+          n_years_per_block
       ) {
         stop(
           "Candidate ",
@@ -4269,15 +4261,15 @@ perm_test_fun <- \(
             n_years_per_block +
             1L
         ):
-          year_position
+        year_position
       ]
 
       right_years <- all_years[
         (year_position + 1L):
-          (
-            year_position +
-              n_years_per_block
-          )
+        (
+          year_position +
+            n_years_per_block
+        )
       ]
 
       data_block <- data |>
@@ -4384,7 +4376,6 @@ perm_test_fun <- \(
         lapply(
           \(x) x$season_year
         )
-
     } else {
       data_ordered <- data
 
@@ -4411,7 +4402,7 @@ perm_test_fun <- \(
       if (
         any(
           i >=
-          n_by_station$n_observations
+            n_by_station$n_observations
         )
       ) {
         stop(
@@ -4444,8 +4435,8 @@ perm_test_fun <- \(
         if (
           any(
             n_by_station$n_observations -
-            i <
-            n_per_block
+              i <
+              n_per_block
           )
         ) {
           stop(
@@ -4485,7 +4476,6 @@ perm_test_fun <- \(
           n_left = n_per_block,
           n_right = n_per_block
         )
-
       } else {
         block_info <- list(
           mode = "cumulative_rows",
@@ -4524,7 +4514,7 @@ perm_test_fun <- \(
       if (
         any(
           alignment_check$n_locations !=
-          expected_locations
+            expected_locations
         )
       ) {
         stop(
@@ -4832,7 +4822,7 @@ perm_test_fun <- \(
 
       if (
         is.null(dist_perm) ||
-        is_failed_result(dist_perm)
+          is_failed_result(dist_perm)
       ) {
         return(NULL)
       }
@@ -4870,8 +4860,8 @@ perm_test_fun <- \(
 
     while (
       length(norm_vals) < n_perm &&
-      n_attempted <
-      max_perm_attempts
+        n_attempted <
+          max_perm_attempts
     ) {
       n_needed <- n_perm -
         length(norm_vals)
@@ -4990,8 +4980,8 @@ perm_test_fun <- \(
 
     if (
       is.finite(failure_rate) &&
-      failure_rate >
-      max_failure_rate
+        failure_rate >
+          max_failure_rate
     ) {
       warning(
         "Candidate ",
@@ -5105,28 +5095,24 @@ perm_test_fun <- \(
     ret <- list(
       success = TRUE,
       block_info = block_info,
-
       p_value_frob =
         p_value_frob,
       p_value_inf =
         p_value_inf,
       p_value_spec =
         p_value_spec,
-
       norm_orig_frob =
         observed_norms$frob,
       norm_orig_inf =
         observed_norms$inf,
       norm_orig_spec =
         observed_norms$spec,
-
       perm_norms_frob =
         perm_norms_frob,
       perm_norms_inf =
         perm_norms_inf,
       perm_norms_spec =
         perm_norms_spec,
-
       permutation_unit = if (
         year_window_mode
       ) {
@@ -5134,7 +5120,6 @@ perm_test_fun <- \(
       } else {
         "observation"
       },
-
       n_attempted =
         n_attempted,
       n_successful =
@@ -5143,7 +5128,6 @@ perm_test_fun <- \(
         n_failed,
       failure_rate =
         failure_rate,
-
       error_stage =
         NA_character_,
       error_message =
@@ -5794,7 +5778,7 @@ plot_permutation_scan <- \(
 
   if (
     plot_ce_parameters &&
-    nrow(dependence_df) > 0L
+      nrow(dependence_df) > 0L
   ) {
     dependence_df <- dependence_df |>
       mutate(

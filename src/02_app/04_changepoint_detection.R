@@ -69,6 +69,7 @@ source("src/00_functions.R")
 screen_one_setting <- \(
   season_name,
   n_years_per_block,
+  min_exceedances = 15L,
   verbose = TRUE,
   mc.cores = getOption("mc.cores", 1L)
 ) {
@@ -128,7 +129,8 @@ screen_one_setting <- \(
       laplace_sample = laplace_sample,
       aLow = 0,
       nruns = 3,
-      ret_dep = TRUE
+      ret_dep = TRUE,
+      min_exceedances = min_exceedances
     ),
     error = \(e) {
       NULL
@@ -216,7 +218,8 @@ screen_one_setting <- \(
       skip_failed = TRUE,
       cond_val = dep_val,
       laplace_sample = laplace_sample,
-      aLow = 0
+      aLow = 0,
+      min_exceedances = min_exceedances
     )
 
     # Common starting values are optional.
@@ -405,10 +408,12 @@ run_season_permutation_scan <- \(
   season_name,
   n_years_per_block = 25L,
   n_perm = 100L,
+  min_exceedances = 15L,
   seed = 123L,
   use_start = TRUE,
   ret_dep = TRUE,
-  verbose = TRUE
+  verbose = TRUE,
+  permutation_validation_warnings = FALSE
 ) {
   season_data <- data_laplace_season[[season_name]] |>
     select(
@@ -482,8 +487,10 @@ run_season_permutation_scan <- \(
     n_mc = length(laplace_sample),
     aLow = 0,
     nruns = 1,
+    min_exceedances = min_exceedances,
     validation_warnings = TRUE,
-    permutation_validation_warnings = FALSE
+    # permutation_validation_warnings = FALSE
+    permutation_validation_warnings = permutation_validation_warnings
   )
 
   list(
@@ -496,7 +503,6 @@ run_season_permutation_scan <- \(
 }
 
 
-
 #### Metadata ####
 
 dep_var <- c("drought_local_rev")
@@ -506,8 +512,8 @@ seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
 seed <- 123 # random seed
 # Conditional threshold and number of samples for Laplace sample used throughout
-# dqu <- 0.8
-dqu <- 0.85
+dqu <- 0.8
+# dqu <- 0.85
 n_samples <- 500
 # grid_vals <- seq(950, 1050, by = 10) # TODO Add more values once code works
 
@@ -518,6 +524,11 @@ n_samples <- 500
 n_perm_screen <- 200L
 n_years_per_block <- 25L # best choice, from screening round
 
+# set minimum number of exceedances required for a successful fit, based on dqu
+# min_exceedances <- 20
+# if (dqu > 0.8) {
+  min_exceedances <- 15
+# }
 
 #### Load Data ####
 
@@ -742,7 +753,11 @@ screen_res_df <- bind_rows(lapply(seq_len(nrow(screen_setup_df)), \(i) {
   }
   with(
     screen_setup_df,
-    screen_one_setting(season[[i]], n_years_per_block[[i]])
+    screen_one_setting(
+      season[[i]],
+      n_years_per_block[[i]],
+      min_exceedances = min_exceedances
+    )
   )
 }))
 
@@ -1138,20 +1153,25 @@ sink(paste0(
   dqu, ".txt"
 ))
 
-source("src/00_functions.R")
+# source("src/00_functions.R")
 permutation_scan_results <- setNames(
   lapply(
     seq_along(seasons),
+    # 1,
     \(i) {
       message("Season = ", seasons[[i]])
+      # message("Season = Spring")
       run_season_permutation_scan(
         season_name = seasons[[i]],
+        # season_name = "Spring",
         n_years_per_block = n_years_per_block,
         n_perm = n_perm_screen,
+        min_exceedances = min_exceedances,
         seed = seed + i - 1L,
         use_start = TRUE,
         ret_dep = TRUE,
-        verbose = TRUE
+        verbose = TRUE,
+        permutation_validation_warnings = TRUE
       )
     }
   ),
@@ -1231,7 +1251,8 @@ permutation_summary_df |>
   arrange(
     season,
     change_after_year
-  )
+  ) |>
+  print(n = Inf)
 
 # create plots for every season
 permutation_scan_plots <- lapply(
@@ -1246,7 +1267,13 @@ permutation_scan_plots <- lapply(
 
 # save
 # plot_directory <- "plots/permutation_scan"
-plot_directory <- paste0("plots/permutation_scan_n_perm_", n_perm_screen)
+# plot_directory <- paste0("plots/permutation_scan_n_perm_", n_perm_screen)
+plot_directory <- paste0(
+  "plots/permutation_scan_n_perm_",
+  n_perm_screen,
+  "_dqu_",
+  dqu
+)
 
 dir.create(
   plot_directory,
