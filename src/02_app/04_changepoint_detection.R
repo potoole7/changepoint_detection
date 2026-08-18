@@ -695,7 +695,6 @@ station_names <- unique(data$station_name)
 #### Precalculations ####
 
 # use the same dependence threshold across all variables and locations
-
 dep_val <- qlaplace(dqu) # for Laplace marginals
 
 # Calculate cap for sampling from Laplace distribution
