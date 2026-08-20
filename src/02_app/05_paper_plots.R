@@ -72,7 +72,9 @@ diff_fill_fun <- \(...) {
 change_year_winter <- 1998
 change_year_summer <- 1990
 
-dqu <- 0.8
+n_perm <- 200
+# dqu <- 0.8
+dqu <- 0.85
 
 
 #### Functions ####
@@ -158,7 +160,8 @@ data <- data %>%
 
 # # marginal fits
 # marg_season <- readRDS(file)
-# if (!is.null(names(marg_season))) {
+marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
+# if (!is.nkull(names(marg_season))) {
 #   seasons <- names(marg_season)
 # }
 
@@ -447,13 +450,35 @@ ggsave(plot = p_loc_names_elev, "plots/02_app/p_loc_names_elev.png", width = 14,
 # spec_locs <- c("Malaga", "Bilbao Aeropuerto")
 # spec_locs <- c("Malaga", "Santander")
 
-data_intro <- data |>
-  filter(name %in% spec_locs, year %in% spec_years) |>
+data_laplace <- bind_rows(lapply(seq_along(marg_season), \(i) {
+  x <- marg_season[[i]]
+  bind_rows(lapply(seq_along(x$transformed), \(j) {
+    y <- as.data.frame(x$transformed[[j]])
+    y$name <- names(x$transformed)[[j]]
+    y$season <- names(marg_season)[[i]]
+    # TODO Need to add date?
+
+    y
+  }))
+}))
+
+# TODO Replace with Laplace transformed data!
+# data_intro <- data |>
+#   filter(name %in% spec_locs, year %in% spec_years) |>
+#   mutate(name = ifelse(
+#     grepl("Aeropuerto", name),
+#     str_remove(name, " Aeropuerto"),
+#     name
+#   ))
+
+data_intro <- data_laplace |>
+  filter(name %in% spec_locs) |>
   mutate(name = ifelse(
     grepl("Aeropuerto", name),
     str_remove(name, " Aeropuerto"),
     name
   ))
+
 
 # first, plot scatter plots of variables against eachother
 p_scatter <- data_intro |>
@@ -467,23 +492,25 @@ p_scatter <- data_intro |>
 p_scatter
 
 # now, plot time series for each
-data_intro |>
-  pivot_longer(c(temp, drought_local), names_to = "var") |>
-  mutate(ind = paste0(name, " - ", var)) |>
-  ggplot(aes(x = season_year, y = value, colour = season)) +
-  geom_point() +
-  facet_wrap(~ind) +
-  cecl_theme()
+# data_intro |>
+#   pivot_longer(c(temp, drought_local), names_to = "var") |>
+#   mutate(ind = paste0(name, " - ", var)) |>
+#   ggplot(aes(x = season_year, y = value, colour = season)) +
+#   geom_point() +
+#   facet_wrap(~ind) +
+#   cecl_theme()
+#
+# data_intro |>
+#   pivot_longer(c(temp, drought_local), names_to = "var") |>
+#   mutate(ind = paste0(name, " - ", var)) |>
+#   group_by(season, ind) |>
+#   filter(value >= quantile(value, 0.95, na.rm = TRUE)) |>
 
-data_intro |>
-  pivot_longer(c(temp, drought_local), names_to = "var") |>
-  mutate(ind = paste0(name, " - ", var)) |>
-  group_by(season, ind) |>
-  filter(value >= quantile(value, 0.95, na.rm = TRUE)) |>
+# p_intro <- p_loc_names_elev + p_scatter
+p_intro <- wrap_plots(list(p_loc_names_elev, p_scatter))
 
-(p_intro <- p_loc_names_elev + p_scatter)
-
-ggsave(plot = p_intro, "latex/plots/intro.png", width = 12, height = 8)
+# ggsave(plot = p_intro, "latex/plots/intro.png", width = 12, height = 8)
+ggsave(plot = p_intro, "latex/plots/intro_laplace.png", width = 12, height = 8)
 
 
 #### Screening plot ####
@@ -656,7 +683,69 @@ top_local_peaks_all <- candidate_peaks_all |>
   ) |>
   ungroup()
 
+# # Combined plot for all norms
+# plot_all_norms <- \(df, spec_year = NULL) {
+#   df_plot <- df
+#   if (!is.null(spec_year)) {
+#     df_plot <- df_plot |>
+#       filter(n_years_per_block == spec_year)
+#   }
+#   p <- df_plot |>
+#     ggplot(
+#       aes(
+#         x = change_after_year,
+#         y = value,
+#         colour = norm
+#       )
+#     ) +
+#     geom_line(
+#       data = \(x) filter(x, success),
+#       aes(
+#         group = interaction(
+#           setting,
+#           norm,
+#           success_run
+#         )
+#       ),
+#       show.legend = FALSE
+#     ) +
+#     geom_point(
+#       data = \(x) filter(x, success)
+#     ) +
+#     geom_point(
+#       data = \(x) filter(x, local_peak),
+#       colour = "red",
+#       size = 3
+#     ) +
+#     facet_wrap(
+#       ~setting,
+#       scales = "free_y"
+#     ) +
+#     scale_x_continuous(
+#       breaks = year_breaks
+#     ) +
+#     scale_colour_brewer(
+#       palette = "Dark2"
+#     ) +
+#     labs(
+#       x = "Season Year",
+#       y = expression(D),
+#       colour = "Norm",
+#     ) +
+#     cecl_theme() +
+#     theme(
+#       axis.text.x = element_text(
+#         angle = 45,
+#         hjust = 1
+#       ),
+#       legend.position = "bottom"
+#     ) +
+#     guides(colour = guide_legend(override.aes = list(size = 6)))
+# }
+
 # Combined plot for all norms
+df <- screen_res_long
+spec_year <- 25
 plot_all_norms <- \(df, spec_year = NULL) {
   df_plot <- df
   if (!is.null(spec_year)) {
@@ -664,12 +753,17 @@ plot_all_norms <- \(df, spec_year = NULL) {
       filter(n_years_per_block == spec_year)
   }
   p <- df_plot |>
-    # filter(n_years_per_block == 25) |>
+    group_by(norm, n_years_per_block) |>
+    # scale between 0 and 1
+    # mutate(value = scale(value, center = TRUE, scale = TRUE)) |>
+    mutate(value = boot::inv.logit(scale(value))) |>
+    filter(norm != "Spectral") |>
     ggplot(
       aes(
         x = change_after_year,
         y = value,
-        colour = norm
+        # colour = norm
+        colour = season
       )
     ) +
     geom_line(
@@ -688,18 +782,17 @@ plot_all_norms <- \(df, spec_year = NULL) {
     ) +
     geom_point(
       data = \(x) filter(x, local_peak),
-      colour = "red",
-      size = 3
+      # colour = "red",
+      colour = "black",
+      shape = 4,
+      size = 5
     ) +
-    # geom_rug(
-    #   data = \(x) filter(x, !success),
-    #   aes(x = change_after_year),
-    #   inherit.aes = FALSE,
-    #   sides = "b",
-    #   colour = "grey50"
+    # facet_wrap(
+    #   ~setting,
+    #   scales = "free_y"
     # ) +
     facet_wrap(
-      ~setting,
+      ~norm,
       scales = "free_y"
     ) +
     scale_x_continuous(
@@ -709,16 +802,10 @@ plot_all_norms <- \(df, spec_year = NULL) {
       palette = "Dark2"
     ) +
     labs(
-      # x = "Candidate change after seasonal year",
-      # x = "season year",
       x = "Season Year",
-      # y = "Discrepancy",
       y = expression(D),
-      colour = "Norm",
-      # caption = paste(
-      #   "Red points indicate norm-specific local peaks.",
-      #   "Grey axis marks indicate failed candidates."
-      # )
+      # colour = "Norm",
+      colour = "Season",
     ) +
     cecl_theme() +
     theme(
@@ -731,10 +818,12 @@ plot_all_norms <- \(df, spec_year = NULL) {
     guides(colour = guide_legend(override.aes = list(size = 6)))
 }
 
+
 (p_all_norms_25 <- plot_all_norms(screen_res_long, spec_year = 25))
 
 # ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
-ggsave("latex/plots/screen.png", p_all_norms_25, width = 12, height = 8)
+# ggsave("latex/plots/screen.png", p_all_norms_25, width = 12, height = 8)
+ggsave(paste0("latex/plots/screen_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
 
 
 #### Changepoint plot ####
@@ -744,9 +833,10 @@ permutation_scan_results <- readRDS(
     "data/02_app/",
     "spain_perm_test_",
     "n_perm_",
-    1000,
+    # 200,
+    n_perm,
     "_dqu_",
-    0.8,
+    dqu,
     ".rds"
   )
 )
@@ -818,6 +908,7 @@ year_breaks <- sort(
 
 # plot with faceted
 p_change <- data_p |>
+  filter(norm != "Spectral") |>
   mutate(season = factor(season, levels = seasons)) |>
   ggplot(
     aes(
@@ -831,6 +922,11 @@ p_change <- data_p |>
     colour = "grey40",
     linetype = "dashed"
   ) +
+  geom_hline(
+    yintercept = 0.10,
+    colour = "gold4",
+    linetype = "dashed"
+  ) +
   geom_line(
     data = \(x) filter(x, success),
     aes(group = norm),
@@ -840,20 +936,6 @@ p_change <- data_p |>
     data = \(x) filter(x, success),
     size = 2
   ) +
-  # geom_rug(
-  #   data = \(x) {
-  #     x |>
-  #       distinct(
-  #         change_after_year,
-  #         success
-  #       ) |>
-  #       filter(!success)
-  #   },
-  #   aes(x = change_after_year),
-  #   inherit.aes = FALSE,
-  #   sides = "b",
-  #   colour = "red"
-  # ) +
   facet_wrap(~ season) +
   scale_x_continuous(
     breaks = year_breaks
@@ -878,7 +960,8 @@ p_change <- data_p |>
   guides(colour = guide_legend(override.aes = list(size = 6)))
 p_change
 
-ggsave("latex/plots/change.png", p_change, width = 12, height = 8)
+# ggsave("latex/plots/change.png", p_change, width = 12, height = 8)
+ggsave(paste0("latex/plots/change_dqu_", dqu, ".png"), p_change, width = 12, height = 8)
 
 
 #### Cluster maps before/after changepoint ####
@@ -1203,7 +1286,8 @@ map_plots_join <- wrap_plots(map_plots_cp)
 
 map_plots_join
 
-ggsave(plot = map_plots_join, "latex/plots/clust_map.png", width = 12, height = 8)
+# ggsave(plot = map_plots_join, "latex/plots/clust_map.png", width = 12, height = 8)
+ggsave(plot = map_plots_join, paste0("latex/plots/clust_map_dqu_", dqu, ".png"), width = 12, height = 8)
 
 
 #### Results for different dissimilarity matrices?? ####
