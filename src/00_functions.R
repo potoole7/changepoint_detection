@@ -1,5 +1,448 @@
 #### Functions ####
 
+#### Functions for screening and changepoints on yearly/seasonal data
+
+# Function to perform screening for a single season and number of years
+# Screen one season using complete season-year windows.
+screen_one_setting <- \(
+  data_laplace_season,
+  season_name,
+  n_years_per_block,
+  min_exceedances = 15L,
+  verbose = TRUE,
+  mc.cores = getOption("mc.cores", 1L)
+) {
+  # Prepare data
+  season_data <- data_laplace_season[[season_name]] |>
+    select(
+      name,
+      date,
+      season_year,
+      X1 = temp,
+      X2 = drought_local
+    ) |>
+    filter(
+      !is.na(name),
+      !is.na(date),
+      !is.na(season_year)
+    ) |>
+    arrange(name, date)
+
+  available_years <- season_data |>
+    distinct(season_year) |>
+    arrange(season_year) |>
+    pull(season_year)
+
+  n_available_years <- length(available_years)
+
+  if (n_available_years < 2L * n_years_per_block) {
+    stop(
+      "Season ", season_name,
+      " has only ", n_available_years,
+      " years, but ", 2L * n_years_per_block,
+      " are required."
+    )
+  }
+
+  candidate_positions <- seq.int(
+    from = n_years_per_block,
+    to = n_available_years - n_years_per_block
+  )
+
+  block_vec <- available_years[candidate_positions]
+
+  # Try to obtain common starting values
+  middle_candidate <- block_vec[
+    ceiling(length(block_vec) / 2)
+  ]
+
+  start_fit <- tryCatch(
+    single_run_explore(
+      data = season_data,
+      i = middle_candidate,
+      n_years_per_block = n_years_per_block,
+      n_vars = 2,
+      laplace_trans = TRUE,
+      skip_failed = TRUE,
+      cond_val = dep_val,
+      laplace_sample = laplace_sample,
+      aLow = 0,
+      nruns = 3,
+      ret_dep = TRUE,
+      min_exceedances = min_exceedances
+    ),
+    error = \(e) {
+      NULL
+    }
+  )
+
+  start_vals <- NULL
+
+  if (
+    is.list(start_fit) &&
+      isTRUE(start_fit$success) &&
+      !is.null(start_fit$dep)
+  ) {
+    candidate_start_vals <- tryCatch(
+      lapply(start_fit$dep, coef),
+      error = \(e) {
+        NULL
+      }
+    )
+
+    # valid_start_vals <- (
+    #   !is.null(candidate_start_vals) &&
+    #     length(candidate_start_vals) > 0L &&
+    #     all(
+    #       vapply(
+    #         candidate_start_vals,
+    #         \(x) {
+    #           is.numeric(x) &&
+    #             length(x) > 0L &&
+    #             all(is.finite(x))
+    #         },
+    #         logical(1)
+    #       )
+    #     )
+    # )
+    valid_start_vals <- (
+      !is.null(candidate_start_vals) &&
+        length(candidate_start_vals) == 2L &&
+        all(
+          vapply(
+            candidate_start_vals,
+            \(x) {
+              !is.null(x) && length(x) > 0L
+            },
+            logical(1)
+          )
+        )
+    )
+
+    if (valid_start_vals) {
+      start_vals <- candidate_start_vals
+
+      if (verbose) {
+        message(
+          "Season ", season_name,
+          ", ", n_years_per_block,
+          "-year windows: starting values obtained at candidate ",
+          middle_candidate,
+          "."
+        )
+      }
+    }
+  }
+
+  if (is.null(start_vals)) {
+    warning(
+      "No valid common starting values for season ",
+      season_name,
+      " with ", n_years_per_block,
+      "-year windows; screening candidates using default starts.",
+      call. = FALSE
+    )
+  }
+
+  # Screen individual candidates
+  run_candidate <- \(candidate_index) {
+    candidate_year <- block_vec[[candidate_index]]
+
+    fit_args <- list(
+      data = season_data,
+      i = candidate_year,
+      n_years_per_block = n_years_per_block,
+      n_vars = 2,
+      laplace_trans = TRUE,
+      skip_failed = TRUE,
+      cond_val = dep_val,
+      laplace_sample = laplace_sample,
+      aLow = 0,
+      min_exceedances = min_exceedances
+    )
+
+    # Common starting values are optional.
+    if (!is.null(start_vals)) {
+      fit_args$start <- start_vals
+    }
+
+    result <- tryCatch(
+      do.call(
+        single_run_explore,
+        fit_args
+      ),
+      error = \(e) {
+        list(
+          success = FALSE,
+          block_info = list(
+            split_after = candidate_year,
+            split_before = available_years[
+              candidate_positions[[candidate_index]] + 1L
+            ],
+            n_left = NA_integer_,
+            n_right = NA_integer_
+          ),
+          frob = NA_real_,
+          inf = NA_real_,
+          spec = NA_real_,
+          dep = NULL,
+          error_stage = "single_run_explore",
+          error_message = conditionMessage(e)
+        )
+      }
+    )
+
+    if (!is.list(result) || is.null(result$success)) {
+      result <- list(
+        success = FALSE,
+        block_info = list(
+          split_after = candidate_year,
+          split_before = available_years[
+            candidate_positions[[candidate_index]] + 1L
+          ],
+          n_left = NA_integer_,
+          n_right = NA_integer_
+        ),
+        frob = NA_real_,
+        inf = NA_real_,
+        spec = NA_real_,
+        dep = NULL,
+        error_stage = "invalid_result",
+        error_message = paste0(
+          "`single_run_explore()` returned an invalid result at candidate ",
+          candidate_year,
+          "."
+        )
+      )
+    }
+
+    result
+  }
+
+  if (mc.cores > 1L && .Platform$OS.type != "windows") {
+    screen_vals <- parallel::mclapply(
+      seq_along(block_vec),
+      run_candidate,
+      mc.cores = mc.cores
+    )
+  } else {
+    screen_vals <- lapply(
+      seq_along(block_vec),
+      run_candidate
+    )
+  }
+
+  # Collate results
+  screen_res <- bind_rows(
+    lapply(
+      seq_along(screen_vals),
+      \(candidate_index) {
+        result <- screen_vals[[candidate_index]]
+        block_info <- result$block_info
+
+        tibble(
+          season = season_name,
+          n_years_per_block = n_years_per_block,
+          change_after_year = block_vec[[candidate_index]],
+          change_before_year = if (
+            is.list(block_info) &&
+              !is.null(block_info$split_before)
+          ) {
+            as.integer(block_info$split_before)
+          } else {
+            available_years[
+              candidate_positions[[candidate_index]] + 1L
+            ]
+          },
+          n_left_dates = if (
+            is.list(block_info) &&
+              !is.null(block_info$n_left)
+          ) {
+            as.integer(block_info$n_left)
+          } else {
+            NA_integer_
+          },
+          n_right_dates = if (
+            is.list(block_info) &&
+              !is.null(block_info$n_right)
+          ) {
+            as.integer(block_info$n_right)
+          } else {
+            NA_integer_
+          },
+          success = isTRUE(result$success),
+          frob = if (isTRUE(result$success)) {
+            as.numeric(result$frob)
+          } else {
+            NA_real_
+          },
+          inf = if (isTRUE(result$success)) {
+            as.numeric(result$inf)
+          } else {
+            NA_real_
+          },
+          spec = if (isTRUE(result$success)) {
+            as.numeric(result$spec)
+          } else {
+            NA_real_
+          },
+          error_stage = if (
+            is.null(result$error_stage)
+          ) {
+            NA_character_
+          } else {
+            as.character(result$error_stage)
+          },
+          error_message = if (
+            is.null(result$error_message)
+          ) {
+            NA_character_
+          } else {
+            as.character(result$error_message)
+          }
+        )
+      }
+    )
+  ) |>
+    arrange(change_after_year)
+
+  # Mark local Frobenius peaks
+  screen_res <- screen_res |>
+    mutate(
+      local_peak_frob = (
+        success &
+          lag(success, default = FALSE) &
+          lead(success, default = FALSE) &
+          frob > lag(frob) &
+          frob >= lead(frob)
+      ),
+      local_peak_frob = replace_na(
+        local_peak_frob,
+        FALSE
+      )
+    )
+
+  failure_rate <- mean(!screen_res$success)
+
+  if (verbose) {
+    message(
+      "Season ", season_name,
+      ", ", n_years_per_block,
+      "-year windows: ",
+      sum(screen_res$success), " of ", nrow(screen_res),
+      " candidates succeeded; failure rate = ",
+      scales::percent(
+        failure_rate,
+        accuracy = 0.1
+      ),
+      "."
+    )
+  }
+
+  screen_res
+}
+
+# Run the permutation scan for one season
+run_season_permutation_scan <- \(
+  data_laplace_season,
+  season_name,
+  n_years_per_block = 25L,
+  n_perm = 100L,
+  min_exceedances = 15L,
+  seed = 123L,
+  use_start = TRUE,
+  ret_dep = TRUE,
+  verbose = TRUE,
+  permutation_validation_warnings = FALSE
+) {
+  season_data <- data_laplace_season[[season_name]] |>
+    select(
+      name,
+      date,
+      season_year,
+      X1 = temp,
+      X2 = drought_local
+    ) |>
+    filter(
+      !is.na(name),
+      !is.na(date),
+      !is.na(season_year)
+    ) |>
+    arrange(name, date)
+
+  available_years <- season_data |>
+    distinct(season_year) |>
+    arrange(season_year) |>
+    pull(season_year)
+
+  n_available_years <- length(available_years)
+
+  if (n_available_years < 2L * n_years_per_block) {
+    stop(
+      "Season ", season_name,
+      " has only ", n_available_years,
+      " seasonal years; ",
+      2L * n_years_per_block,
+      " are required."
+    )
+  }
+
+  candidate_positions <- seq.int(
+    from = n_years_per_block,
+    to = n_available_years - n_years_per_block
+  )
+
+  candidate_years <- available_years[
+    candidate_positions
+  ]
+
+  message(
+    "Running ", n_perm,
+    " permutations for season ", season_name,
+    " over candidate years ",
+    min(candidate_years),
+    "–",
+    max(candidate_years),
+    " using ", n_years_per_block,
+    " years per block."
+  )
+
+  set.seed(seed)
+
+  permutation_results <- perm_test_fun(
+    data = season_data,
+    grid_vals = candidate_years,
+    n_perm = n_perm,
+    max_perm_attempts = 5L * n_perm,
+    max_failure_rate = 0.10,
+    n_years_per_block = n_years_per_block,
+    n_vars = 2,
+    laplace_trans = TRUE,
+    use_start = use_start,
+    ret_dep = ret_dep,
+    use_dth = FALSE,
+    verbose = verbose,
+    cond_val = dep_val,
+    laplace_sample = laplace_sample,
+    n_mc = length(laplace_sample),
+    aLow = 0,
+    nruns = 1,
+    min_exceedances = min_exceedances,
+    validation_warnings = TRUE,
+    # permutation_validation_warnings = FALSE
+    permutation_validation_warnings = permutation_validation_warnings
+  )
+
+  list(
+    season = season_name,
+    n_years_per_block = n_years_per_block,
+    n_perm = n_perm,
+    candidate_years = candidate_years,
+    results = permutation_results
+  )
+}
+
+
 #### Chi related ####
 
 # function to calc chi, chibar at quantile q (or closest q) at each  site
