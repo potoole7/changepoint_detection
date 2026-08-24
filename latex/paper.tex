@@ -556,6 +556,29 @@ Under the local and global alternatives, they measure the ability of the procedu
 
 
 
+\begin{itemize}
+\item We simulate weekly observations for one season at 40 locations over 60 years, with 12 observations per season--year, i.e.\ for a single ``season'', as found in our application section in Section~\ref{sec:app}.
+\item At each location \(s\) and year \(t\), the two variables are generated from a bivariate \(t\)-copula with \(\nu=3\) degrees of freedom and known generalized Pareto marginal distributions.
+\item The locations are divided into three baseline dependence clusters: \(14\) locations with \(\rho_{s,0}=0.2\), \(13\) with \(\rho_{s,0}=0.5\), and \(13\) with \(\rho_{s,0}=0.8\).
+
+\item A gradual change in the \(t\)-copula correlation parameter is introduced using
+\[
+\rho_{s,t}
+=
+\tanh\!\left\{
+\operatorname{atanh}(\rho_{s,0})
++
+A_s\delta_z g(t)
+\right\},
+\]
+where \(A_s\) indicates whether location \(s\) is affected, \(\delta_z\) controls the magnitude and direction of the change, and \(g(t)\) increases linearly from \(0\) to \(1\) over the specified transition period.
+
+\item The transformation \(\operatorname{atanh}(\rho_{s,0})\) maps the baseline correlation from \((-1,1)\) to the unrestricted real line. The change is applied on this Fisher-\(z\) scale, after which \(\tanh(\cdot)\) maps the linear predictor back to \((-1,1)\), ensuring that the resulting copula correlation remains valid.
+
+\item We consider a local-change setting, in which \(A_s=1\) for only a selected subset of locations, and a global-change setting, in which \(A_s=1\) for all locations.
+
+\end{itemize}
+
 \section{Application to Spanish data}\label{sec:app}
 
 \begin{itemize}
