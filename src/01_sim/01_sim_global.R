@@ -91,218 +91,7 @@ laplace_sample <- rlaplace_trunc(
 
 #### Simulate Data ####
 
-# Generate one simulated season with time-varying, site-specific
-# bivariate t-copula dependence.
-simulate_t_copula_season <- \(
-  n_sites = 40L,
-  n_years = 60L,
-  n_obs_per_year = 12L,
-  season_name = "Winter",
-  start_year = 1961L,
-  baseline_rho = c(
-    rep(0.1, 14L),
-    rep(0.5, 13L),
-    rep(0.8, 13L)
-  ),
-  change_type = c("local", "global", "none"),
-  affected_sites = 1L,
-  change_start = 30L,
-  change_end = 60L,
-  delta_z = 0.5,
-  df_t = 3,
-  gpd_xi = c(-0.05, -0.05),
-  gpd_sigma = c(1, 1),
-  return_laplace = FALSE,
-  seed = NULL
-) {
-  change_type <- match.arg(change_type)
-
-  if (!is.null(seed)) {
-    set.seed(seed)
-  }
-
-  stopifnot(
-    n_sites >= 1L,
-    n_years >= 1L,
-    n_obs_per_year >= 1L,
-    length(baseline_rho) == n_sites,
-    all(abs(baseline_rho) < 1),
-    length(gpd_xi) == 2L,
-    length(gpd_sigma) == 2L,
-    all(gpd_sigma > 0),
-    change_start >= 1L,
-    change_start <= n_years,
-    change_end >= change_start,
-    change_end <= n_years
-  )
-
-  site_ids <- sprintf(
-    "site_%02d",
-    seq_len(n_sites)
-  )
-
-  if (change_type == "none") {
-    affected_index <- integer()
-  } else if (change_type == "global") {
-    affected_index <- seq_len(n_sites)
-  } else {
-    if (is.character(affected_sites)) {
-      affected_index <- match(
-        affected_sites,
-        site_ids
-      )
-
-      if (anyNA(affected_index)) {
-        stop(
-          "At least one `affected_sites` name is invalid."
-        )
-      }
-    } else {
-      affected_index <- as.integer(
-        affected_sites
-      )
-
-      if (
-        anyNA(affected_index) ||
-          any(!affected_index %in% seq_len(n_sites))
-      ) {
-        stop(
-          "`affected_sites` contains invalid site indices."
-        )
-      }
-    }
-
-    affected_index <- unique(affected_index)
-  }
-
-  # Smooth ramp:
-  #   0 before change_start
-  #   linearly increases from 0 to 1
-  #   1 from change_end onward
-  year_index <- seq_len(n_years)
-
-  change_progress <- pmin(
-    1,
-    pmax(
-      0,
-      (
-        year_index - change_start
-      ) /
-        max(1, change_end - change_start)
-    )
-  )
-
-  # Make the first affected year have a positive change when
-  # change_start == change_end.
-  if (change_start == change_end) {
-    change_progress <- as.numeric(
-      year_index >= change_start
-    )
-  }
-
-  design <- tidyr::expand_grid(
-    site_index = seq_len(n_sites),
-    year_index = year_index
-  ) |>
-    dplyr::mutate(
-      name = site_ids[site_index],
-      season = season_name,
-      season_year =
-        start_year + year_index - 1L,
-      baseline_rho =
-        baseline_rho[site_index],
-      cluster = dplyr::case_when(
-        baseline_rho <= 0.1 ~ "low",
-        baseline_rho <= 0.5 ~ "medium",
-        TRUE ~ "high"
-      ),
-      affected =
-        site_index %in% affected_index,
-      change_progress =
-        change_progress[year_index],
-      eta = atanh(baseline_rho) +
-        delta_z *
-          change_progress *
-          affected,
-      rho = tanh(eta)
-    )
-
-  generated <- lapply(
-    seq_len(nrow(design)),
-    \(i) {
-      cop <- copula::tCopula(
-        param = design$rho[[i]],
-        dim = 2L,
-        df = df_t,
-        df.fixed = TRUE,
-        dispstr = "ex"
-      )
-
-      u <- copula::rCopula(
-        n_obs_per_year,
-        cop
-      )
-
-      tibble::tibble(
-        within_year_index =
-          seq_len(n_obs_per_year),
-        U1 = u[, 1],
-        U2 = u[, 2]
-      )
-    }
-  )
-
-  simulated <- dplyr::bind_cols(
-    design,
-    tibble::tibble(draws = generated)
-  ) |>
-    tidyr::unnest(draws) |>
-    dplyr::mutate(
-      X1 = qgpd(
-        U1,
-        xi = gpd_xi[[1]],
-        sigma = gpd_sigma[[1]],
-        u = 0
-      ),
-      X2 = qgpd(
-        U2,
-        xi = gpd_xi[[2]],
-        sigma = gpd_sigma[[2]],
-        u = 0
-      )
-    )
-
-  if (return_laplace) {
-    # Because the true marginal CDF values are known in simulation,
-    # transform U directly to standard Laplace margins.
-    simulated <- simulated |>
-      dplyr::mutate(
-        X1_laplace = qlaplace(U1),
-        X2_laplace = qlaplace(U2)
-      )
-  }
-
-  simulated |>
-    dplyr::select(
-      name,
-      site_index,
-      cluster,
-      season,
-      season_year,
-      year_index,
-      within_year_index,
-      affected,
-      change_progress,
-      baseline_rho,
-      rho,
-      X1,
-      X2,
-      dplyr::any_of(
-        c("X1_laplace", "X2_laplace")
-      )
-    )
-}
-
+# simulate data with global change in dependence
 sim_local <- simulate_t_copula_season(
   n_sites = 40L,
   n_years = 60L,
@@ -311,12 +100,12 @@ sim_local <- simulate_t_copula_season(
     rep(0.5, 13L),
     rep(0.8, 13L)
   ),
-  # change_type = "global",
-  change_type = "local",
+  change_type = "global",
+  # change_type = "local",
   # affected_sites = 1:5,
   # affected_sites = 1:30,
-  # affected_sites = 1:40,
-  affected_sites = 1:14,
+  affected_sites = 1:40,
+  # affected_sites = 1:14,
   change_start = 30L, # starts on middle year
   change_end = 60L,
   # TODO maybe parametrise by desired rho_t??
@@ -469,7 +258,7 @@ screen_res_df <- bind_rows(lapply(seq_len(nrow(screen_setup_df)), \(i) {
   )
 }))
 
-warnings()
+# warnings()
 
 # summarise failures by season and n_years_per_block
 screen_failure_summary <- screen_res_df |>
@@ -494,7 +283,7 @@ screen_failure_summary
 readr::write_csv(screen_res_df, paste0("data/01_sim/screen_res_dqu_", dqu, ".csv.gz"))
 
 # screen_res_df <- readr::read_csv("data/02_app/screen_res.csv.gz")
-screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
+screen_res_df <- readr::read_csv(paste0("data/01_sim/screen_res_dqu_", dqu, ".csv.gz"))
 
 
 #### Plotting ####
