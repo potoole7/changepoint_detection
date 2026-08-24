@@ -202,7 +202,7 @@ y^{\boldsymbol{\beta}_{\mid i,s}}
 \right).
 \]
 The model is fitted separately for each conditioning variable, spatial location and temporal block, without imposing spatial smoothness. 
-A common threshold $u_i$, defined on the standard Laplace scale, is used across locations to ensure that the resulting conditional distributions are comparable. 
+We set $u_i = u$, a high quantile of the standard Laplace distribution, for all $i$ and $s$, to ensure that the resulting conditional distributions are comparable across locations, after Laplace standardisation.
 The Gaussian working model also permits the closed-form divergence calculations described in Section~\ref{subsec:div}.
 
 \subsection{Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence}\label{subsec:div}
@@ -241,7 +241,7 @@ H_{i,s,T}(y)
 \Vert
 H_{i,s^*,T}(y)
 \right\},
-\qquad y>u_i.
+\qquad y>u.
 \end{equation}
 This quantity compares the fitted extremal dependence structures at the two locations for a specified value of the conditioning variable.
 
@@ -253,21 +253,21 @@ To remove the dependence on a particular conditioning value, we average Equation
 \mathbb{E}
 \left[
 \cJSGa{s,s^*}(Y_i;T)
-\mid Y_i>u_i
+\mid Y_i>u
 \right]
 =
-\int_{u_i}^{\infty}
+\int_{u}^{\infty}
 \cJSGa{s,s^*}(y;T)
-h(y\mid Y_i>u_i)
+h(y\mid Y_i>u)
 \,\mathrm{d}y,
 \end{equation}
-where $h(y\mid Y_i>u_i)$ is the conditional density of a standard Laplace variable above $u_i$. 
+where $h(y\mid Y_i>u)$ is the conditional density of a standard Laplace variable above $u$. 
 As the marginal distribution and conditioning threshold are common across locations, this density does not depend on $s$, ensuring that the resulting expected divergence is comparable and symmetric across site pairs.
 
 \textcolor{red}{Needed?}
 In practice, Equation~\eqref{eq:jsga_integral} is approximated using a common Monte Carlo sample of conditioning values. 
 To avoid unstable extrapolation beyond the observed range, the sample is truncated at a suitably high upper quantile of the standard Laplace distribution. 
-The same sample is used across locations and temporal blocks, preventing additional Monte Carlo variation from being introduced into comparisons between blocks.
+Again, The same threshold $u$, taken to be a high quantile of the standard Laplace distribution, and Laplace samples are used across locations and temporal blocks, preventing additional Monte Carlo variation from being introduced into comparisons between blocks in our changepoint detection procedure in Section~\ref{subsec:cp}.
 
 For each conditioning variable $i$, the expected divergences are collected in the dissimilarity matrix
 \begin{equation}
@@ -335,7 +335,7 @@ We therefore generate a reference distribution for $D_{\mathrm{obs}}$ by repeate
   \item \textbf{Pool observations:} For a chosen block size $n \le \min\{|T_1|, |T_2|\}$, combine the final $n$ observations from time block $T_1$ and the first $n$ observations from $T_2$ into a single dataset. 
   % \item \textbf{Permute time labels:} Randomly permute the time indices of the pooled observations and reassign them to two pseudo-blocks of size $n$. 
   \item \textbf{Permute temporal labels:} Randomly reassign the pooled observations, or appropriate dependence-preserving temporal groups, to two pseudo-blocks of size $n$.
-  \item \textbf{Refit CE models:} For the permuted dataset, reapply the exceedance threshold $u_i$ for each conditioning variable and refit the CE model in each pseudo-block, yielding divergence matrices  $M^{(b)}(T_1)$ and $M^{(b)}(T_2)$, for $b = 1,\dots,B$ permutations.
+  \item \textbf{Refit CE models:} For the permuted dataset, reapply the exceedance threshold $u$ for each conditioning variable and refit the CE model in each pseudo-block, yielding divergence matrices  $M^{(b)}(T_1)$ and $M^{(b)}(T_2)$, for $b = 1,\dots,B$ permutations.
 \item \textbf{Recompute statistic:} Compute the test statistic
   \begin{equation} \label{eq:perm_stat}
     D^{(b)} \coloneq
@@ -484,8 +484,6 @@ In settings with longer time series or substantially larger spatial networks, th
 As changes in environmental dependence structures may occur gradually, a candidate $\tau$ should not necessarily be interpreted as the time of an instantaneous physical transition. 
 Rather, it identifies a division between adjacent periods whose estimated extremal dependence structures differ.
 
-
-
 \section{Simulation Study}
 \label{sec:sim}
 
@@ -506,6 +504,7 @@ At each site and time point, the two variables are generated from a bivariate St
 The sites are generated independently, and the weekly observations are conditionally independent given the site- and year-specific copula parameters. 
 % Known generalised Pareto marginal distributions, with shape parameter $\xi=-0.05$, scale parameter $\sigma=1$ and threshold zero, are used for both variables. 
 The observations are transformed to standard Laplace margins using their known marginal distributions.
+Across all CE fits, the same threshold $u$, set to the $85$th quantile of the standard Laplace distribution, as well as $500$ Monte Carlo samples of the conditioning variable, are used to evaluate the expected divergence in Equation~\eqref{eq:jsga_integral}, to ensure comparability of the resulting conditional distributions.
 
 \textcolor{red}{Need for mathematical notation/description?}
 The sites are divided into three baseline extremal dependence groups. 

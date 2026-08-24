@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  24 AUG 2026 16:21
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  24 AUG 2026 17:48
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -2057,17 +2057,8 @@ Overfull \vbox (6.46347pt too high) has occurred while \output is active []
 
 ]
 
-LaTeX Warning: Reference `subsec:ce' on page 2 undefined on input line 134.
-
-
 Package natbib Warning: Citation `Keef2013' on page 2 undefined on input line 1
 34.
-
-
-LaTeX Warning: Reference `subsec:div' on page 2 undefined on input line 135.
-
-
-LaTeX Warning: Reference `subsec:cp' on page 2 undefined on input line 136.
 
 
 Package natbib Warning: Citation `Keef2013' on page 2 undefined on input line 1
@@ -2079,45 +2070,107 @@ Package natbib Warning: Citation `OToole2025' on page 2 undefined on input line
 
 
 Package natbib Warning: Citation `Keef2013' on page 2 undefined on input line 1
-47.
+46.
 
 
-LaTeX Warning: Reference `subsec:div' on page 2 undefined on input line 207.
+Package natbib Warning: Citation `OToole2025' on page 2 undefined on input line
+ 210.
+
+
+Package natbib Warning: Citation `Nielsen2019' on page 2 undefined on input lin
+e 211.
 
 [2]
 
-Package natbib Warning: Citation `Good2004' on page 3 undefined on input line 2
-32.
+LaTeX Warning: Reference `eq:jsga' on page 3 undefined on input line 230.
 
 
-LaTeX Warning: Reference `eq:distance_matrix' on page 3 undefined on input line
- 241.
+Package natbib Warning: Citation `Nielsen2019' on page 3 undefined on input lin
+e 230.
 
 
-LaTeX Warning: Reference `eq:aggregate_matrix' on page 3 undefined on input lin
-e 241.
+Package natbib Warning: Citation `OToole2025' on page 3 undefined on input line
+ 230.
 
-[3] [4]
+
+LaTeX Warning: Reference `eq:cjsga' on page 3 undefined on input line 248.
+
+
+LaTeX Warning: Reference `eq:jsga_integral' on page 3 undefined on input line 2
+68.
+
+[3]
+
+Package natbib Warning: Citation `Good2004' on page 4 undefined on input line 3
+16.
+
+
+LaTeX Warning: Reference `eq:distance_matrix' on page 4 undefined on input line
+ 326.
+
+
+LaTeX Warning: Reference `eq:aggregate_matrix' on page 4 undefined on input lin
+e 326.
+
+[4]
+
+LaTeX Warning: Reference `subsec:sim_setup' on page 5 undefined on input line 4
+99.
+
+
+Package natbib Warning: Citation `Demarta2007-ap' on page 5 undefined on input 
+line 505.
+
+! Missing delimiter (. inserted).
+<to be read again> 
+                   {
+l.518 \rho_{s,t} \coloneq \tanh\left{
+                                     
+? 
+! Missing } inserted.
+<inserted text> 
+                }
+l.522 \right
+            },
+? 
+! Missing delimiter (. inserted).
+<to be read again> 
+                   }
+l.522 \right}
+             ,
+? 
+! Extra }, or forgotten $.
+<recently read> }
+                 
+l.522 \right}
+             ,
+? 
+! Extra alignment tab has been changed to \cr.
+<template> ...w@strut \hfil $\relax $\endtemplate 
+                                                  
+l.531 \dfrac{t-t_0}{t_1-t_0}, &
+                                t_0<t<t_1,[8pt]
+? 
+[5]
 LaTeX Font Info:    Trying to load font information for TS1+stix on input line 
-339.
+560.
  (/usr/share/texlive/texmf-dist/tex/latex/stix/ts1stix.fd
 File: ts1stix.fd 2015/04/17 v1.1.2-latex STIX TS1 font definitions
-)
+) [6]
 ! Misplaced alignment tab character &.
-l.386 ...ed from the European Climate Assessment &
+l.632 ...ed from the European Climate Assessment &
                                                    Dataset (ECA&D) \citep{EC...
 
 ? 
 ! Misplaced alignment tab character &.
-l.386 ...ropean Climate Assessment & Dataset (ECA&
+l.632 ...ropean Climate Assessment & Dataset (ECA&
                                                   D) \citep{ECADdaily}.
 ? 
 ! Misplaced alignment tab character &.
-l.387 \item The ECA&
+l.633 \item The ECA&
                     D provides quality-controlled daily meteorological obser...
 
 ? 
-[5]
 
 ! LaTeX Error: \mathrm allowed only in math mode.
 
@@ -2125,22 +2178,24 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.403 D=-\mathrm
+l.649 D=-\mathrm
                 {SPI},
 ? 
-<plots/intro_trim.png, id=93, 823.3962pt x 286.1892pt>
+[7]
+<plots/intro_trim.png, id=118, 823.3962pt x 286.1892pt>
 File: plots/intro_trim.png Graphic file (type png)
 <use plots/intro_trim.png>
-Package pdftex.def Info: plots/intro_trim.png  used on input line 420.
+Package pdftex.def Info: plots/intro_trim.png  used on input line 666.
 (pdftex.def)             Requested size: 456.75398pt x 158.75827pt.
 
+
 ! LaTeX Error: \mathrm allowed only in math mode.
 
 See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.425 }
+l.671 }
        
 ? 
 
@@ -2150,50 +2205,48 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.425 }
+l.671 }
        
 ? 
-[6 <./plots/intro_trim.png>]
+[8 <./plots/intro_trim.png>]
 
-LaTeX Warning: Reference `sec:method' on page 7 undefined on input line 481.
+LaTeX Warning: Reference `sec:method' on page 9 undefined on input line 727.
 
-[7] [8]
-<plots/screen.png, id=113, 867.24pt x 578.16pt>
+[9] [10]
+<plots/screen.png, id=137, 867.24pt x 578.16pt>
 File: plots/screen.png Graphic file (type png)
 <use plots/screen.png>
-Package pdftex.def Info: plots/screen.png  used on input line 563.
+Package pdftex.def Info: plots/screen.png  used on input line 809.
 (pdftex.def)             Requested size: 456.75398pt x 304.50896pt.
- [9]
+ [11 <./plots/screen.png>]
 
-LaTeX Warning: Reference `sec:method' on page 10 undefined on input line 629.
+LaTeX Warning: Reference `sec:method' on page 12 undefined on input line 875.
 
-[10 <./plots/screen.png>]
-<plots/change.png, id=125, 867.24pt x 578.16pt>
+<plots/change.png, id=146, 867.24pt x 578.16pt>
 File: plots/change.png Graphic file (type png)
 <use plots/change.png>
-Package pdftex.def Info: plots/change.png  used on input line 640.
+Package pdftex.def Info: plots/change.png  used on input line 886.
 (pdftex.def)             Requested size: 456.75398pt x 304.50896pt.
 
+LaTeX Warning: Reference `sec:method' on page 12 undefined on input line 917.
 
-LaTeX Warning: Reference `sec:method' on page 11 undefined on input line 671.
-
-[11 <./plots/change.png>]
-<plots/clust_map_trim.png, id=131, 829.1778pt x 504.4446pt>
+[12] [13 <./plots/change.png>]
+<plots/clust_map_trim.png, id=158, 829.1778pt x 504.4446pt>
 File: plots/clust_map_trim.png Graphic file (type png)
 <use plots/clust_map_trim.png>
-Package pdftex.def Info: plots/clust_map_trim.png  used on input line 706.
+Package pdftex.def Info: plots/clust_map_trim.png  used on input line 952.
 (pdftex.def)             Requested size: 456.75398pt x 277.87642pt.
- [12]
-Overfull \hbox (13.0pt too wide) in paragraph at lines 752--752
+
+Overfull \hbox (13.0pt too wide) in paragraph at lines 998--998
 [] [] 
  []
 
-(./paper.bbl
+[14] (./paper.bbl
 LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 5
 3.
  (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2022/07/10 v2.5l Standard LaTeX font definitions
-) [13 <./plots/clust_map_trim.png>])
+))
 
 Package natbib Warning: There were undefined citations.
 
@@ -2203,7 +2256,7 @@ Package natbib Warning: There were undefined citations.
 \tf@loc=\write6
 \openout6 = `paper.loc'.
 
-[14] (./paper.aux)
+[15 <./plots/clust_map_trim.png>] (./paper.aux)
 
 LaTeX Font Warning: Size substitutions with differences
 (Font)              up to 1.25pt have occurred.
@@ -2216,13 +2269,13 @@ LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
  ) 
 Here is how much of TeX's memory you used:
- 34195 strings out of 477975
- 599196 string characters out of 5839282
+ 34215 strings out of 477975
+ 599474 string characters out of 5839282
  1876330 words of memory out of 5000000
- 53595 multiletter control sequences out of 15000+600000
+ 53605 multiletter control sequences out of 15000+600000
  675010 words of font info for 276 fonts, out of 8000000 for 9000
  85 hyphenation exceptions out of 8191
- 99i,11n,94p,1041b,578s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 99i,11n,94p,1041b,582s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 pdfTeX warning (dest): name{Hfootnote.1} has been referenced but does not exist
 , replaced by a fixed one
@@ -2233,15 +2286,16 @@ stix-t1.enc}</home/paddy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Bold.pfb>
 </home/paddy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Italic.pfb></home/pad
 dy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Regular.pfb></usr/share/texmf/f
 onts/type1/public/cm-super/sftt1000.pfb></home/paddy7wb/texmf/fonts/type1/publi
-c/stix/stix-mathcal.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-math
-ex.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathit-bold.pfb></hom
-e/paddy7wb/texmf/fonts/type1/public/stix/stix-mathit.pfb></home/paddy7wb/texmf/
-fonts/type1/public/stix/stix-mathrm-bold.pfb></home/paddy7wb/texmf/fonts/type1/
-public/stix/stix-mathrm.pfb>
-Output written on paper.pdf (14 pages, 3046479 bytes).
+c/stix/stix-mathbb.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathc
+al.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathex.pfb></home/pad
+dy7wb/texmf/fonts/type1/public/stix/stix-mathit-bold.pfb></home/paddy7wb/texmf/
+fonts/type1/public/stix/stix-mathit.pfb></home/paddy7wb/texmf/fonts/type1/publi
+c/stix/stix-mathrm-bold.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-
+mathrm.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathscr.pfb>
+Output written on paper.pdf (15 pages, 3071269 bytes).
 PDF statistics:
- 284 PDF objects out of 1000 (max. 8388607)
- 240 compressed objects within 3 object streams
- 53 named destinations out of 1000 (max. 500000)
- 209 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 317 PDF objects out of 1000 (max. 8388607)
+ 268 compressed objects within 3 object streams
+ 63 named destinations out of 1000 (max. 500000)
+ 217 words of extra memory for PDF output out of 10000 (max. 10000000)
 
