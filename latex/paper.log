@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  13 AUG 2026 10:06
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  24 AUG 2026 16:21
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -1783,39 +1783,39 @@ LaTeX Warning: Unused global option(s):
 (./paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 43.
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for LS1/stix/m/n on input line 43.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 66.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for LS1/stix/m/n on input line 66.
 LaTeX Font Info:    Trying to load font information for LS1+stix on input line 
-43.
+66.
  (/usr/share/texlive/texmf-dist/tex/latex/stix/ls1stix.fd
 File: ls1stix.fd 2015/04/17 v1.1.2-latex STIX LS1 font definitions
 )
-LaTeX Font Info:    ... okay on input line 43.
-LaTeX Font Info:    Checking defaults for LS2/stix/m/n on input line 43.
+LaTeX Font Info:    ... okay on input line 66.
+LaTeX Font Info:    Checking defaults for LS2/stix/m/n on input line 66.
 LaTeX Font Info:    Trying to load font information for LS2+stix on input line 
-43.
+66.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls2stix.fd
 File: ls2stix.fd 2015/04/17 v1.1.2-latex STIX LS2 font definitions
 )
-LaTeX Font Info:    ... okay on input line 43.
+LaTeX Font Info:    ... okay on input line 66.
 
 (/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
@@ -1844,7 +1844,7 @@ Package caption Info: hyperref package is loaded.
 Package caption Info: listings package is loaded.
 Package caption Info: wrapfig package is loaded.
 Package caption Info: End \AtBeginDocument code.
-Package hyperref Info: Link coloring ON on input line 43.
+Package hyperref Info: Link coloring ON on input line 66.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -1888,138 +1888,166 @@ File: english.apc 2013/07/21 v6.03 apacite language file
 LaTeX Info: Redefining \BPBI on input line 129.
 LaTeX Info: Redefining \BHBI on input line 130.
 )
-LaTeX Info: Command `\dddot' is already robust on input line 43.
-LaTeX Info: Command `\ddddot' is already robust on input line 43.
+LaTeX Info: Command `\dddot' is already robust on input line 66.
+LaTeX Info: Command `\ddddot' is already robust on input line 66.
 \c@lstlisting=\count462
 
 
 Package todonotes Warning: The length marginparwidth is less than 2cm and will 
 most likely cause issues with the appearance of inserted todonotes. The issue c
 an be solved by adding a line like \setlength {\marginparwidth }{2cm} prior to 
-loading the todonotes package. on input line 43.
+loading the todonotes package. on input line 66.
 
-LaTeX Font Info:    Calculating math sizes for size <18> on input line 78.
+LaTeX Font Info:    Calculating math sizes for size <18> on input line 101.
 LaTeX Font Info:    Trying to load font information for LS1+stixscr on input li
-ne 78.
+ne 101.
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls1stixscr.fd
 File: ls1stixscr.fd 2015/04/17 v1.1.2-latex STIX script LS1 font definitions
 )
 LaTeX Font Info:    Trying to load font information for LS2+stixex on input lin
-e 78.
+e 101.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls2stixex.fd
 File: ls2stixex.fd 2015/04/17 v1.1.2-latex STIX extentions LS2 font definitions
 
 )
 LaTeX Font Info:    Trying to load font information for LS1+stixfrak on input l
-ine 78.
+ine 101.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls1stixfrak.fd
 File: ls1stixfrak.fd 2015/04/17 v1.1.2-latex STIX fraktur LS1 font definitions
 )
 LaTeX Font Info:    Trying to load font information for LS1+stixbb on input lin
-e 78.
+e 101.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls1stixbb.fd
 File: ls1stixbb.fd 2015/04/17 v1.1.2-latex STIX blackboard LS1 font definitions
 
 )
 LaTeX Font Info:    Trying to load font information for LS2+stixcal on input li
-ne 78.
+ne 101.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls2stixcal.fd
 File: ls2stixcal.fd 2015/04/17 v1.1.2-latex STIX calligraphic LS2 font definiti
 ons
 )
 LaTeX Font Info:    Trying to load font information for LS1+stixsf on input lin
-e 78.
+e 101.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls1stixsf.fd
 File: ls1stixsf.fd 2015/04/17 v1.1.2-latex STIX sans-serif LS1 font definitions
 
 )
 LaTeX Font Info:    Trying to load font information for LS2+stixtt on input lin
-e 78.
+e 101.
 
 (/usr/share/texlive/texmf-dist/tex/latex/stix/ls2stixtt.fd
 File: ls2stixtt.fd 2015/04/17 v1.1.2-latex STIX typewriter LS2 font definitions
 
 )
-LaTeX Font Info:    Trying to load font information for U+msa on input line 78.
-
+LaTeX Font Info:    Trying to load font information for U+msa on input line 101
+.
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 78.
-
+LaTeX Font Info:    Trying to load font information for U+msb on input line 101
+.
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for U+rsfs on input line 78
-.
+LaTeX Font Info:    Trying to load font information for U+rsfs on input line 10
+1.
 
 (/usr/share/texlive/texmf-dist/tex/latex/jknapltx/ursfs.fd
 File: ursfs.fd 1998/03/24 rsfs font definition file (jk)
 )
 
 LaTeX Font Warning: Font shape `U/rsfs/m/n' in size <18> not available
-(Font)              size <17.28> substituted on input line 78.
+(Font)              size <17.28> substituted on input line 101.
 
 
 LaTeX Font Warning: Font shape `U/rsfs/m/n' in size <12.59995> not available
-(Font)              size <12> substituted on input line 78.
+(Font)              size <12> substituted on input line 101.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\@ifnextchar' on input line 78.
+(hyperref)                removing `\@ifnextchar' on input line 101.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\<let>-command' on input line 78.
+(hyperref)                removing `\<let>-command' on input line 101.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\<let>-command' on input line 78.
+(hyperref)                removing `\<let>-command' on input line 101.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\afterassignment' on input line 78.
+(hyperref)                removing `\afterassignment' on input line 101.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\<let>-command' on input line 78.
+(hyperref)                removing `\<let>-command' on input line 101.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\<def>-command' on input line 78.
+(hyperref)                removing `\<def>-command' on input line 101.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\@thanks' on input line 78.
+(hyperref)                removing `\@thanks' on input line 101.
 
 
-Overfull \hbox (346.99213pt too wide) in paragraph at lines 78--78
+Overfull \hbox (346.99213pt too wide) in paragraph at lines 101--101
 [][] | || []|[][] 
  []
 
-LaTeX Font Info:    Calculating math sizes for size <10.03749> on input line 78
-.
-LaTeX Font Info:    Calculating math sizes for size <7.5> on input line 78.
+LaTeX Font Info:    Calculating math sizes for size <10.03749> on input line 10
+1.
+LaTeX Font Info:    Calculating math sizes for size <7.5> on input line 101.
 
 LaTeX Font Warning: Font shape `U/rsfs/m/n' in size <7.5> not available
-(Font)              size <7> substituted on input line 78.
+(Font)              size <7> substituted on input line 101.
 
 
 LaTeX Font Warning: Font shape `U/rsfs/m/n' in size <3.75> not available
-(Font)              size <5> substituted on input line 78.
+(Font)              size <5> substituted on input line 101.
 
-LaTeX Font Info:    Trying to load font information for TS1+stix on input line 
-92.
-(/usr/share/texlive/texmf-dist/tex/latex/stix/ts1stix.fd
-File: ts1stix.fd 2015/04/17 v1.1.2-latex STIX TS1 font definitions
-)
+
+Package natbib Warning: Citation `katz2010statistics' on page 1 undefined on in
+put line 110.
+
+
+Package natbib Warning: Citation `Gilles2018' on page 1 undefined on input line
+ 110.
+
+
+Package natbib Warning: Citation `panagoulias2025extreme' on page 1 undefined o
+n input line 110.
+
+
+Package natbib Warning: Citation `Talento2025' on page 1 undefined on input lin
+e 110.
+
+
+Package natbib Warning: Citation `Zhong2022' on page 1 undefined on input line 
+116.
+
+
+Package natbib Warning: Citation `McGonigle2025' on page 1 undefined on input l
+ine 125.
+
+
+Package natbib Warning: Citation `Alouni2026' on page 1 undefined on input line
+ 126.
+
+
+Package natbib Warning: Citation `Agarwal2025' on page 1 undefined on input lin
+e 127.
+
+
 Overfull \vbox (6.46347pt too high) has occurred while \output is active []
 
 
@@ -2028,20 +2056,68 @@ Overfull \vbox (6.46347pt too high) has occurred while \output is active []
 \openout3 = `paper.pag'.
 
 ]
+
+LaTeX Warning: Reference `subsec:ce' on page 2 undefined on input line 134.
+
+
+Package natbib Warning: Citation `Keef2013' on page 2 undefined on input line 1
+34.
+
+
+LaTeX Warning: Reference `subsec:div' on page 2 undefined on input line 135.
+
+
+LaTeX Warning: Reference `subsec:cp' on page 2 undefined on input line 136.
+
+
+Package natbib Warning: Citation `Keef2013' on page 2 undefined on input line 1
+41.
+
+
+Package natbib Warning: Citation `OToole2025' on page 2 undefined on input line
+ 143.
+
+
+Package natbib Warning: Citation `Keef2013' on page 2 undefined on input line 1
+47.
+
+
+LaTeX Warning: Reference `subsec:div' on page 2 undefined on input line 207.
+
+[2]
+
+Package natbib Warning: Citation `Good2004' on page 3 undefined on input line 2
+32.
+
+
+LaTeX Warning: Reference `eq:distance_matrix' on page 3 undefined on input line
+ 241.
+
+
+LaTeX Warning: Reference `eq:aggregate_matrix' on page 3 undefined on input lin
+e 241.
+
+[3] [4]
+LaTeX Font Info:    Trying to load font information for TS1+stix on input line 
+339.
+ (/usr/share/texlive/texmf-dist/tex/latex/stix/ts1stix.fd
+File: ts1stix.fd 2015/04/17 v1.1.2-latex STIX TS1 font definitions
+)
 ! Misplaced alignment tab character &.
-l.139 ...ed from the European Climate Assessment &
+l.386 ...ed from the European Climate Assessment &
                                                    Dataset (ECA&D) \citep{EC...
 
 ? 
 ! Misplaced alignment tab character &.
-l.139 ...ropean Climate Assessment & Dataset (ECA&
+l.386 ...ropean Climate Assessment & Dataset (ECA&
                                                   D) \citep{ECADdaily}.
 ? 
 ! Misplaced alignment tab character &.
-l.140 \item The ECA&
+l.387 \item The ECA&
                     D provides quality-controlled daily meteorological obser...
 
 ? 
+[5]
 
 ! LaTeX Error: \mathrm allowed only in math mode.
 
@@ -2049,13 +2125,13 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.156 D=-\mathrm
+l.403 D=-\mathrm
                 {SPI},
 ? 
-<plots/intro_trim.png, id=37, 823.3962pt x 286.1892pt>
+<plots/intro_trim.png, id=93, 823.3962pt x 286.1892pt>
 File: plots/intro_trim.png Graphic file (type png)
 <use plots/intro_trim.png>
-Package pdftex.def Info: plots/intro_trim.png  used on input line 173.
+Package pdftex.def Info: plots/intro_trim.png  used on input line 420.
 (pdftex.def)             Requested size: 456.75398pt x 158.75827pt.
 
 ! LaTeX Error: \mathrm allowed only in math mode.
@@ -2064,7 +2140,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.178 }
+l.425 }
        
 ? 
 
@@ -2074,39 +2150,41 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.178 }
+l.425 }
        
 ? 
-[2] [3 <./plots/intro_trim.png>]
+[6 <./plots/intro_trim.png>]
 
-LaTeX Warning: Reference `sec:method' on page 4 undefined on input line 234.
+LaTeX Warning: Reference `sec:method' on page 7 undefined on input line 481.
 
-[4]
-<plots/screen.png, id=60, 867.24pt x 578.16pt>
+[7] [8]
+<plots/screen.png, id=113, 867.24pt x 578.16pt>
 File: plots/screen.png Graphic file (type png)
 <use plots/screen.png>
-Package pdftex.def Info: plots/screen.png  used on input line 316.
+Package pdftex.def Info: plots/screen.png  used on input line 563.
 (pdftex.def)             Requested size: 456.75398pt x 304.50896pt.
- [5] [6 <./plots/screen.png>]
+ [9]
 
-LaTeX Warning: Reference `sec:method' on page 7 undefined on input line 382.
+LaTeX Warning: Reference `sec:method' on page 10 undefined on input line 629.
 
-<plots/change.png, id=74, 867.24pt x 578.16pt>
+[10 <./plots/screen.png>]
+<plots/change.png, id=125, 867.24pt x 578.16pt>
 File: plots/change.png Graphic file (type png)
 <use plots/change.png>
-Package pdftex.def Info: plots/change.png  used on input line 393.
+Package pdftex.def Info: plots/change.png  used on input line 640.
 (pdftex.def)             Requested size: 456.75398pt x 304.50896pt.
 
-LaTeX Warning: Reference `sec:method' on page 7 undefined on input line 424.
 
-[7] [8 <./plots/change.png>]
-<plots/clust_map_trim.png, id=86, 829.1778pt x 504.4446pt>
+LaTeX Warning: Reference `sec:method' on page 11 undefined on input line 671.
+
+[11 <./plots/change.png>]
+<plots/clust_map_trim.png, id=131, 829.1778pt x 504.4446pt>
 File: plots/clust_map_trim.png Graphic file (type png)
 <use plots/clust_map_trim.png>
-Package pdftex.def Info: plots/clust_map_trim.png  used on input line 459.
+Package pdftex.def Info: plots/clust_map_trim.png  used on input line 706.
 (pdftex.def)             Requested size: 456.75398pt x 277.87642pt.
- [9 <./plots/clust_map_trim.png>]
-Overfull \hbox (13.0pt too wide) in paragraph at lines 505--505
+ [12]
+Overfull \hbox (13.0pt too wide) in paragraph at lines 752--752
 [] [] 
  []
 
@@ -2115,15 +2193,17 @@ LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 5
 3.
  (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2022/07/10 v2.5l Standard LaTeX font definitions
-))
+) [13 <./plots/clust_map_trim.png>])
+
+Package natbib Warning: There were undefined citations.
+
 \Changes@OutFile=\write5
 \openout5 = `paper.soc'.
 
 \tf@loc=\write6
 \openout6 = `paper.loc'.
 
- [10]
-(./paper.aux)
+[14] (./paper.aux)
 
 LaTeX Font Warning: Size substitutions with differences
 (Font)              up to 1.25pt have occurred.
@@ -2136,33 +2216,32 @@ LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
  ) 
 Here is how much of TeX's memory you used:
- 34094 strings out of 477975
- 597755 string characters out of 5839282
- 1873330 words of memory out of 5000000
- 53525 multiletter control sequences out of 15000+600000
- 660391 words of font info for 246 fonts, out of 8000000 for 9000
+ 34195 strings out of 477975
+ 599196 string characters out of 5839282
+ 1876330 words of memory out of 5000000
+ 53595 multiletter control sequences out of 15000+600000
+ 675010 words of font info for 276 fonts, out of 8000000 for 9000
  85 hyphenation exceptions out of 8191
- 99i,10n,94p,887b,582s stack positions out of 10000i,1000n,20000p,200000b,200000s
-
-pdfTeX warning (dest): name{figure.caption.5} has been referenced but does not 
-exist, replaced by a fixed one
-
+ 99i,11n,94p,1041b,578s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 pdfTeX warning (dest): name{Hfootnote.1} has been referenced but does not exist
 , replaced by a fixed one
 
 {/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}{/home/paddy7wb/texm
-f/fonts/enc/dvips/stix/stix-t1.enc}{/home/paddy7wb/texmf/fonts/enc/dvips/stix/s
-tix-ts1.enc}</home/paddy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Bold.pfb>
+f/fonts/enc/dvips/stix/stix-ts1.enc}{/home/paddy7wb/texmf/fonts/enc/dvips/stix/
+stix-t1.enc}</home/paddy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Bold.pfb>
 </home/paddy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Italic.pfb></home/pad
 dy7wb/texmf/fonts/type1/public/stix/STIXGeneral-Regular.pfb></usr/share/texmf/f
 onts/type1/public/cm-super/sftt1000.pfb></home/paddy7wb/texmf/fonts/type1/publi
 c/stix/stix-mathcal.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-math
-it.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathrm.pfb>
-Output written on paper.pdf (10 pages, 3084732 bytes).
+ex.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathit-bold.pfb></hom
+e/paddy7wb/texmf/fonts/type1/public/stix/stix-mathit.pfb></home/paddy7wb/texmf/
+fonts/type1/public/stix/stix-mathrm-bold.pfb></home/paddy7wb/texmf/fonts/type1/
+public/stix/stix-mathrm.pfb>
+Output written on paper.pdf (14 pages, 3046479 bytes).
 PDF statistics:
- 202 PDF objects out of 1000 (max. 8388607)
- 169 compressed objects within 2 object streams
- 32 named destinations out of 1000 (max. 500000)
- 169 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 284 PDF objects out of 1000 (max. 8388607)
+ 240 compressed objects within 3 object streams
+ 53 named destinations out of 1000 (max. 500000)
+ 209 words of extra memory for PDF output out of 10000 (max. 10000000)
 
