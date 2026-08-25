@@ -36,7 +36,8 @@ source("src/00_functions.R")
 #### metadata ####
 
 # number of times to repeat simulations
-nreps <- 100
+nreps <- 50 # start with 50, then move on to 100
+# nreps <- 100
 
 # variables
 # dep_var <- c("drought_local_rev")
@@ -358,7 +359,7 @@ screen_res_all_plt |>
   guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
 
 screen_res_all_plt |>
-  #filter(name != "Spectral") |>
+  filter(name != "Spectral") |>
   ggplot(aes(x = change_after_year, y = value, colour = name)) +
   geom_smooth(show.legend = FALSE) +
   geom_line(aes(group = interaction(n_years_per_block, rep)), alpha = 0.2) +
@@ -437,19 +438,20 @@ lims <- c(0, max(changepoint_df_bar_plt$cp) + 1)
 # barplot of number of changepoints detected for each change_after_year,
 # for each norm type
 changepoint_df_bar_plt |>
+  filter(norm != "Spectral") |>
   ggplot(aes(x = change_after_year, y = as.integer(cp), fill = norm)) +
   geom_bar(stat = "identity", position = "dodge") +
   facet_wrap(~alpha) +
   labs(x = "Season year", y = "# detected changepoints", fill = "Norm type") +
   cecl_theme() +
   scale_y_continuous(
-    limits = lims,
-    breaks = seq(0, max(changepoint_df_bar_plt$cp) + 1, by = 1)
+    limits = lims, breaks = seq(0, max(changepoint_df_bar_plt$cp) + 1, by = 1)
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # barplot with percentages
 changepoint_df_bar_plt |>
+  filter(norm != "Spectral") |>
   group_by(norm, change_after_year, alpha) |>
   mutate(cp_perc = cp / length(changepoint_res_all)) |>
   ungroup() |>
@@ -462,9 +464,5 @@ changepoint_df_bar_plt |>
     fill = "Norm type"
   ) +
   cecl_theme() +
-  scale_y_continuous(
-    # limits = c(0, 1),
-    # breaks = seq(0, 1, by = 0.1),
-    labels = scales::percent
-  ) +
+  scale_y_continuous(labels = scales::percent) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
