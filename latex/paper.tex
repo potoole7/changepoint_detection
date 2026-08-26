@@ -526,11 +526,11 @@ These groups produce heterogeneous extremal dependence across the spatial domain
 For an affected site $s$, we allow the $t$-copula correlation parameter to evolve according to
 \begin{equation}
 \label{eq:sim_rho}
-\rho_{s,t} \coloneq \tanh\left{
+\rho_{s,t} \coloneq \tanh\left\{
 \operatorname{atanh}(\rho_{s,0})
 +
 A_s\delta_z g(t)
-\right},
+\right\},
 \end{equation}
 where $A_s$ indicates whether site $s$ is affected by the change, $\delta_z$ controls its magnitude on the Fisher-$z$ scale, and $g(t)$ determines its temporal progression. 
 Specifically,
@@ -638,8 +638,8 @@ where \(A_s\) indicates whether location \(s\) is affected, \(\delta_z\) control
 \item Their locations are shown in the left panel of Figure~\ref{fig}.
 \item The analysis covers the period 1960-2020, inclusive. 
 \item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
-\item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment & Dataset (ECA&D) \citep{ECADdaily}. 
-\item The ECA&D provides quality-controlled daily meteorological observations from stations across Europe.
+\item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) \citep{ECADdaily}. 
+\item The ECAD provides quality-controlled daily meteorological observations from stations across Europe.
 \item We aggregate the daily observations to a weekly resolution, taking the maximum recorded temperature and total accumulated precipitation within each week. 
 \item This aggregation reduces the influence of very short-range temporal variation and decreases the proportion of zero precipitation observations, although it does not necessarily remove temporal dependence completely.
 \end{itemize}
@@ -654,9 +654,7 @@ where \(A_s\) indicates whether location \(s\) is affected, \(\delta_z\) control
 % \item The calculation is implemented using the \texttt{spi} function from the \texttt{SPEI} package \citep{Begueria2023}, with a rectangular kernel assigning equal weight to each of the 13 weeks.
 \item Under the usual SPI convention, negative values represent drier-than-normal conditions and positive values represent wetter-than-normal conditions. 
 \item For the dependence analysis, we therefore define the drought index
-[
-D=-\mathrm{SPI},
-]
+$D=-\mathrm{SPI}$,
 so that larger values correspond to drier conditions. 
 \item This sign convention means that high temperatures and dry conditions are expected to exhibit positive extremal dependence.
 \end{itemize}
@@ -676,7 +674,7 @@ so that larger values correspond to drier conditions.
 \caption{
 Left: Elevation (m) profile of mainland Spain along with locations of 40 meteorological stations.
 Daroca and Jerez de la Frontera highlighted. 
-Right: Weekly maximum temperature against 13-week drought index, (D=-\mathrm{SPI}), at these two stations, with observations coloured by season.
+Right: Weekly maximum temperature against 13-week drought index, ($D=-\mathrm{SPI}$), at these two stations, with observations coloured by season.
 }
 \label{fig}
 \end{figure}
