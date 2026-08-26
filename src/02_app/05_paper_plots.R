@@ -2,6 +2,13 @@
 
 # Plots for Application section of paper
 
+# TODO Plot dissimilarity matrices (and differenced ones)
+# TODO Include changepoint for Autumn also! So would just show Spring on it's own
+# Cluster for k = 2 and k = 4 as well (and plot!) (done)
+# TODO Move functions to functions section
+# TODO Some plots of clustering solution against distance to coast and elevation (anything else of interest?)
+# - Maybe distance from Madrid might be interesting?
+
 # TODO What about matrices for individual variables? Right now we're only
 # looking at aggregated matrices!!! Would need to do entire analysis again ...
 
@@ -71,10 +78,11 @@ diff_fill_fun <- \(...) {
 # Identified changepoint years
 change_year_winter <- 1998
 change_year_summer <- 1990
+change_year_autumn <- 1986 # change for Autumn at 10% level
 
 n_perm <- 200
-# dqu <- 0.8
-dqu <- 0.85
+dqu <- 0.8
+# dqu <- 0.85
 
 
 #### Functions ####
@@ -903,7 +911,7 @@ data_p <- bind_rows(lapply(names(permutation_scan_plots), \(x) {
 }))
 
 year_breaks <- sort(
-    unique(data_p$change_after_year)
+  unique(data_p$change_after_year)
 )
 
 # plot with faceted
@@ -936,7 +944,7 @@ p_change <- data_p |>
     data = \(x) filter(x, success),
     size = 2
   ) +
-  facet_wrap(~ season) +
+  facet_wrap(~season) +
   scale_x_continuous(
     breaks = year_breaks
   ) +
@@ -1005,25 +1013,27 @@ data_laplace <- bind_rows(lapply(
 ))
 
 # Split by season and changepoints (in the case of Summer and Winter)
-marg_laplace_cp <- data_laplace |>
+# TODO Make again below for Autumn as well
+# marg_laplace_cp <- data_laplace |>
+data_laplace_cp <- data_laplace |>
   mutate(
     group = case_when(
-      season %in% c("Spring", "Autumn")        ~ 1,
+      season %in% c("Spring", "Autumn") ~ 1,
       season == "Winter" & season_year <= 1998 ~ 1,
       season == "Summer" & season_year <= 1990 ~ 1,
-      TRUE                                     ~ 2
+      TRUE ~ 2
     )
   ) |>
   mutate(
     season = factor(season, levels = seasons),
-    group  = factor(group, levels = c(1, 2)),
+    group = factor(group, levels = c(1, 2)),
     ind = paste0(season, " - ", group),
     ind = case_when(
       ind == "Winter - 1" ~ "Winter - 1960-1998",
       ind == "Winter - 2" ~ "Winter - 1999-2020",
       ind == "Summer - 1" ~ "Summer - 1960-1990",
       ind == "Summer - 2" ~ "Summer - 1991-2020",
-      TRUE                ~ season
+      TRUE ~ season
     ),
     ind = factor(
       ind,
@@ -1034,54 +1044,67 @@ marg_laplace_cp <- data_laplace |>
         "Autumn"
       )
     )
-  ) |>
-  group_split(ind, .keep = TRUE) |>
-  lapply(\(x) {
-    ret <- x |>
-      select(name, temp, drought_local) |>
-      as_cecl_marg()
+  )
 
-    ret$date <- x$date
-    ret$season_year <- x$season_year
-    ret$season <- unique(x$season)
-    ret$group <- unique(x$group)
-    ret$ind <- unique(x$ind)
+# function to make distance matrices for each season and changepoint group
+# TODO Move to functions
+make_dist_mat <- \(x) {
+  marg_laplace_cp <- x |>
+    group_split(ind, .keep = TRUE) |>
+    lapply(\(x) {
+      ret <- x |>
+        select(name, temp, drought_local) |>
+        as_cecl_marg()
 
-    ret
+      ret$date <- x$date
+      ret$season_year <- x$season_year
+      ret$season <- unique(x$season)
+      ret$group <- unique(x$group)
+      ret$ind <- unique(x$ind)
+
+      ret
+    })
+
+  # label appropriately
+  names(marg_laplace_cp) <- vapply(marg_laplace_cp, \(x) {
+    # paste0(x$season, " - ", x$group)
+    paste0(x$ind)
+  }, character(1))
+
+
+  # fit CE model for each
+  ce_cp <- lapply(marg_laplace_cp, \(x) {
+    cecl_dep(
+      x,
+      vars      = c("temp", dep_var),
+      cond_vars = c("temp", dep_var),
+      cond_prob = dqu,
+      nruns     = 3,
+      ncores    = getOption("mc_cores", 2L)
+    )
   })
 
-# label appropriately
-names(marg_laplace_cp) <- vapply(marg_laplace_cp, \(x) {
-  # paste0(x$season, " - ", x$group)
-  paste0(x$ind)
-}, character(1))
 
+  # calculate distances
+  set.seed(123)
+  dist_cp <- lapply(seq_along(ce_cp), \(i) {
+    cecl_dist(
+      # dep_var_season[[i]],
+      # marg_season[[name_df$season[[i]]]],
+      ce_cp[[i]],
+      marg_laplace_cp[[i]],
+      ncores = getOption("mc_cores", 2L)
+    )
+  })
+  names(dist_cp) <- names(ce_cp)
 
-# fit CE model for each
-ce_cp <- lapply(marg_laplace_cp, \(x) {
-  cecl_dep(
-    x,
-    vars      = c("temp", dep_var),
-    cond_vars = c("temp", dep_var),
-    cond_prob = dqu,
-    nruns     = 3,
-    ncores    = getOption("mc_cores", 2L)
-  )
-})
+  # need marg_laplace_cp for TWGSS calculation, and dist_cp for clustering
+  return(list(marg_laplace_cp, dist_cp))
+}
 
-
-# calculate distances
-set.seed(123)
-dist_cp <- lapply(seq_along(ce_cp), \(i) {
-  cecl_dist(
-    # dep_var_season[[i]],
-    # marg_season[[name_df$season[[i]]]],
-    ce_cp[[i]],
-    marg_laplace_cp[[i]],
-    ncores = getOption("mc_cores", 2L)
-  )
-})
-names(dist_cp) <- names(ce_cp)
+out <- make_dist_mat(data_laplace_cp)
+marg_laplace_cp <- out[[1]]
+dist_cp <- out[[2]]
 
 # # function to label years from group and season
 # year_from_season_group <- \(season, group) {
@@ -1095,27 +1118,34 @@ names(dist_cp) <- names(ce_cp)
 #   ))
 # }
 
-# find k via Elbow plot
-twgss_vals <- bind_rows(lapply(seq_along(dist_cp), \(i) {
+# Find k via Elbow plot
 
-  season <- as.character(marg_laplace_cp[[i]]$season)
-  # group <- as.numeric(marg_laplace_cp[[i]]$group)
-  # years <- year_from_season_group(season, group)
-  years <- ifelse(
-    season == names(dist_cp)[[i]],
-    NA,
-    str_split(names(dist_cp)[[i]], " - ")[[1]][[2]]
-  )
+# function to calculate TWD for each season and changepoint group
+calc_twgss <- \(dist_cp, marg_laplace_cp, k_vals = 1:10) {
+  twgss_vals <- bind_rows(lapply(seq_along(dist_cp), \(i) {
+    season <- as.character(marg_laplace_cp[[i]]$season)
+    # group <- as.numeric(marg_laplace_cp[[i]]$group)
+    # years <- year_from_season_group(season, group)
+    years <- ifelse(
+      season == names(dist_cp)[[i]],
+      NA,
+      str_split(names(dist_cp)[[i]], " - ")[[1]][[2]]
+    )
 
-  data.frame(
-    "twgss"    = plot_scree(dist_cp[[i]]$dist_mat, 1:10, "none"),
-    "k"        = 1:10, # TODO Add to metadata
-    "season"   = season,
-    "years"    = years
-  )
-}))
+    data.frame(
+      "twgss"    = plot_scree(dist_cp[[i]]$dist_mat, 1:10, "none"),
+      "k"        = k_vals, # TODO Add to metadata
+      "season"   = season,
+      "years"    = years
+    )
+  }))
 
-twgss_vals |>
+  return(twgss_vals)
+}
+
+twgss_vals <- calc_twgss(dist_cp, marg_laplace_cp)
+
+twgss_plot <- twgss_vals |>
   arrange(factor(season, levels = seasons)) |>
   mutate(
     ind = ifelse(
@@ -1139,17 +1169,12 @@ twgss_vals |>
   labs(y = "TWD") +
   cecl_theme()
 
+twgss_plot
+
+ggsave(plot = twgss_plot, paste0("latex/plots/twgss_dqu_", dqu, ".png"), width = 12, height = 8)
+
 # TODO Fit for k = 2 and k = 4 as well, even just so as to save
 k <- 3 # Do for now, but might need to test for others later ...
-
-# cluster
-clust_cp <- lapply(dist_cp, \(x) {
-  cecl_clust(
-      x,
-      k      = k,
-      ncores = getOption("mc_cores", 2L)
-    )
-})
 
 # function to ensure colours in map plots are always aligned
 align_pam_labels <- \(reference_pam, target_pam) {
@@ -1216,89 +1241,376 @@ align_pam_labels <- \(reference_pam, target_pam) {
   aligned_pam
 }
 
-# align colours
-clust_cp_aligned <- clust_cp
-for (i in seq_along(clust_cp_aligned)) {
-  if (i != reference_i) {
-    clust_cp_aligned[[i]]$pam <- align_pam_labels(
-      reference_pam = clust_cp[[reference_i]]$pam,
-      target_pam = clust_cp[[i]]$pam
+# function to make map plots for each season and changepoint group
+map_plot <- \(
+  dist_cp,
+  marg_laplace_cp,
+  k = 3,
+  # common reference solution for aligning cluster colours
+  reference_name = "Winter - 1960-1998",
+  # indices of plots to remove x and y axes (for better layout)
+  wch_rm_x_axis = c(1, 2, 3),
+  wch_rm_y_axis = c(2, 3, 5, 6)
+) {
+  # cluster
+  clust_cp <- lapply(dist_cp, \(x) {
+    cecl_clust(
+      x,
+      k      = k,
+      ncores = getOption("mc_cores", 2L)
     )
+  })
+
+  # Use Winter 1960–1998 as the common reference solution
+  # reference_name <- "Winter - 1960-1998"
+  reference_i <- match(reference_name, names(clust_cp))
+
+  # align colours
+  clust_cp_aligned <- clust_cp
+  for (i in seq_along(clust_cp_aligned)) {
+    if (i != reference_i) {
+      clust_cp_aligned[[i]]$pam <- align_pam_labels(
+        reference_pam = clust_cp[[reference_i]]$pam,
+        target_pam = clust_cp[[i]]$pam
+      )
+    }
   }
+
+  # assign distinct colours for each cluster
+  cluster_cols <- stats::setNames(
+    ggsci::pal_nejm()(k),
+    as.character(seq_len(k))
+  )
+
+  # map_plots_cp <- mclapply(seq_along(clust_cp_aligned), \(i) {
+  map_plots_cp <- lapply(seq_along(clust_cp_aligned), \(i) {
+    season <- as.character(marg_laplace_cp[[i]]$season)
+
+    years <- ifelse(
+      season == names(dist_cp)[[i]],
+      NA,
+      str_split(names(dist_cp)[[i]], " - ")[[1]][[2]]
+    )
+
+    ind <- ifelse(
+      !is.na(years),
+      paste0(season, " - ", years),
+      season
+    )
+
+    p <- plt_clust_map(
+      pts = pts,
+      areas = areas_proj,
+      clust_obj = clust_cp_aligned[[i]]$pam,
+      plot_medoids = FALSE,
+      pt_size = 6,
+      elev_df = elev_df,
+      point_cols = cluster_cols,
+      alpha = 1
+    ) +
+      ggtitle(ind)
+
+    # TODO May have to change if layout changes
+    # if (i %in% c(1, 2, 3)) {
+    if (!is.null(wch_rm_x_axis) && i %in% wch_rm_x_axis) {
+      p <- p +
+        theme(
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()
+        )
+    }
+
+    # if (i %in% c(2, 3, 5, 6)) {
+    if (!is.null(wch_rm_y_axis) && i %in% wch_rm_y_axis) {
+      p <- p +
+        theme(
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank()
+        )
+    }
+
+    p
+  })
+
+  names(map_plots_cp) <- names(clust_cp_aligned)
+
+  # return(wrap_plots(map_plots_cp))
+  return(list(
+    clust_cp_aligned = clust_cp_aligned,
+    map_plots_join = wrap_plots(map_plots_cp)
+  ))
 }
 
-# assign distinct colours for each cluster
-cluster_cols <- stats::setNames(
-  ggsci::pal_nejm()(k),
-  as.character(seq_len(k))
-)
-
-# map_plots_cp <- mclapply(seq_along(clust_cp_aligned), \(i) {
-map_plots_cp <- lapply(seq_along(clust_cp_aligned), \(i) {
-  season <- as.character(marg_laplace_cp[[i]]$season)
-
-  years <- ifelse(
-    season == names(dist_cp)[[i]],
-    NA,
-    str_split(names(dist_cp)[[i]], " - ")[[1]][[2]]
-  )
-
-  ind <- ifelse(
-    !is.na(years),
-    paste0(season, " - ", years),
-    season
-  )
-
-  p <- plt_clust_map(
-    pts = pts,
-    areas = areas_proj,
-    clust_obj = clust_cp_aligned[[i]]$pam,
-    plot_medoids = FALSE,
-    pt_size = 6,
-    elev_df = elev_df,
-    point_cols = cluster_cols,
-    alpha = 1
-  ) +
-    ggtitle(ind)
-
-  if (i %in% c(1, 2, 3)) {
-    p <- p +
-      theme(
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()
-      )
-  }
-
-  if (i %in% c(2, 3, 5, 6)) {
-    p <- p +
-      theme(
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank()
-      )
-  }
-
-  p
-})
-
-names(map_plots_cp) <- names(clust_cp_aligned)
-
-map_plots_join <- wrap_plots(map_plots_cp)
-
-map_plots_join
+map_out <- map_plot(dist_cp, marg_laplace_cp, k = 3)
+clust_cp_aligned <- map_out$clust_cp_aligned
+map_plots_join <- map_out$map_plots_join
 
 # ggsave(plot = map_plots_join, "latex/plots/clust_map.png", width = 12, height = 8)
 ggsave(plot = map_plots_join, paste0("latex/plots/clust_map_dqu_", dqu, ".png"), width = 12, height = 8)
 
 
-#### Results for different dissimilarity matrices?? ####
-#### DQU Sensitivity Plot (for 80 and 85%) ####
+#### k = 2, k = 4 ####
 
+# plot for k = 2 and k = 4, for completeness
+k_vals <- c(2, 4)
+map_plots_join_k <- lapply(k_vals, map_plot, dist_cp = dist_cp, marg_laplace_cp = marg_laplace_cp)
+lapply(seq_along(map_plots_join_k), \(i) {
+  ggsave(
+    plot = map_plots_join_k[[i]]$map_plots_join,
+    paste0("latex/plots/clust_map_dqu_", dqu, "_k", k_vals[[i]], ".png"),
+    width = 12, height = 8
+  )
+})
+
+
+#### Changepoints for Autumn, Summer and Winter (i.e. taking sig = 10% lev) ####
+
+# also seen a changepoint for Autumn at 1986 at the 10% significance level, but not at 5%.
+data_laplace_cp_autumn <- data_laplace |>
+  mutate(
+    # TODO Just plot for Autumn now, can add other seasons later if needed
+    group = case_when(
+      # season == "Spring"                       ~ 1,
+      season == "Autumn" & season_year <= 1986 ~ 1,
+      season == "Autumn" & season_year > 1986 ~ 2,
+      # season == "Winter" & season_year <= 1998 ~ 1,
+      # season == "Summer" & season_year <= 1990 ~ 1,
+      # TRUE                                     ~ 2
+      TRUE ~ NA
+    )
+  ) |>
+  filter(!is.na(group)) |>
+  mutate(
+    season = factor(season, levels = seasons),
+    group = factor(group, levels = c(1, 2)),
+    ind = paste0(season, " - ", group),
+    ind = case_when(
+      # ind == "Winter - 1" ~ "Winter - 1960-1998",
+      # ind == "Winter - 2" ~ "Winter - 1999-2020",
+      # ind == "Summer - 1" ~ "Summer - 1960-1990",
+      # ind == "Summer - 2" ~ "Summer - 1991-2020",
+      ind == "Autumn - 1" ~ "Autumn - 1960-1986",
+      ind == "Autumn - 2" ~ "Autumn - 1987-2020",
+      TRUE ~ season
+    ),
+    ind = factor(
+      ind,
+      levels = c(
+        # "Winter - 1960-1998", "Winter - 1999-2020",
+        # "Spring",
+        # "Summer - 1960-1990", "Summer - 1991-2020",
+        "Autumn - 1960-1986", "Autumn - 1987-2020"
+      )
+    )
+  )
+
+# calculate distances for Autumn changepoint groups
+out_autumn <- make_dist_mat(data_laplace_cp_autumn)
+marg_laplace_cp_autumn <- out_autumn[[1]]
+dist_cp_autumn <- out_autumn[[2]]
+
+# find k via Elbow plot
+twgss_vals_autumn <- calc_twgss(dist_cp_autumn, marg_laplace_cp_autumn)
+
+twgss_plot_autumn <- twgss_vals_autumn |>
+  arrange(factor(season, levels = seasons)) |>
+  mutate(
+    ind = ifelse(
+      !is.na(years), paste0(season, " - ", years), season
+    ),
+    ind = factor(
+      ind,
+      # levels = c(
+      #   "Winter - 1960-1998", "Winter - 1999-2020",
+      #   "Spring",
+      #   "Summer - 1960-1990", "Summer - 1991-2020",
+      #   "Autumn"
+      # )
+      levels = c(
+        "Autumn - 1960-1986", "Autumn - 1987-2020"
+      )
+    )
+  ) |>
+  ggplot(aes(x = k, y = twgss)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = unique(twgss_vals$k)) +
+  facet_wrap(~ind, scale = "free_y") +
+  labs(y = "TWD") +
+  cecl_theme()
+
+twgss_plot_autumn
+
+ggsave(plot = twgss_plot_autumn, paste0("latex/plots/twgss_dqu_", dqu, "_autumn.png"), width = 12, height = 8)
+
+k <- 3
+
+# TODO Fix plot
+# map_plots_join_autumn <- map_plot(
+# TODO May have to re-align solutions with Winter (looks okay to me!)
+map_out_autumn <- map_plot(
+  dist_cp_autumn,
+  marg_laplace_cp_autumn,
+  k              = 3,
+  reference_name = "Autumn - 1960-1986",
+  wch_rm_x_axis  = NULL,
+  wch_rm_y_axis  = NULL
+)
+clust_cp_aligned_autumn <- map_out_autumn$clust_cp_aligned
+map_plots_join_autumn <- map_out_autumn$map_plots_join
+
+ggsave(
+  plot = map_plots_join_autumn,
+  paste0("latex/plots/clust_map_dqu_", dqu, "_autumn.png"),
+  width = 12, height = 8
+)
+
+
+#### Results for different dissimilarity matrices (before/after changepoint) ####
+
+# TODO Need to think about this one more!
+# - 6 plots of all distance matrices is far too many (could put individually in supplementary materials)
+# - 3 plots of differences is doable, however we do need to think about
+#   how to align them (will need to use difference matrices, rather than
+#   clustering ones, since they're ordered differently (or re-order within
+#   clustering solutions))
+
+seasons_diff <- c("Winter", "Summer", "Autumn")
+
+# pull clustering solutions for changepoints
+# TODO May have to re-align solutions
+clust_cp_plt <- c(
+  clust_cp_aligned[grepl(c("Winter|Summer"), names(clust_cp_aligned))],
+  clust_cp_aligned_autumn[grepl(c("Autumn"), names(clust_cp_aligned_autumn))]
+)
+
+# TODO Make y-axis text slightly bigger etc
+# TODO Maybe add title as facet title, rather than ggtitle?
+dist_plts <- lapply(seasons_diff, \(season) {
+  x <- clust_cp_plt[grepl(season, names(clust_cp_plt))]
+
+  plts <- lapply(seq_along(x), \(i) {
+    ggplot(x[[i]]) +
+      # Remove "Season - " from name
+      ggtitle(gsub(paste0(season, " - "), "", names(x)[[i]])) +
+      # facet_wrap(vars(gsub(paste0(season, " - "), "", names(x)[[i]]))) +
+      # need to manually add back cecl_theme details
+      theme(
+        axis.text        = element_text(size = 10),
+        # strip.text       = element_text(size = 13, face = "bold"),
+        # strip.background = element_rect(fill = NA, colour = "black"),
+        plot.title       = element_text(size = 16, hjust = 0.5),
+        legend.text      = element_text(size = 12, angle = 45, hjust = 1),
+        legend.position  = "bottom"
+      )
+  })
+  wrap_plots(plts, nrow = 1)
+})
+names(dist_plts) <- seasons_diff
+
+# save
+lapply(seq_along(dist_plts), \(i) {
+  ggsave(
+    plot = dist_plts[[i]],
+    paste0("latex/plots/dist_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
+    width = 16, height = 8
+  )
+})
+
+# calculate differences for seasons with changepoints
+seasons_diff <- c("Winter", "Summer", "Autumn")
+
+dist_cp_diff <- c(
+  dist_cp[grepl(c("Winter|Summer"), names(dist_cp))],
+  dist_cp_autumn[grepl(c("Autumn"), names(dist_cp_autumn))]
+)
+
+dist_cp_plt <- lapply(seasons_diff, \(season) {
+  dist_cp_season <- dist_cp_diff[which(grepl(season, names(dist_cp_diff)))]
+
+  dist_mat1 <- dist_cp_season[[1]]$dist_mat
+  dist_mat2 <- dist_cp_season[[2]]$dist_mat
+
+  # ensure ordering in matrices is the same
+  stopifnot(colnames(dist_mat1) == colnames(dist_mat2))
+  stopifnot(rownames(dist_mat1) == colnames(dist_mat2))
+
+  dist_cp_ret <- dist_cp_season[[1]]
+  dist_cp_ret$dist_mat <- dist_cp_season[[1]]$dist_mat -
+    dist_cp_season[[2]]$dist_mat
+
+  dist_cp_ret
+})
+names(dist_cp_plt) <- seasons_diff
+
+# function to plot difference matrices for each season
+plt_dist_diff <- \(dist_cp_plt, divergent_colour = TRUE) {
+  lapply(seasons_diff, \(season) {
+    plt <- ggplot(dist_cp_plt[[which(grepl(season, names(dist_cp_plt)))]]) +
+      ggtitle(season) +
+      # need to manually add back cecl_theme details
+      theme(
+        axis.text        = element_text(size = 10),
+        plot.title       = element_text(size = 16, hjust = 0.5),
+        legend.text      = element_text(size = 12) # , angle = 45, hjust = 1)
+        # legend.position  = "bottom"
+      )
+    # use divergent colours for differences
+    if (divergent_colour) {
+      plt <- plt +
+        scale_fill_gradient2(
+          low = "blue3",
+          mid = "white",
+          high = "red3",
+          midpoint = 0,
+          na.value = "grey",
+          guide = "legend"
+        )
+    }
+    plt
+  })
+}
+
+dist_plts <- plt_dist_diff(dist_cp_plt)
+
+# would also be interesting to look at absolute differences!
+dist_cp_plt_abs <- lapply(dist_cp_plt, \(x) {
+  x$dist_mat <- abs(x$dist_mat)
+  x
+})
+
+dist_plts_abs <- plt_dist_diff(dist_cp_plt_abs, divergent_colour = FALSE)
+
+# save both
+lapply(seq_along(dist_plts), \(i) {
+  ggsave(
+    plot = dist_plts[[i]],
+    paste0("latex/plots/dist_diff_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
+    width = 12, height = 8
+  )
+})
+lapply(seq_along(dist_plts_abs), \(i) {
+  ggsave(
+    plot = dist_plts_abs[[i]],
+    paste0("latex/plots/dist_diff_abs_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
+    width = 12, height = 8
+  )
+})
+
+
+#### Clustering solutions vs distance to coast and elevation ####
+
+# TODO Calculate distance to coast using shapefile with France & Portugal inc.
+# TODO Plot clustering solutions vs distance to coast and elevation
+# - Do for each changepoint season, as well as Spring
+
+
+
+
+#### DQU Sensitivity Plot (for 80 and 85%) ####
 #### Supplementary Materials ####
 #### TODO Parameter maps before/after changepoint ####
 #### TODO Gaussian QQ plots ####
-
-
-
 #### Old ####
 #### Chi plot ####
 
