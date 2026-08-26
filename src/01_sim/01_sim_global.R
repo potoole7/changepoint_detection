@@ -808,7 +808,7 @@ permutation_scan_plots <- permutation_scan_plots[[1]]
 
 # save
 plot_directory <- paste0(
-  "plots/02_sim/permutation_scan_n_perm_",
+  "plots/01_sim/permutation_scan_n_perm_",
   n_perm_screen,
   "_dqu_",
   dqu
