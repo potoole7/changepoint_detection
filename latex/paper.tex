@@ -151,7 +151,7 @@ We model multivariate extremal dependence using the conditional extremes (CE) fr
 
 
 This framework describes the behaviour of a random vector conditional on one of its components exceeding a high threshold, and can accommodate both asymptotic dependence and asymptotic independence. 
-We briefly summarise the spatial formulation used here; further details are provided in \citet{OToole2025}.
+We briefly summarise the spatial formulation used here; further details are provided in \citet{OToole2026clustering}.
 
 Let $\boldsymbol{X}_s = (X_{1,s}, \ldots, X_{d,s})$ denote a $d$-dimensional random vector observed at spatial location $s \in \{1, \ldots, D\}$. 
 Following \citet{Keef2013}, we transform each component to standard Laplace margins, yielding $\boldsymbol{Y}_s = (Y_{1,s}, \ldots, Y_{d,s})$. 
@@ -218,7 +218,7 @@ The Gaussian working model also permits the closed-form divergence calculations 
 
 \subsection{Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence}\label{subsec:div}
 
-To compare extremal dependence structures across spatial locations, we use the divergence-based framework of \citet{OToole2025}. 
+To compare extremal dependence structures across spatial locations, we use the divergence-based framework of \citet{OToole2026clustering}. 
 This approach measures dissimilarity between fitted CE models using the skew-geometric Jensen--Shannon divergence of \citet{Nielsen2019}, which has a closed-form expression for the Gaussian conditional distributions in Equation~\eqref{eq:ce_conditional_gaussian}.
 
 For two distributions $H$ and $H^*$, the dual skew-geometric Jensen--Shannon divergence is
@@ -238,7 +238,7 @@ G_{\lambda}(H,H^*) \Vert H^*
 \end{equation}
 where $\KL$ denotes the Kullback--Leibler divergence and $G_{\lambda}(H,H^*)$ is the distribution with density proportional to the weighted geometric mean of the densities of $H$ and $H^*$. 
 We set $\lambda=0.5$, yielding a symmetric, non-negative measure of dissimilarity. 
-When $H$ and $H^*$ are multivariate Gaussian, Equation~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2025} for details.
+When $H$ and $H^*$ are multivariate Gaussian, Equation~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2026clustering} for details.
 
 Let $H_{i,s,T}(y)$ denote the fitted conditional distribution of $\boldsymbol{Y}_{-i,s}$ given $Y_{i,s}=y$ at location $s$, estimated using observations from temporal block $T$. 
 For two locations $s$ and $s^*$, and conditioning variable $i$, the conditional extremal divergence is
