@@ -130,15 +130,30 @@ We hope to build on these existing approaches and also the divergence-based clus
 
 \section{Methodology}\label{sec:method}
 
-In this section, we describe a framework for detecting changepoints in multivariate extremal dependence structures.
-Section~\ref{subsec:ce} introduces the CE framework of \citet{Heffernan2004} and \citet{Keef2013}, which we use to model the extremal dependence structure of multivariate data.
-Section~\ref{subsec:div} describes how the extremal skew-geometric $\JSGa$ divergence can be used to quantify the difference between two extremal dependence structures.
-Finally, in Section~\ref{subsec:cp}, we describe a permutation-based procedure for detecting changepoints in the extremal dependence structure over time, using the divergence measure to quantify differences between temporal blocks.
+In what follows, we describe our framework for detecting changepoints in multivariate extremal dependence structures. Section~\ref{subsec:ce} summarizes the conditional extremes (CE) framework of \citet{Heffernan2004} and \citet{Keef2013} which describes the tail behaviour of a random vector conditional on one of its components exceeding a high threshold. Section~\ref{subsec:div} outlines the divergence measure of \cite{OToole2026clustering} for quantifying similarity of CE models. Finally, Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting changepoints in the extremal dependence structure based on the CE framework. 
 
-\subsection{Conditional extremes model for multivariate extremal dependence}
+
+%using the divergence measure to quantify differences between temporal blocks. 
+
+
+%which we use to model the extremal dependence structure of multivariate data.
+
+
+%Section~\ref{subsec:div} describes how the extremal skew-geometric $\JSGa$ divergence can be used to quantify the difference between two extremal dependence structures.
+
+
+%Finally, in Section~\ref{subsec:cp}, we describe 
+
+\subsection{The conditional extremes model}
 \label{subsec:ce}
 
+Let 
+
+
+
 We model multivariate extremal dependence using the conditional extremes (CE) framework of \citet{Heffernan2004} and \citet{Keef2013}. 
+
+
 This framework describes the behaviour of a random vector conditional on one of its components exceeding a high threshold, and can accommodate both asymptotic dependence and asymptotic independence. 
 We briefly summarise the spatial formulation used here; further details are provided in \citet{OToole2025}.
 
