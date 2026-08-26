@@ -113,24 +113,29 @@ screen_setup_df <- tidyr::crossing(
 # arguments for simulate_t_copula_season function
 sim_args <- list(
   # chosen to emulate the application data
-  "n_sites"        = 40L,
-  "n_years"        = 60L,
+  "n_sites" = 40L,
+  "n_years" = 60L,
   # well separated "clusters" of sites, with different dependence structures
-  "baseline_rho"   = c(
+  "baseline_rho" = c(
     rep(0.1, 14L),
     rep(0.5, 13L),
     rep(0.8, 13L)
   ),
-  "change_type"    = cp_type,
+  "change_type" = cp_type,
   # TODO maybe parametrise by desired rho_t??
-  "delta_z"        = 0.45,
-  "change_start"   = 30L, # starts on middle year
-  "change_end"     = 60L,
+  "delta_z" = 0.45,
+  "change_start" = 30L, # starts on middle year
+  "change_end" = 60L,
   "affected_sites" = ifelse(cp_type == "local", 1:5, NA_integer_),
   "return_laplace" = TRUE
 )
 
 res <- lapply(seq_len(nreps), \(k) {
+  system(sprintf(
+    'echo "\n%s\n"',
+    paste0(k, " of ", nreps, " repititions completed")
+  ))
+
   system(sprintf(
     'echo "\n%s\n"',
     paste0(round(k / nreps, 3) * 100, "% completed", collapse = "")
@@ -329,13 +334,13 @@ screen_res_all_plt <- screen_res_all |>
   # add rep number
   group_by(n_years_per_block, change_after_year) |>
   mutate(rep = row_number()) |>
-  ungroup() |>  # stack metrics into one column
+  ungroup() |> # stack metrics into one column
   pivot_longer(c(frob, inf, spec)) |>
   # scale between 0 and 1
   group_by(name, n_years_per_block) |>
   mutate(value = boot::inv.logit(scale(value))) |>
- ungroup() |>
- mutate(
+  ungroup() |>
+  mutate(
     name = case_when(
       name == "frob" ~ "Frobenius",
       name == "inf" ~ "Infinity",
