@@ -128,7 +128,7 @@ In \citet{Agarwal2025}, a likelihood-based method for detecting temporal changep
 We hope to build on these existing approaches and also the divergence-based clustering framework developed in our paper to develop a method for detecting changepoints in multivariate extremal dependence structures, which can be applied to a wide range of datasets and applications.
 
 
-\section{Methodology}\label{sec:methods}
+\section{Methodology}\label{sec:method}
 
 In this section, we describe a framework for detecting changepoints in multivariate extremal dependence structures.
 Section~\ref{subsec:ce} introduces the CE framework of \citet{Heffernan2004} and \citet{Keef2013}, which we use to model the extremal dependence structure of multivariate data.
@@ -495,8 +495,9 @@ Rather than imposing an instantaneous changepoint, we allow the extremal depende
 The objective is therefore not to recover a single exact change time, but to assess whether the procedure identifies evidence of a transition and whether the Frobenius and infinity norms respond differently to widespread and localised changes.
 
 In Section~\ref{subsec:sim_setup}, we describe the simulation setup and the scenarios considered, which include a null scenario with no change, a local change affecting a subset of sites, and a global change affecting all sites.
-\textcolor{red}{Describe results section}
+\textcolor{red}{TODO: Describe results section here}
 
+\subsection{Simulation setup}
 \label{subsec:sim_setup}
 
 We simulate two variables at $D=40$ sites over $60$ season-years, with $12$ weekly observations in each season-year. 
@@ -524,11 +525,11 @@ where $A_s$ indicates whether site $s$ is affected by the change, $\delta_z$ con
 Specifically,
 \begin{equation}
 \label{eq:sim_transition}
-g(t) = 
+g(t) =
 \begin{cases}
-0, & t \leq t_0,[3pt]
-\dfrac{t-t_0}{t_1-t_0}, & t_0<t<t_1,[8pt]
-1, & t \geq t_1,
+0, & t \leq t_0, \\
+\dfrac{t - t_0}{t_1 - t_0}, & t_0 < t < t_1, \\
+1, & t \geq t_1.
 \end{cases}
 \end{equation}
 so that the dependence parameter is constant before season-year $t_0$, changes gradually between $t_0$ and $t_1$, and remains constant thereafter. 
@@ -552,8 +553,6 @@ Under the null scenario, the $p$-values give an empirical frequency with which t
 Under the local and global alternatives, they measure the ability of the procedure to detect the simulated transition and identify the region to which the estimated change is localised.
 
 \subsection{Simulation results}\label{subsec:sim_results}
-
-
 
 \begin{itemize}
 \item We simulate weekly observations for one season at 40 locations over 60 years, with 12 observations per season--year, i.e.\ for a single ``season'', as found in our application section in Section~\ref{sec:app}.

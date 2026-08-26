@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  24 AUG 2026 17:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2025.2.5)  25 AUG 2026 13:22
 entering extended mode
  \write18 enabled.
  %&-line parsing enabled.
@@ -2082,9 +2082,6 @@ e 211.
 
 [2]
 
-LaTeX Warning: Reference `eq:jsga' on page 3 undefined on input line 230.
-
-
 Package natbib Warning: Citation `Nielsen2019' on page 3 undefined on input lin
 e 230.
 
@@ -2092,34 +2089,15 @@ e 230.
 Package natbib Warning: Citation `OToole2025' on page 3 undefined on input line
  230.
 
-
-LaTeX Warning: Reference `eq:cjsga' on page 3 undefined on input line 248.
-
-
-LaTeX Warning: Reference `eq:jsga_integral' on page 3 undefined on input line 2
-68.
-
 [3]
 
 Package natbib Warning: Citation `Good2004' on page 4 undefined on input line 3
 16.
 
-
-LaTeX Warning: Reference `eq:distance_matrix' on page 4 undefined on input line
- 326.
-
-
-LaTeX Warning: Reference `eq:aggregate_matrix' on page 4 undefined on input lin
-e 326.
-
 [4]
 
-LaTeX Warning: Reference `subsec:sim_setup' on page 5 undefined on input line 4
-99.
-
-
 Package natbib Warning: Citation `Demarta2007-ap' on page 5 undefined on input 
-line 505.
+line 504.
 
 ! Missing delimiter (. inserted).
 <to be read again> 
@@ -2145,29 +2123,23 @@ l.522 \right}
 l.522 \right}
              ,
 ? 
-! Extra alignment tab has been changed to \cr.
-<template> ...w@strut \hfil $\relax $\endtemplate 
-                                                  
-l.531 \dfrac{t-t_0}{t_1-t_0}, &
-                                t_0<t<t_1,[8pt]
-? 
 [5]
 LaTeX Font Info:    Trying to load font information for TS1+stix on input line 
-560.
+558.
  (/usr/share/texlive/texmf-dist/tex/latex/stix/ts1stix.fd
 File: ts1stix.fd 2015/04/17 v1.1.2-latex STIX TS1 font definitions
 ) [6]
 ! Misplaced alignment tab character &.
-l.632 ...ed from the European Climate Assessment &
+l.630 ...ed from the European Climate Assessment &
                                                    Dataset (ECA&D) \citep{EC...
 
 ? 
 ! Misplaced alignment tab character &.
-l.632 ...ropean Climate Assessment & Dataset (ECA&
+l.630 ...ropean Climate Assessment & Dataset (ECA&
                                                   D) \citep{ECADdaily}.
 ? 
 ! Misplaced alignment tab character &.
-l.633 \item The ECA&
+l.631 \item The ECA&
                     D provides quality-controlled daily meteorological obser...
 
 ? 
@@ -2178,14 +2150,14 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.649 D=-\mathrm
+l.647 D=-\mathrm
                 {SPI},
 ? 
 [7]
-<plots/intro_trim.png, id=118, 823.3962pt x 286.1892pt>
+<plots/intro_trim.png, id=127, 823.3962pt x 286.1892pt>
 File: plots/intro_trim.png Graphic file (type png)
 <use plots/intro_trim.png>
-Package pdftex.def Info: plots/intro_trim.png  used on input line 666.
+Package pdftex.def Info: plots/intro_trim.png  used on input line 664.
 (pdftex.def)             Requested size: 456.75398pt x 158.75827pt.
 
 
@@ -2195,7 +2167,7 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.671 }
+l.669 }
        
 ? 
 
@@ -2205,39 +2177,40 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.671 }
+l.669 }
        
 ? 
 [8 <./plots/intro_trim.png>]
 
-LaTeX Warning: Reference `sec:method' on page 9 undefined on input line 727.
+LaTeX Warning: Reference `sec:method' on page 9 undefined on input line 725.
 
 [9] [10]
-<plots/screen.png, id=137, 867.24pt x 578.16pt>
+<plots/screen.png, id=147, 867.24pt x 578.16pt>
 File: plots/screen.png Graphic file (type png)
 <use plots/screen.png>
-Package pdftex.def Info: plots/screen.png  used on input line 809.
+Package pdftex.def Info: plots/screen.png  used on input line 807.
 (pdftex.def)             Requested size: 456.75398pt x 304.50896pt.
  [11 <./plots/screen.png>]
 
-LaTeX Warning: Reference `sec:method' on page 12 undefined on input line 875.
+LaTeX Warning: Reference `sec:method' on page 12 undefined on input line 873.
 
-<plots/change.png, id=146, 867.24pt x 578.16pt>
+<plots/change.png, id=154, 867.24pt x 578.16pt>
 File: plots/change.png Graphic file (type png)
 <use plots/change.png>
-Package pdftex.def Info: plots/change.png  used on input line 886.
+Package pdftex.def Info: plots/change.png  used on input line 884.
 (pdftex.def)             Requested size: 456.75398pt x 304.50896pt.
+[12]
 
-LaTeX Warning: Reference `sec:method' on page 12 undefined on input line 917.
+LaTeX Warning: Reference `sec:method' on page 13 undefined on input line 915.
 
-[12] [13 <./plots/change.png>]
-<plots/clust_map_trim.png, id=158, 829.1778pt x 504.4446pt>
+[13 <./plots/change.png>]
+<plots/clust_map_trim.png, id=167, 829.1778pt x 504.4446pt>
 File: plots/clust_map_trim.png Graphic file (type png)
 <use plots/clust_map_trim.png>
-Package pdftex.def Info: plots/clust_map_trim.png  used on input line 952.
+Package pdftex.def Info: plots/clust_map_trim.png  used on input line 950.
 (pdftex.def)             Requested size: 456.75398pt x 277.87642pt.
 
-Overfull \hbox (13.0pt too wide) in paragraph at lines 998--998
+Overfull \hbox (13.0pt too wide) in paragraph at lines 996--996
 [] [] 
  []
 
@@ -2264,15 +2237,12 @@ LaTeX Font Warning: Size substitutions with differences
 
 LaTeX Warning: There were undefined references.
 
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
  ) 
 Here is how much of TeX's memory you used:
- 34215 strings out of 477975
- 599474 string characters out of 5839282
+ 34217 strings out of 477975
+ 599494 string characters out of 5839282
  1876330 words of memory out of 5000000
- 53605 multiletter control sequences out of 15000+600000
+ 53606 multiletter control sequences out of 15000+600000
  675010 words of font info for 276 fonts, out of 8000000 for 9000
  85 hyphenation exceptions out of 8191
  99i,11n,94p,1041b,582s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -2292,10 +2262,10 @@ dy7wb/texmf/fonts/type1/public/stix/stix-mathit-bold.pfb></home/paddy7wb/texmf/
 fonts/type1/public/stix/stix-mathit.pfb></home/paddy7wb/texmf/fonts/type1/publi
 c/stix/stix-mathrm-bold.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-
 mathrm.pfb></home/paddy7wb/texmf/fonts/type1/public/stix/stix-mathscr.pfb>
-Output written on paper.pdf (15 pages, 3071269 bytes).
+Output written on paper.pdf (15 pages, 3071668 bytes).
 PDF statistics:
- 317 PDF objects out of 1000 (max. 8388607)
- 268 compressed objects within 3 object streams
- 63 named destinations out of 1000 (max. 500000)
- 217 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 329 PDF objects out of 1000 (max. 8388607)
+ 280 compressed objects within 3 object streams
+ 64 named destinations out of 1000 (max. 500000)
+ 225 words of extra memory for PDF output out of 10000 (max. 10000000)
 
