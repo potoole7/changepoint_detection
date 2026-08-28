@@ -146,8 +146,8 @@ Following \citet{Keef2013}, we transform each component of $\boldsymbol{X}_s^{(t
 \begin{equation}
 Y_{i,s}^{(t)} =
 \begin{cases}
-\log\left\{2 \left(F_{i,s}^{(t)}\right)^{-1}(X_{i,s}^{(t)})\right\} & \mbox{for}~X_{i,s}^{(t)} < F_{i,s}^{(t)}(0.5),\\
--\log\left\{2 \left[1-\left(F_{i,s}^{(t)}\right)^{-1}(X_{i,s}^{(t)})\right]\right\} & \mbox{for}~X_{i,s}^{(t)} \geq F_{i,s}^{(t)}(0.5),
+\log\left\{2 F_{i,s}^{(t)}(X_{i,s}^{(t)})\right\} & \mbox{for}~F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right) < 0.5,\\
+-\log\left\{2 \left[1-F_{i,s}^{(t)}(X_{i,s}^{(t)})\right]\right\} & \mbox{for}~F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right) \geq 0.5,
 \end{cases}
 \label{eq:Laplace}
 \end{equation}
@@ -226,7 +226,7 @@ y^{\boldsymbol{\beta}_{\mid i,s}^{(t)}}
 
 We fit this model separately for each conditioning variable and spatial location, without imposing spatial smoothness. The threshold $u_{i,s}^{(t)}$ is fixed at a high quantile $u$ of the standard Laplace distribution, for all $i$ and $s$, to ensure that the resulting CE models are comparable across locations.
 
-Although the Gaussian assumption \eqref{eq:ce_conditional_gaussian} is known to suffer from parameter identifiability issues and may lead to invalid inference \citep{Keef2012_flooding}, the results of \cite{OToole2026clustering} suggest that these shortcomings have limited impact when the primary objective is to analyse spatial variation in extremal dependence among $\boldsymbol{X}_1^{(t)}, \ldots,\boldsymbol{X}_D^{(t)}$. It is therefore reasonable to expect that the assumption remains adequate when additionally allowing for non-stationarity in the extremal dependence structure. Moreover, the assumption yields substantial computational advantages, as discussed in the next subsection.
+Although the Gaussian assumption~\eqref{eq:ce_conditional_gaussian} is known to suffer from parameter identifiability issues and may lead to invalid inference \citep{Keef2012_flooding}, the results of \cite{OToole2026clustering} suggest that these shortcomings have limited impact when the primary objective is to analyse spatial variation in extremal dependence among $\boldsymbol{X}_1^{(t)}, \ldots,\boldsymbol{X}_D^{(t)}$. It is therefore reasonable to expect that the assumption remains adequate when additionally allowing for non-stationarity in the extremal dependence structure. Moreover, the assumption yields substantial computational advantages, as discussed in the next subsection.
 
 
 
@@ -236,30 +236,43 @@ Although the Gaussian assumption \eqref{eq:ce_conditional_gaussian} is known to 
 
 %Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence
 
-\cite{OToole2026clustering} introduce a dissimilarity measure based on the skew-geometric Jensen--Shannon divergence \citet{Nielsen2019} to quantify the similarity of CE models. 
+%To compare extremal dependence structures across spatial locations, we use the divergence-based framework of \citet{OToole2026clustering}. This approach measures dissimilarity between fitted CE models using the skew-geometric Jensen--Shannon divergence of \citet{Nielsen2019}, which has a closed-form expression for the Gaussian conditional distributions in Equation~\eqref{eq:ce_conditional_gaussian}.
 
-
-To compare extremal dependence structures across spatial locations, we use the divergence-based framework of \citet{OToole2026clustering}. 
-This approach measures dissimilarity between fitted CE models using the skew-geometric Jensen--Shannon divergence of \citet{Nielsen2019}, which has a closed-form expression for the Gaussian conditional distributions in Equation~\eqref{eq:ce_conditional_gaussian}.
-
-For two distributions $H$ and $H^*$, the dual skew-geometric Jensen--Shannon divergence is
+\cite{OToole2026clustering} introduce the conditional extremal skew-geometric Jensen--Shannon divergence as a dissimilarity measure to quantify the pairwise similarity of CE models; the measure itself is based on the skew-geometric Jensen--Shannon divergence \citet{Nielsen2019}. Let $H_{i,s}^{(t)}$ denote the distribution function of the CE model in \eqref{eq:ce_conditional_gaussian} for $\boldsymbol{Y}_{-i,s}^{(t)}\mid (Y_{i,s}^{(t)} = y)$. The skew-geometric Jensen--Shannon divergence of $H_{i,s}^{(t)}$ and $H_{i,s'}^{(t)}$ is then formally defined as
 \begin{equation}
 \label{eq:jsga}
-\JSGa{}(H \Vert H^*)
+\JSGa{}\left(H_{i,s}^{(t)} \Vert H_{i,s'}^{(t)}\right)
 =
-(1-\lambda)
-\KL\left\{
-G_{\lambda}(H,H^*) \Vert H
-\right\}
-+
 \lambda
 \KL\left\{
-G_{\lambda}(H,H^*) \Vert H^*
+G_{\lambda}\left(H_{i,s}^{(t)},H_{i,s'}^{(t)}\right) \Vert H_{i,s}^{(t)}
+\right\}
++
+(1-\lambda)
+\KL\left\{
+G_{\lambda}\left(H_{i,s}^{(t)},H_{i,s'}^{(t)}\right) \Vert H_{i,s'}^{(t)}
 \right\},
 \end{equation}
-where $\KL$ denotes the Kullback--Leibler divergence and $G_{\lambda}(H,H^*)$ is the distribution with density proportional to the weighted geometric mean of the densities of $H$ and $H^*$. 
-We set $\lambda=0.5$, yielding a symmetric, non-negative measure of dissimilarity. 
-When $H$ and $H^*$ are multivariate Gaussian, Equation~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2026clustering} for details.
+where $\KL$ denotes the Kullback--Leibler divergence, $G_{\lambda}\left(H_{i,s}^{(t)},H_{i,s'}^{(t)}\right)$ is the distribution with density proportional to the weighted geometric mean of the densities corresponding to $H_{i,s}^{(t)}$ and $H_{i,s'}^{(t)}$, and $\lambda\in[0,1]$. We set $\lambda=0.5$, yielding a symmetric, non-negative measure of dissimilarity. Due to the Gaussian assumption~\eqref{eq:ce_conditional_gaussian}, the expression in~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2026clustering} for details.
+
+
+%For two distribution functions, denoted by $H$ and $H^*$, the dual skew-geometric Jensen--Shannon divergence is defined as
+%\begin{equation}
+%\label{eq:jsga}
+%\JSGa{}(H \Vert H^*)
+%=
+%\lambda
+%\KL\left\{
+%G_{\lambda}(H,H^*) \Vert H
+%\right\}
+%+
+%(1-\lambda)
+%\KL\left\{
+%G_{\lambda}(H,H^*) \Vert H^*
+%\right\},
+%\end{equation}
+%where $\KL$ denotes the Kullback--Leibler divergence, $G_{\lambda}(H,H^*)$ is the distribution with density proportional to the weighted geometric mean of the densities corresponding to $H$ and $H^*$, and $\lambda\in[0,1]$. We set $\lambda=0.5$, yielding a symmetric, non-negative measure of dissimilarity. 
+%When $H$ and $H^*$ are multivariate Gaussian, Equation~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2026clustering} for details.
 
 Let $H_{i,s,T}(y)$ denote the fitted conditional distribution of $\boldsymbol{Y}_{-i,s}$ given $Y_{i,s}=y$ at location $s$, estimated using observations from temporal block $T$. 
 For two locations $s$ and $s^*$, and conditioning variable $i$, the conditional extremal divergence is
@@ -1074,6 +1087,11 @@ For Winter before the changepoint, the elbow plot suggests 4 clusters.
 
 \subsubsection{Changepoints for Autumn}
 
+\begin{itemize}
+    \item Not bad results; South West locations become more like red ones, and Eastern points go from blue to red (orange characterised by being more like red locations than blue ones).
+    \item Evidence of having higher temperature-DPI extremal dependence, as red locations have large $\chi$ \textcolor{red}{double check!}
+\end{itemize}
+
 \begin{figure}[htb]
 \centering
 \includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
@@ -1086,6 +1104,17 @@ For Winter before the changepoint, the elbow plot suggests 4 clusters.
 \newpage
 
 \subsubsection{Dissimilarity Matrices}
+
+\begin{itemize}
+\item Signed differences are calculated as $D_{\mathrm{before}}-D_{\mathrm{after}}$.
+\item Positive differences therefore indicate that a pair of locations became more similar after the changepoint, whereas negative differences indicate that it became more dissimilar.
+\item Winter contains a mixture of positive and negative differences, suggesting heterogeneous restructuring rather than a uniform change.
+\item The Winter changes are concentrated in particular rows and columns, indicating that a limited number of locations contribute disproportionately to the change.
+\item Summer differences are predominantly positive, suggesting a general reduction in pairwise dissimilarity after 1990.
+\item Summer also contains the largest individual absolute differences, reaching approximately $0.10$.
+\item Autumn differences are also predominantly positive but are more widely distributed throughout the matrix, suggesting a relatively widespread convergence in fitted dependence structure.
+\item Colour intensity should not be compared directly between seasons because the panels use different colour-scale limits.
+\end{itemize}
 
 \begin{figure}[htb]
 \centering
@@ -1112,6 +1141,27 @@ Go through PDFs.
 % \begin{itemize}
 %   \item 
 % \end{itemize}
+
+\subsubsection{Covariates and cluster membership}
+
+\begin{itemize}
+\item Cluster membership is associated with broad geographical structure, although geography does not completely determine the solutions.
+\item Autumn exhibits a particularly clear longitudinal ordering, while Summer shows a comparatively strong latitudinal division.
+\item Winter has a more complicated geographical structure and changes substantially after 1998.
+\item Elevation overlaps considerably between clusters and does not provide a consistent explanation of membership across seasons.
+\item Distance to the coast provides clearer separation, particularly in Winter and Summer.
+\item Pre-changepoint Winter cluster 2 and Summer cluster 2 generally contain more coastal locations, whereas other clusters contain more inland locations.
+\item High temperature quantiles clearly distinguish some clusters, including the warmer cluster 2 in pre-changepoint Winter and in Summer.
+\item Some temperature-quantile separation weakens after the changepoints, particularly in Winter and Autumn.
+\item High DPI quantiles provide some of the clearest marginal distinctions between clusters.
+\item Winter cluster 3 has the highest DPI quantiles, post-changepoint Summer cluster 2 has the highest DPI quantiles, and pre-changepoint Autumn shows a progression from lower values in cluster 1 to higher values in cluster 3.
+\item The empirical $\widehat{\chi}(0.9)$ and $\widehat{\overline{\chi}}(0.9)$ estimates also distinguish several clusters, confirming that the solutions represent different extremal-dependence regimes rather than only different marginal climates.
+\item Pre-changepoint Winter cluster 2 has relatively strong tail dependence, whereas cluster 3 has relatively weak tail dependence.
+\item In Autumn, cluster 2 generally has weaker tail dependence, while cluster 3 has especially strong tail dependence after 1986.
+\item Summer shows greater overlap in $\widehat{\chi}(0.9)$, although some separation remains in $\widehat{\overline{\chi}}(0.9)$.
+\item The physical interpretation of a cluster number can change between seasons and periods, so cluster labels should not be treated as having a universal meaning.
+\item The distance-to-coast axis currently appears to contain values in metres despite being labelled in kilometres and should be corrected before presentation.
+\end{itemize}
 
 \subsubsection{Cluster switching}
 
