@@ -226,13 +226,18 @@ y^{\boldsymbol{\beta}_{\mid i,s}^{(t)}}
 
 We fit this model separately for each conditioning variable and spatial location, without imposing spatial smoothness. The threshold $u_{i,s}^{(t)}$ is fixed at a high quantile $u$ of the standard Laplace distribution, for all $i$ and $s$, to ensure that the resulting CE models are comparable across locations.
 
-Although the Gaussian assumption \eqref{eq:ce_conditional_gaussian} is known to suffer from parameter identifiability issues and may lead to invalid inference \citep{Keef2012_flooding}, the results of \cite{OToole2026clustering} suggest that these shortcomings have limited impact when the primary objective is to analyse spatial variation in extremal dependence among $\boldsymbol{X}_1^{(t)}, \ldots,\boldsymbol{X}_D^{(t)}$.It is therefore reasonable to expect that the assumption remains adequate when additionally allowing for non-stationarity in the extremal dependence structure. Moreover, the assumption yields substantial computational advantages, as discussed in the next subsection.
+Although the Gaussian assumption \eqref{eq:ce_conditional_gaussian} is known to suffer from parameter identifiability issues and may lead to invalid inference \citep{Keef2012_flooding}, the results of \cite{OToole2026clustering} suggest that these shortcomings have limited impact when the primary objective is to analyse spatial variation in extremal dependence among $\boldsymbol{X}_1^{(t)}, \ldots,\boldsymbol{X}_D^{(t)}$. It is therefore reasonable to expect that the assumption remains adequate when additionally allowing for non-stationarity in the extremal dependence structure. Moreover, the assumption yields substantial computational advantages, as discussed in the next subsection.
 
 
 
 %The Gaussian working model also permits the closed-form divergence calculations described in Section~\ref{subsec:div}.
 
-\subsection{Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence}\label{subsec:div}
+\subsection{A divergence measure for condtional extremes models}\label{subsec:div}
+
+%Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence
+
+\cite{OToole2026clustering} introduce a dissimilarity measure based on the skew-geometric Jensen--Shannon divergence \citet{Nielsen2019} to quantify the similarity of CE models. 
+
 
 To compare extremal dependence structures across spatial locations, we use the divergence-based framework of \citet{OToole2026clustering}. 
 This approach measures dissimilarity between fitted CE models using the skew-geometric Jensen--Shannon divergence of \citet{Nielsen2019}, which has a closed-form expression for the Gaussian conditional distributions in Equation~\eqref{eq:ce_conditional_gaussian}.
