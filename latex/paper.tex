@@ -130,91 +130,107 @@ We hope to build on these existing approaches and also the divergence-based clus
 
 \section{Methodology}\label{sec:method}
 
-In what follows, we describe our framework for detecting changepoints in multivariate extremal dependence structures. Section~\ref{subsec:ce} summarises the conditional extremes (CE) framework of \citet{Heffernan2004} and \citet{Keef2013} which describes the tail behaviour of a random vector conditional on one of its components exceeding a high threshold. Section~\ref{subsec:div} outlines the divergence measure of \cite{OToole2026clustering} for quantifying similarity of CE models. Finally, Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting changepoints in the extremal dependence structure based on the CE framework. 
+Suppose we have $D$ spatial sites and observe $d$ variables across $T$ time points at each site. Let $\boldsymbol{X}_{s}^{(t)}=\left(X_{1,s}^{(t)}, \ldots,X_{d,s}^{(t)}\right)^{\mathrm{T}}$ denote the vector of variables observed at site $s\in\{1,\ldots,D\}$ and time $t\in\{1,\ldots,T\}$. Our objective is to analyse the tail behaviour of $\boldsymbol{X}_s^{(t)}$, in particular the extremal dependence of the $d$ variables at the individual time points and sites, and to assess whether there is evidence of non-stationarity in the tail behaviour at one or more site. Subsection~\ref{subsec:ce} summarises the conditional extremes (CE) framework by \cite{Heffernan2004} and \cite{Keef2013} which is used throughout and characterises the tail behaviour of $\boldsymbol{X}_s^{(t)}$ conditional on one of its components exceeding a high threshold. Section~\ref{subsec:div} outlines the divergence measure proposed by \cite{OToole2026clustering}, which we employ to quantify similarity of the CE models for $\boldsymbol{X}_{s}^{(t)}$ and $\boldsymbol{X}_{s'}^{(t)}$ ($s,s'=1,\ldots,D;~t=1,\ldots,T$). Finally, Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting a structural break point in tail behaviour using the pairwise similarities between fitted CE models.
 
+%In what follows, we introduce our framework for detecting changepoints in multivariate extremal dependence structures. Section~\ref{subsec:ce} summarises the conditional extremes (CE) framework of \citet{Heffernan2004} and \citet{Keef2013} which describes the tail behaviour of a random vector conditional on one of its components exceeding a high threshold. Section~\ref{subsec:div} outlines the divergence measure of \cite{OToole2026clustering} for quantifying similarity of CE models. Finally, Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting changepoints in the extremal dependence structure based on the CE framework. 
 
 %using the divergence measure to quantify differences between temporal blocks. 
-
-
 %which we use to model the extremal dependence structure of multivariate data.
-
-
 %Section~\ref{subsec:div} describes how the extremal skew-geometric $\JSGa$ divergence can be used to quantify the difference between two extremal dependence structures.
-
-
 %Finally, in Section~\ref{subsec:cp}, we describe 
 
 \subsection{The conditional extremes model}
 \label{subsec:ce}
 
-We model multivariate extremal dependence using the conditional extremes (CE) framework of \citet{Heffernan2004} and \citet{Keef2013}. 
-
-
-This framework describes the behaviour of a random vector conditional on one of its components exceeding a high threshold, and can accommodate both asymptotic dependence and asymptotic independence. 
-We briefly summarise the spatial formulation used here; further details are provided in \citet{OToole2026clustering}.
-
-Let $\boldsymbol{X}_s = (X_{1,s}, \ldots, X_{d,s})$ denote a $d$-dimensional random vector observed at spatial location $s \in \{1, \ldots, D\}$. 
-Following \citet{Keef2013}, we transform each component to standard Laplace margins, yielding $\boldsymbol{Y}_s = (Y_{1,s}, \ldots, Y_{d,s})$. 
-This standardisation separates marginal behaviour from the extremal dependence structure and permits both positive and negative associations.
-
-For conditioning variable $i \in \{1, \ldots, d\}$ and location $s \in \{1, \ldots, D\}$, the CE model is
+Following \citet{Keef2013}, we transform each component of $\boldsymbol{X}_s^{(t)}$ to standard Laplace margins, yielding the random vector $\boldsymbol{Y}_s^{(t)} = (Y_{1,s}^{(t)}, \ldots, Y_{d,s}^{(t)})$. Formally, we achieve this transformation by defining
+\begin{equation}
+Y_{i,s}^{(t)} =
+\begin{cases}
+\log\left\{2 \left(F_{i,s}^{(t)}\right)^{-1}(X_{i,s}^{(t)})\right\} & \mbox{for}~X_{i,s}^{(t)} < F_{i,s}^{(t)}(0.5),\\
+-\log\left\{2 \left[1-\left(F_{i,s}^{(t)}\right)^{-1}(X_{i,s}^{(t)})\right]\right\} & \mbox{for}~X_{i,s}^{(t)} \geq F_{i,s}^{(t)}(0.5),
+\end{cases}
+\label{eq:Laplace}
+\end{equation}
+where $F_{i,s}^{(t)}(\cdot)$ is the cumulative distribution function of $X_{i,s}^{(t)}$ ($i=1,\ldots,d;~s=1,\ldots,D;~t=1,\ldots,T$). Let $\boldsymbol{Y}^{(t)}_{-i,s}$ denote $\boldsymbol{Y}^{(t)}_s$ with its $i^{\mathrm{th}}$ component removed. The CE framework postulates that, for a sufficiently large threshold $u_i^{(t)}$, the conditional distribution of $\boldsymbol{Y}_{-i,s}^{(t)}$ given $Y_{i,s}^{(t)} = y$ can approximately be represented as 
 \begin{equation}
 \label{eq:ce_model_spat}
-\bigl(\boldsymbol{Y}_{-i,s} \mid Y_{i,s} = y\bigr)
+\bigl(\boldsymbol{Y}_{-i,s}^{(t)} \mid Y_{i,s}^{(t)} = y\bigr)
 =
-\boldsymbol{\alpha}_{\mid i,s} y
+\boldsymbol{\alpha}_{\mid i,s}^{(t)} y
 +
-y^{\boldsymbol{\beta}_{\mid i,s}}
-\boldsymbol{Z}_{\mid i,s},
-\qquad y > u_i,
+y^{\boldsymbol{\beta}_{\mid i,s}^{(t)}}
+\boldsymbol{Z}_{\mid i,s}^{(t)},
+\qquad y > u_{i,s}^{(t)},
 \end{equation}
-where $\boldsymbol{Y}_{-i,s}$ denotes $\boldsymbol{Y}_s$ with its $i^{\mathrm{th}}$ component removed, $u_i$ is a high threshold, and all vector operations are applied componentwise. 
-The parameter vectors $\boldsymbol{\alpha}_{\mid i,s} \in [-1,1]^{d-1}$ and $\boldsymbol{\beta}_{\mid i,s} \in (-\infty,1]^{d-1}$ describe, respectively, the strength of extremal association and the conditional scaling of the remaining components. 
-The residual vector $\boldsymbol{Z}_{\mid i,s}$ is assumed to be independent of $Y_{i,s}$ above $u_i$.
+where $\boldsymbol{\alpha}_{\mid i,s}^{(t)}\in[-1,1]^{d-1}$, $\boldsymbol{\beta}_{\mid i,s}^{(t)}\in(-\infty,1]^{d-1}$, and all vector operations are applied componentwise. Further, the residual vector $\boldsymbol{Z}_{\mid i,s}^{(t)}$ is assumed to be independent of $Y_{i,s}^{(t)}$. The parameter vectors $\boldsymbol{\alpha}_{\mid i,s}^{(t)}$ and $\boldsymbol{\beta}_{\mid i,s}^{(t)}$ govern, respectively, the strength of extremal dependence and the rate at which the conditional variability scales with the conditioning value. 
 
-Following \citet{Heffernan2004}, we adopt the working assumption
+%We model multivariate extremal dependence using the conditional extremes (CE) framework of \citet{Heffernan2004} and \citet{Keef2013}. This framework describes the behaviour of a random vector conditional on one of its components exceeding a high threshold, and can accommodate both asymptotic dependence and asymptotic independence. We briefly summarise the spatial formulation used here; further details are provided in \citet{OToole2026clustering}.
+
+%Let $\boldsymbol{X}_s = (X_{1,s}, \ldots, X_{d,s})$ denote a $d$-dimensional random vector observed at spatial location $s \in \{1, \ldots, D\}$. This standardisation separates marginal behaviour from the extremal dependence structure and permits both positive and negative associations.
+
+%For conditioning variable $i \in \{1, \ldots, d\}$ and location $s \in \{1, \ldots, D\}$, the CE model is
+%\begin{equation}
+%\label{eq:ce_model_spat}
+%\bigl(\boldsymbol{Y}_{-i,s} \mid Y_{i,s} = y\bigr)
+%=
+%\boldsymbol{\alpha}_{\mid i,s} y
+%+
+%y^{\boldsymbol{\beta}_{\mid i,s}}
+%\boldsymbol{Z}_{\mid i,s},
+%\qquad y > u_i,
+%\end{equation}
+%where $\boldsymbol{Y}_{-i,s}$ denotes $\boldsymbol{Y}_s$ with its $i^{\mathrm{th}}$ component removed, $u_i$ is a high threshold, and all vector operations are applied componentwise. 
+%The parameter vectors $\boldsymbol{\alpha}_{\mid i,s} \in [-1,1]^{d-1}$ and $\boldsymbol{\beta}_{\mid i,s} \in (-\infty,1]^{d-1}$ describe, respectively, the strength of extremal association and the conditional scaling of the remaining components. 
+%The residual vector $\boldsymbol{Z}_{\mid i,s}$ is assumed to be independent of $Y_{i,s}$ above $u_i$.
+
+For inference and to quantify similarity of CE models, we adopt the working assumption proposed by \citet{Heffernan2004} that
 \[
-\boldsymbol{Z}_{\mid i,s}
+\boldsymbol{Z}_{\mid i,s}^{(t)}
 \sim
 \operatorname{MVN}_{d-1}
 \left(
-\boldsymbol{\mu}_{\mid i,s},
-\Sigma_{\mid i,s}
+\boldsymbol{\mu}_{\mid i,s}^{(t)},
+\Sigma_{\mid i,s}^{(t)}
 \right),
 \]
 which gives
 \begin{equation}
 \label{eq:ce_conditional_gaussian}
-\bigl(\boldsymbol{Y}_{-i,s} \mid Y_{i,s} = y\bigr)
+\bigl(\boldsymbol{Y}_{-i,s}^{(t)} \mid Y_{i,s}^{(t)} = y\bigr)
 \sim
 \operatorname{MVN}_{d-1}
 \left(
-\boldsymbol{\alpha}_{\mid i,s}y
+\boldsymbol{\alpha}^{(t)}_{\mid i,s}y
 +
-y^{\boldsymbol{\beta}_{\mid i,s}}
-\boldsymbol{\mu}_{\mid i,s},
+y^{\boldsymbol{\beta}^{(t)}_{\mid i,s}}
+\boldsymbol{\mu}^{(t)}_{\mid i,s},
 \;
-\Omega_{\mid i,s}(y)
+\Omega^{(t)}_{\mid i,s}(y)
 \right),
-\qquad y > u_i,
+\qquad y > u_{i,s}^{(t)},
 \end{equation}
 where
 \[
-\Omega_{\mid i,s}(y)
+\Omega^{(t)}_{\mid i,s}(y)
 =
 \operatorname{diag}
 \left(
-y^{\boldsymbol{\beta}_{\mid i,s}}
+y^{\boldsymbol{\beta}^{(t)}_{\mid i,s}}
 \right)
-\Sigma_{\mid i,s}
+\Sigma_{\mid i,s}^{(t)}
 \operatorname{diag}
 \left(
-y^{\boldsymbol{\beta}_{\mid i,s}}
+y^{\boldsymbol{\beta}_{\mid i,s}^{(t)}}
 \right).
 \]
-The model is fitted separately for each conditioning variable, spatial location and temporal block, without imposing spatial smoothness. 
-We set $u_i = u$, a high quantile of the standard Laplace distribution, for all $i$ and $s$, to ensure that the resulting conditional distributions are comparable across locations, after Laplace standardisation.
-The Gaussian working model also permits the closed-form divergence calculations described in Section~\ref{subsec:div}.
+
+We fit this model separately for each conditioning variable and spatial location, without imposing spatial smoothness. The threshold $u_{i,s}^{(t)}$ is fixed at a high quantile $u$ of the standard Laplace distribution, for all $i$ and $s$, to ensure that the resulting CE models are comparable across locations.
+
+Although the Gaussian assumption \eqref{eq:ce_conditional_gaussian} is known to suffer from parameter identifiability issues and may lead to invalid inference \citep{Keef2012_flooding}, the results of \cite{OToole2026clustering} suggest that these shortcomings have limited impact when the primary objective is to analyse spatial variation in extremal dependence among $\boldsymbol{X}_1^{(t)}, \ldots,\boldsymbol{X}_D^{(t)}$.It is therefore reasonable to expect that the assumption remains adequate when additionally allowing for non-stationarity in the extremal dependence structure. Moreover, the assumption yields substantial computational advantages, as discussed in the next subsection.
+
+
+
+%The Gaussian working model also permits the closed-form divergence calculations described in Section~\ref{subsec:div}.
 
 \subsection{Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence}\label{subsec:div}
 
