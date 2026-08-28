@@ -629,6 +629,7 @@ Under the local and global alternatives, they measure the ability of the procedu
 \label{fig:sim_local_bar_perc}
 \end{figure}
 
+\newpage % TODO Remove once simulation study section is finished
 
 \section{Application to Spanish data}\label{sec:app}
 
@@ -677,7 +678,7 @@ Under the local and global alternatives, they measure the ability of the procedu
 
 \begin{itemize}
 \item We analyse temperature and precipitation observations from 40 meteorological stations distributed across mainland Spain.
-\item Their locations are shown in the left panel of Figure~\ref{fig}.
+\item Their locations are shown in the left panel of Figure~\ref{fig:app_intro}.
 \item The analysis covers the period 1960-2020, inclusive. 
 \item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
 \item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) \citep{ECADdaily}. 
@@ -702,7 +703,7 @@ so that larger values correspond to drier conditions.
 \end{itemize}
 
 \begin{itemize}
-\item The right-hand panels of Figure~\ref{fig} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
+\item The right-hand panels of Figure~\ref{fig:app_intro} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
 \item These stations are highlighted in the map in the left-hand panel.
 \item At both stations, the distribution of weekly maximum temperature differs substantially between seasons. 
 \item The seasonal separation in drought-index values is less pronounced at Daroca, whereas Jerez de la Frontera exhibits clearer seasonal variation in both temperature and drought conditions. \textcolor{red}{Mention explicit figures for means/95th quantiles??}
@@ -1009,6 +1010,95 @@ Background shading represents elevation.
 }
 \label{fig:app_clust}
 \end{figure}
+
+\newpage
+
+\subsection{Additional Results}
+
+\textcolor{red}{I've just included all the results and plots here, many will go into supplement!}
+
+\subsubsection{Clustering maps for 2 and 4 clusters}
+
+For Summer after the changepoint, the elbow plot suggests 2 clusters.
+For Winter before the changepoint, the elbow plot suggests 4 clusters.
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/twgss_dqu_0.8.png}
+\caption{
+  Elbow plots for each season. 
+}
+% TODO Add label
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k2.png}
+\caption{
+  Clustering solutions for $k = 2$ clusters. 
+}
+% TODO Add label
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k4.png}
+\caption{
+  Clustering solutions for $k = 4$ clusters. 
+}
+% TODO Add label
+\end{figure}
+
+\newpage
+
+\subsubsection{Changepoints for Autumn}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
+\caption{
+  Clustering solutions for $k = 3$ clusters, with a changepoint for Autumn.
+}
+% TODO Add label
+\end{figure}
+
+\newpage
+
+\subsubsection{Dissimilarity Matrices}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/dist_diff_all_dqu_0.8_trim.png}
+\caption{
+  Dissimilarity matrices for differences before and after changepoints.
+}
+% TODO Add label
+\end{figure}
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/dist_diff_abs_all_dqu_0.8_trim.png}
+\caption{
+  Dissimilarity matrices for absolute differences before and after changepoints.
+}
+% TODO Add label
+\end{figure}
+
+\newpage
+
+\subsubsection{Clustering solutions vs covariates}
+
+Go through PDFs.
+% \begin{itemize}
+%   \item 
+% \end{itemize}
+
+\subsubsection{Cluster switching}
+
+Go through PDFs.
+% \begin{itemize}
+% 
+% \end{itemize}
+
 
 
 \section{Discussion}\label{sec5}
