@@ -105,7 +105,7 @@ y^{\boldsymbol{\beta}_{\mid i,#1}}
 
 \section{Introduction}\label{sec:intro}
 
-\textcolor{red}{From confirmation reporrt}
+\textcolor{red}{From confirmation report}
 We now consider settings in which the extremal dependence structure is non-stationary, and may change over time.
 For example, meteorological variables observed across spatial locations may exhibit changes in extremal dependence due to shifts in climate regimes, while biomarker measurements collected longitudinally for individuals may display structural changes associated with disease progression, treatment effects, or lifestyle changes \citep{katz2010statistics, Gilles2018, panagoulias2025extreme, Talento2025}.
 In such settings, it is of interest to detect changepoints or structural breaks in the extremal dependence structure.
@@ -130,7 +130,7 @@ We hope to build on these existing approaches and also the divergence-based clus
 
 \section{Methodology}\label{sec:method}
 
-Suppose we have $D$ spatial sites and observe $d$ variables across $T$ time points at each site. Let $\boldsymbol{X}_{s}^{(t)}=\left(X_{1,s}^{(t)}, \ldots,X_{d,s}^{(t)}\right)^{\mathrm{T}}$ denote the vector of variables observed at site $s\in\{1,\ldots,D\}$ and time $t\in\{1,\ldots,T\}$. Our objective is to analyse the tail behaviour of $\boldsymbol{X}_s^{(t)}$, in particular the extremal dependence of the $d$ variables at the individual time points and sites, and to assess whether there is evidence of non-stationarity in the tail behaviour at one or more site. Subsection~\ref{subsec:ce} summarises the conditional extremes (CE) framework by \cite{Heffernan2004} and \cite{Keef2013} which is used throughout and characterises the tail behaviour of $\boldsymbol{X}_s^{(t)}$ conditional on one of its components exceeding a high threshold. Section~\ref{subsec:div} outlines the divergence measure proposed by \cite{OToole2026clustering}, which we employ to quantify similarity of the CE models for $\boldsymbol{X}_{s}^{(t)}$ and $\boldsymbol{X}_{s'}^{(t)}$ ($s,s'=1,\ldots,D;~t=1,\ldots,T$). Finally, Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting a structural break point in tail behaviour using the pairwise similarities between fitted CE models.
+Suppose we have $D$ spatial sites and observe $d$ variables across $T$ time points at each site. Let $\boldsymbol{X}_{s}^{(t)}=\left(X_{1,s}^{(t)}, \ldots,X_{d,s}^{(t)}\right)^{\mathrm{T}}$ denote the vector of variables observed at site $s\in\{1,\ldots,D\}$ and time $t\in\{1,\ldots,T\}$. Our objective is to analyse the tail behaviour of $\boldsymbol{X}_s^{(t)}$, in particular the extremal dependence of the $d$ variables at the individual time points and sites, and to assess whether there is evidence of non-stationarity in the tail behaviour at one or more site. Subsection~\ref{subsec:ce} summarises the conditional extremes (CE) framework by \cite{Heffernan2004} and \cite{Keef2013} which is used throughout and characterises the tail behaviour of $\boldsymbol{X}_s^{(t)}$ conditional on one of its components exceeding a high threshold. Section~\ref{subsec:div} outlines the divergence measure proposed by \cite{OToole2026clustering}, which we employ to quantify similarity of the extremal dependence for $\boldsymbol{X}_{s}^{(t)}$ and $\boldsymbol{X}_{s'}^{(t)}$ at two different sites ($s,s'=1,\ldots,D;~t=1,\ldots,T$). Finally, Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting a structural breakpoint in tail behaviour using the pairwise similarities between fitted CE models.
 
 %In what follows, we introduce our framework for detecting changepoints in multivariate extremal dependence structures. Section~\ref{subsec:ce} summarises the conditional extremes (CE) framework of \citet{Heffernan2004} and \citet{Keef2013} which describes the tail behaviour of a random vector conditional on one of its components exceeding a high threshold. Section~\ref{subsec:div} outlines the divergence measure of \cite{OToole2026clustering} for quantifying similarity of CE models. Finally, Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting changepoints in the extremal dependence structure based on the CE framework. 
 
@@ -146,8 +146,8 @@ Following \citet{Keef2013}, we transform each component of $\boldsymbol{X}_s^{(t
 \begin{equation}
 Y_{i,s}^{(t)} =
 \begin{cases}
-\log\left\{2 F_{i,s}^{(t)}(X_{i,s}^{(t)})\right\} & \mbox{for}~F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right) < 0.5,\\
--\log\left\{2 \left[1-F_{i,s}^{(t)}(X_{i,s}^{(t)})\right]\right\} & \mbox{for}~F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right) \geq 0.5,
+\log\left\{2 F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right)\right\} & \mbox{for}~F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right) < 0.5,\\
+-\log\left\{2 \left[1-F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right)\right]\right\} & \mbox{for}~F_{i,s}^{(t)}\left(X_{i,s}^{(t)}\right) \geq 0.5,
 \end{cases}
 \label{eq:Laplace}
 \end{equation}
@@ -223,37 +223,62 @@ y^{\boldsymbol{\beta}^{(t)}_{\mid i,s}}
 y^{\boldsymbol{\beta}_{\mid i,s}^{(t)}}
 \right).
 \]
-
-We fit this model separately for each conditioning variable and spatial location, without imposing spatial smoothness. The threshold $u_{i,s}^{(t)}$ is fixed at a high quantile $u$ of the standard Laplace distribution, for all $i$ and $s$, to ensure that the resulting CE models are comparable across locations.
+We fit this model separately for each conditioning variable and spatial location using maximum likelihood estimation, without imposing spatial smoothness. The threshold $u_{i,s}^{(t)}$ is fixed at a high quantile $u$ of the standard Laplace distribution, for all $i$ and $s$, to ensure that the resulting CE models are comparable across locations.
 
 Although the Gaussian assumption~\eqref{eq:ce_conditional_gaussian} is known to suffer from parameter identifiability issues and may lead to invalid inference \citep{Keef2012_flooding}, the results of \cite{OToole2026clustering} suggest that these shortcomings have limited impact when the primary objective is to analyse spatial variation in extremal dependence among $\boldsymbol{X}_1^{(t)}, \ldots,\boldsymbol{X}_D^{(t)}$. It is therefore reasonable to expect that the assumption remains adequate when additionally allowing for non-stationarity in the extremal dependence structure. Moreover, the assumption yields substantial computational advantages, as discussed in the next subsection.
 
+Let $\hat{M}(\mathcal{T}_1)$ and $\hat{M}(\mathcal{T}_2)$ denote the estimates for 
 
 
 %The Gaussian working model also permits the closed-form divergence calculations described in Section~\ref{subsec:div}.
 
-\subsection{A divergence measure for condtional extremes models}\label{subsec:div}
+\subsection{A divergence measure for conditional extremes models}
+\label{subsec:div}
 
-%Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence
-
-%To compare extremal dependence structures across spatial locations, we use the divergence-based framework of \citet{OToole2026clustering}. This approach measures dissimilarity between fitted CE models using the skew-geometric Jensen--Shannon divergence of \citet{Nielsen2019}, which has a closed-form expression for the Gaussian conditional distributions in Equation~\eqref{eq:ce_conditional_gaussian}.
-
-\cite{OToole2026clustering} introduce the conditional extremal skew-geometric Jensen--Shannon divergence as a dissimilarity measure to quantify the pairwise similarity of CE models; the measure itself is based on the skew-geometric Jensen--Shannon divergence \citet{Nielsen2019}. Let $H_{i,s}^{(t)}$ denote the distribution function of the CE model in \eqref{eq:ce_conditional_gaussian} for $\boldsymbol{Y}_{-i,s}^{(t)}\mid (Y_{i,s}^{(t)} = y)$. The skew-geometric Jensen--Shannon divergence of $H_{i,s}^{(t)}$ and $H_{i,s'}^{(t)}$ is then formally defined as
+\cite{OToole2026clustering} introduce the conditional extremal skew-geometric Jensen--Shannon divergence as a dissimilarity measure between CE models; the measure is based on the skew-geometric Jensen--Shannon divergence \citet{Nielsen2019}. Let $H_{i,s}^{(t)}(y)$ denote the distribution function of the CE model in \eqref{eq:ce_conditional_gaussian} for $\boldsymbol{Y}_{-i,s}^{(t)}\mid (Y_{i,s}^{(t)} = y)$, $y>u$. The skew-geometric Jensen--Shannon divergence of $H_{i,s}^{(t)}(y)$ and $H_{i,s'}^{(t)}(y)$ is defined by
 \begin{equation}
 \label{eq:jsga}
-\JSGa{}\left(H_{i,s}^{(t)} \Vert H_{i,s'}^{(t)}\right)
+\JSGa{}\left[H_{i,s}^{(t)}(y) \Vert H_{i,s'}^{(t)}(y)\right]
 =
 \lambda
 \KL\left\{
-G_{\lambda}\left(H_{i,s}^{(t)},H_{i,s'}^{(t)}\right) \Vert H_{i,s}^{(t)}
+G_{\lambda}\left[H_{i,s}^{(t)}(y),H_{i,s'}^{(t)}(y)\right] \Vert H_{i,s}^{(t)}(y)
 \right\}
 +
 (1-\lambda)
 \KL\left\{
-G_{\lambda}\left(H_{i,s}^{(t)},H_{i,s'}^{(t)}\right) \Vert H_{i,s'}^{(t)}
+G_{\lambda}\left[H_{i,s}^{(t)}(y),H_{i,s'}^{(t)}(y)\right] \Vert H_{i,s'}^{(t)}(y)
 \right\},
 \end{equation}
-where $\KL$ denotes the Kullback--Leibler divergence, $G_{\lambda}\left(H_{i,s}^{(t)},H_{i,s'}^{(t)}\right)$ is the distribution with density proportional to the weighted geometric mean of the densities corresponding to $H_{i,s}^{(t)}$ and $H_{i,s'}^{(t)}$, and $\lambda\in[0,1]$. We set $\lambda=0.5$, yielding a symmetric, non-negative measure of dissimilarity. Due to the Gaussian assumption~\eqref{eq:ce_conditional_gaussian}, the expression in~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2026clustering} for details.
+where $\KL$ denotes the Kullback--Leibler divergence, $G_{\lambda}\left[H_{i,s}^{(t)}(y),H_{i,s'}^{(t)}(y)\right]$ is the distribution with density proportional to the weighted geometric mean of the densities corresponding to $H_{i,s}^{(t)}(y)$ and $H_{i,s'}^{(t)}(y)$, and $\lambda\in[0,1]$. We set $\lambda=0.5$, yielding a symmetric, non-negative measure of dissimilarity. Due to the Gaussian assumption~\eqref{eq:ce_conditional_gaussian}, the expression in~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2026clustering} for details.
+
+The quantity \eqref{eq:jsga} only compares the fitted CE models at the two locations for $Y_{i,s}^{(t)} = Y_{i,s'}^{(t)} = y$. We therefore take its expectation with respect to the conditioning variable. As all marginal distributions are standard Laplace and the conditioning threshold is fixed as $u$ across locations (see Section~\ref{subsec:ce}), the expected skew-geometric Jensen--Shannon divergence for two CE models is
+\begin{equation}
+\label{eq:jsga_integral}
+E_{i,s,s'}^{(t)} = 
+\mathbb{E}
+\left\{
+\JSGa{}\left[H_{i,s}^{(t)}\left(Y\right) \Vert H_{i,s'}^{(t)}\left(Y\right)\right]
+\mid Y>u
+\right\}
+=
+\int_{u}^{\infty}
+\JSGa{}\left[H_{i,s}^{(t)}(y) \Vert H_{i,s'}^{(t)}(y)\right]
+f(y-u) \,\mathrm{d}y,
+\end{equation}
+where $f(y-u) = \exp\{-(y-u)\}$ is the density of $Y_{i,s}\mid (Y_{i,s}>u)$ for $u>0$; we refer the reader to \cite{OToole2026clustering} for a theoretical treatment of this dissimilarity measure. In practice, we approximate the expectation using Monte Carlo integration and, to avoid unstable extrapolation beyond the observed range, we evaluate the integral only up to a suitably high upper quantile of the standard exponential distribution. By averaging $E_{i,s,s'}^{(t)}$ over the $d$ conditioning variables for each pair ($s,s'$) of sites, we obtain the dissimilarity matrix $M^{(t)} \in \mathbb{R}^{D\times D}$, with
+\begin{equation}
+\label{eq:distance_matrix}
+M^{(t)} =\left\{M_{s,s'}^{(t)}\right\}_{s,s'=1,\ldots,D}, \quad  
+M_{s,s'}^{(t)} = 
+\frac{1}{d} \sum_{i=1}^d E_{i,s,s'}^{(t)}
+,\quad t=1,\ldots,T.
+\end{equation}
+Th resulting matrix forms the basis for the procedure described in the next subsection for analysing non-stationarity in the tail behaviour.
+
+%Extremal skew-geometric Jensen-Shannon divergence for multivariate extremal dependence
+
+%To compare extremal dependence structures across spatial locations, we use the divergence-based framework of \citet{OToole2026clustering}. This approach measures dissimilarity between fitted CE models using the skew-geometric Jensen--Shannon divergence of \citet{Nielsen2019}, which has a closed-form expression for the Gaussian conditional distributions in Equation~\eqref{eq:ce_conditional_gaussian}.
 
 
 %For two distribution functions, denoted by $H$ and $H^*$, the dual skew-geometric Jensen--Shannon divergence is defined as
@@ -274,150 +299,207 @@ where $\KL$ denotes the Kullback--Leibler divergence, $G_{\lambda}\left(H_{i,s}^
 %where $\KL$ denotes the Kullback--Leibler divergence, $G_{\lambda}(H,H^*)$ is the distribution with density proportional to the weighted geometric mean of the densities corresponding to $H$ and $H^*$, and $\lambda\in[0,1]$. We set $\lambda=0.5$, yielding a symmetric, non-negative measure of dissimilarity. 
 %When $H$ and $H^*$ are multivariate Gaussian, Equation~\eqref{eq:jsga} can be evaluated in closed form; see \citet{Nielsen2019} and \citet{OToole2026clustering} for details.
 
-Let $H_{i,s,T}(y)$ denote the fitted conditional distribution of $\boldsymbol{Y}_{-i,s}$ given $Y_{i,s}=y$ at location $s$, estimated using observations from temporal block $T$. 
-For two locations $s$ and $s^*$, and conditioning variable $i$, the conditional extremal divergence is
+%this density does not depend on $s$, ensuring that the resulting expected divergence is comparable and symmetric across site pairs. %As the marginal distribution and conditioning threshold are common across locations, this density does not depend on $s$, ensuring that the resulting expected divergence is comparable and symmetric across site pairs.
+
+
+%Let $H_{i,s,T}(y)$ denote the fitted conditional distribution of $\boldsymbol{Y}_{-i,s}$ given $Y_{i,s}=y$ at location $s$, estimated using observations from temporal block $T$. 
+%For two locations $s$ and $s^*$, and conditioning variable $i$, the conditional extremal divergence is
+%\begin{equation}
+%\label{eq:cjsga}
+%\cJSGa{s,s^*}(y;T)
+%=
+%\JSGa{}
+%\left\{
+%H_{i,s,T}(y)
+%\Vert
+%H_{i,s^*,T}(y)
+%\right\},
+%\qquad y>u.
+%\end{equation}
+%This quantity compares the fitted extremal dependence structures at the two locations for a specified value of the conditioning variable.
+
+%To remove the dependence on a particular conditioning value, we average Equation~\eqref{eq:cjsga} over the distribution of threshold exceedances:
+%\begin{equation}
+%\label{eq:jsga_integral}
+%\eJSGa{s,s^*}(T)
+%=
+%\mathbb{E}
+%\left[
+%\cJSGa{s,s^*}(Y_i;T)
+%\mid Y_i>u
+%\right]
+%=
+%\int_{u}^{\infty}
+%\cJSGa{s,s^*}(y;T)
+%h(y\mid Y_i>u)
+%\,\mathrm{d}y,
+%\end{equation}
+%where $h(y\mid Y_i>u)$ is the conditional density of a standard Laplace variable above $u$. 
+%As the marginal distribution and conditioning threshold are common across locations, this density does not depend on $s$, ensuring that the resulting expected divergence is comparable and symmetric across site pairs.
+
+%In practice, Equation~\eqref{eq:jsga_integral} is approximated using a common Monte Carlo sample of conditioning values. 
+%To avoid unstable extrapolation beyond the observed range, the sample is truncated at a suitably high upper quantile of the standard Laplace distribution. 
+%Again, The same threshold $u$, taken to be a high quantile of the standard Laplace distribution, and Laplace samples are used across locations and temporal blocks, preventing additional Monte Carlo variation from being introduced into comparisons between blocks in our changepoint detection procedure in Section~\ref{subsec:cp}.
+
+%For each conditioning variable $i$, the expected divergences are collected in the dissimilarity matrix
+%\begin{equation}
+%\label{eq:distance_matrix}
+%M^{(i)}(T)
+%=
+%\left\{
+%\eJSGa{s,s^*}(T)
+%\right\}_{s,s^*=1}^{D},
+%\end{equation}
+%where $D$ is the number of spatial locations. 
+%Information across all conditioning variables can then be combined using the elementwise average
+%\begin{equation}
+%\label{eq:aggregate_matrix}
+%M(T)
+%=
+%\frac{1}{d}
+%\sum_{i=1}^{d}
+%M^{(i)}(T).
+%\end{equation}
+%The matrix $M(T)$ summarises the spatial configuration of extremal dependence during %temporal block $T$. 
+%Comparing matrices estimated from different blocks therefore allows us to assess whether this configuration changes over time, as described in Section~\ref{subsec:cp}.
+
+\subsection{Testing for non-stationarity in extremal dependence}
+\label{subsec:cp}
+
+Let $\tau\in\{1,\ldots,T\}$ be a time point and define the time blocks $\mathcal{T}_1(\tau) = \{\tau-n+1,\ldots,\tau\}$ and $\mathcal{T}_2(\tau) = \{\tau+1,\ldots,\tau+n\}$, where $n$ is a user-specified block length. To assess stationarity in the tail behaviour of  $\boldsymbol{Y}_1^{(t)},\ldots,\boldsymbol{Y}_D^{(t)}$, we construct a statistical test based on the pairwise dissimilarities of CE models fitted using observations from the two time blocks. For block $\mathcal{T}_j(\tau)$~($j=1,2$), we assume that the parameters of the CE model in \eqref{eq:ce_conditional_gaussian} remain constant across time within the block. This yields a matrix $M^{(j)}(\tau)$, as defined in \eqref{eq:distance_matrix}, which summarises the pairwise dissimilarities between sites. Under stationarity, $M^{(1)}(\tau) = M^{(2)}(\tau)$, and this motivates the null hypothesis
 \begin{equation}
-\label{eq:cjsga}
-\cJSGa{s,s^*}(y;T)
-=
-\JSGa{}
-\left\{
-H_{i,s,T}(y)
-\Vert
-H_{i,s^*,T}(y)
-\right\},
-\qquad y>u.
+H_0: M^{(1)}(\tau) = M^{(2)}(\tau),
+\label{eq:H0}
 \end{equation}
-This quantity compares the fitted extremal dependence structures at the two locations for a specified value of the conditioning variable.
+with the alternative hypothesis $H_1: M^{(1)}(\tau) \neq M^{(2)}(\tau)$.
 
-To remove the dependence on a particular conditioning value, we average Equation~\eqref{eq:cjsga} over the distribution of threshold exceedances:
+Given the data for the time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$, we obtain estimates $\hat{M}_1(\tau)$ and $\hat{M}^{(2)}(\tau)$ of $M^{(1)}(\tau)$ and $M^{(2)}(\tau)$, respectively, by first estimating the CE model parameters via maximum likelihood inference, followed by Monte Carlo integration for evaluating \eqref{eq:jsga_integral}. Two statistics are considered to test $H_0$ against $H_1$. The first is the Frobenius norm of the difference between $\hat{M}^{(1)}(\tau)$ and $\hat{M}^{(2)}(\tau)$: 
+\begin{equation} 
+\label{eq:frob}
+N_{\mathrm{obs}}^{(F)}(\tau) \coloneq \left\| \hat{M}^{(1)}(\tau) - \hat{M}^{(2)}(\tau) \right\|_{\mathrm{F}} = \sqrt{\sum_{s=1}^D \sum_{s'=1}^D \left[\hat{M}^{(1)}_{s,s'}(\tau) - \hat{M}^{(2)}_{s,s'}(\tau)\right]^2}.
+\end{equation}
+The second statistic is the infinity, or maximum-entry, norm:
 \begin{equation}
-\label{eq:jsga_integral}
-\eJSGa{s,s^*}(T)
-=
-\mathbb{E}
-\left[
-\cJSGa{s,s^*}(Y_i;T)
-\mid Y_i>u
-\right]
-=
-\int_{u}^{\infty}
-\cJSGa{s,s^*}(y;T)
-h(y\mid Y_i>u)
-\,\mathrm{d}y,
+\label{eq:infinity}
+N_{\mathrm{obs}}^{(I)}(\tau) \coloneq \max_{s,s'=1,\ldots,D}\left|\hat{M}^{(1)}_{s,s'}(\tau) - \hat{M}^{(2)}_{s,s'}(\tau)\right|.
 \end{equation}
-where $h(y\mid Y_i>u)$ is the conditional density of a standard Laplace variable above $u$. 
-As the marginal distribution and conditioning threshold are common across locations, this density does not depend on $s$, ensuring that the resulting expected divergence is comparable and symmetric across site pairs.
+The Frobenius norm~\eqref{eq:frob} captures the overall magnitude of change, whereas the infinity norm~\eqref{eq:infinity} is only sensitive to the largest pairwise difference. Consequently, their relative performance under non-stationarity is expected to depend on whether changes occur across many sites or are concentrated in a small number of locations. For notational brevity, we write $N_{\mathrm{obs}}(\tau)$ in the rest of the section when referring to $N_{\mathrm{obs}}^{(F)}(\tau)$ or $N_{\mathrm{obs}}^{(I)}(\tau)$.
 
-\textcolor{red}{Needed?}
-In practice, Equation~\eqref{eq:jsga_integral} is approximated using a common Monte Carlo sample of conditioning values. 
-To avoid unstable extrapolation beyond the observed range, the sample is truncated at a suitably high upper quantile of the standard Laplace distribution. 
-Again, The same threshold $u$, taken to be a high quantile of the standard Laplace distribution, and Laplace samples are used across locations and temporal blocks, preventing additional Monte Carlo variation from being introduced into comparisons between blocks in our changepoint detection procedure in Section~\ref{subsec:cp}.
-
-For each conditioning variable $i$, the expected divergences are collected in the dissimilarity matrix
-\begin{equation}
-\label{eq:distance_matrix}
-M^{(i)}(T)
-=
-\left\{
-\eJSGa{s,s^*}(T)
-\right\}_{s,s^*=1}^{D},
-\end{equation}
-where $D$ is the number of spatial locations. 
-Information across all conditioning variables can then be combined using the elementwise average
-\begin{equation}
-\label{eq:aggregate_matrix}
-M(T)
-=
-\frac{1}{d}
-\sum_{i=1}^{d}
-M^{(i)}(T).
-\end{equation}
-The matrix $M(T)$ summarises the spatial configuration of extremal dependence during temporal block $T$. 
-Comparing matrices estimated from different blocks therefore allows us to assess whether this configuration changes over time, as described in Section~\ref{subsec:cp}.
-
-\subsection{Changepoint detection in non-stationary multivariate extremal dependence structures}\label{subsec:cp}
-
-Let $M(T)$ denote the estimated extremal dependence structure for a time block $T$, which could represent a given period of time for which we have sufficient data to fit the CE model and estimate the corresponding divergence matrix.
-A simple way to compare two time blocks $T_1$ and $T_2$ is via the statistic
-\begin{equation} \label{eq:frob}
-D_{\mathrm{obs}} \coloneq \| M(T_1) - M(T_2) \|_{\mathrm{F}},
-\end{equation}
-i.e.\ the Frobenius norm of their difference, defined as
-\[
-  \| A \|_{\mathrm{F}} \coloneq \sqrt{\sum_{i,j} A_{ij}^2}.
-\]
-This statistic captures the overall or global magnitude of change in extremal dependence across all pairs of sites.
-Another option is the infinity, or maximum-entry, norm, defined as
-\[
-  \| A \|_{\infty} \coloneq \max_{i,j}|A_{ij}|,
-\]
-% which may better highlight the maximum difference between each matrix, placing greater emphasis on more localised changes in tail dependence.
-which captures the largest difference between corresponding entries of the two matrices and therefore places greater emphasis on localised changes in extremal dependence.
-Critical values for this statistic could be generated via simulation from fitted models to assess whether observed changes represent significant shifts in tail dependence.
-
-One key question is how large the observed statistic must be to indicate a significant change in extremal dependence.
-A natural way to assess whether the difference between two time periods reflects a genuine structural change, rather than sampling variability in the fitted CE models, is via a permutation test. 
-A permutation test is a non-parametric method for testing hypotheses by comparing the observed test statistic to a reference distribution generated by randomly permuting the data \citep{Good2004}.
-Such procedures are exact when the observations are exchangeable under the null hypothesis.
-% One advantage of this approach is that it avoids strong parametric assumptions about the sampling distribution of the divergence matrix, which is unknown, and directly respects the dependence structure of the observed data.
-One advantage of this approach is that it avoids strong parametric assumptions about the sampling distribution of the divergence matrix, which is unknown, and avoids specifying a parametric sampling distribution for the divergence matrix and can accommodate dependence-preserving permutation schemes.
-
-\subsubsection{Permutation test for temporal changes in extremal dependence}
-
-% \textcolor{red}{Include brief intro to subsubsection introducing screening step and permutation test?}
-Suppose we wish to test for a change in extremal dependence at a candidate split point $\tau$ by comparing two local time blocks immediately before and after the split. 
-Let $T_1$ and $T_2$ denote the corresponding pre- and post-change windows, each of size $n$. 
-We fit the CE model separately in each block, yielding divergence matrices $M(T_1)$ and $M(T_2)$ as defined in Equation~\eqref{eq:distance_matrix} (or their aggregate form in Equation~\eqref{eq:aggregate_matrix}). 
-
-Our null hypothesis is 
-\[
-H_0:\ \text{the extremal dependence structure is identical in } T_1 \text{ and } T_2.
-\]
-Under this null hypothesis of stationarity, exceedances from the two blocks arise from the same distribution. 
-We therefore generate a reference distribution for $D_{\mathrm{obs}}$ by repeatedly permuting the time indices:
-\begin{enumerate}[label=\arabic*.]
-  \item \textbf{Pool observations:} For a chosen block size $n \le \min\{|T_1|, |T_2|\}$, combine the final $n$ observations from time block $T_1$ and the first $n$ observations from $T_2$ into a single dataset. 
-  % \item \textbf{Permute time labels:} Randomly permute the time indices of the pooled observations and reassign them to two pseudo-blocks of size $n$. 
-  \item \textbf{Permute temporal labels:} Randomly reassign the pooled observations, or appropriate dependence-preserving temporal groups, to two pseudo-blocks of size $n$.
-  \item \textbf{Refit CE models:} For the permuted dataset, reapply the exceedance threshold $u$ for each conditioning variable and refit the CE model in each pseudo-block, yielding divergence matrices  $M^{(b)}(T_1)$ and $M^{(b)}(T_2)$, for $b = 1,\dots,B$ permutations.
-\item \textbf{Recompute statistic:} Compute the test statistic
-  \begin{equation} \label{eq:perm_stat}
-    D^{(b)} \coloneq
-    \bigl\| M^{(b)}(T_1) - M^{(b)}(T_2) \bigr\|_{\mathrm{r}},
-    \qquad b = 1,\dots,B, 
-  \end{equation}
+To determine whether to reject $H_0$ based on $N_{\mathrm{obs}}(\tau)$, we implement a permutation test, which involves comparing the observed test statistic to a reference distribution generated by randomly permuting the data \citep{Good2004}. This approach avoids strong parametric assumptions about the sampling distribution of the dissimilarity matrices and is exact when the observations are exchangeable under $H_0$. The null distribution of $N_{\mathrm{obs}}(\tau)$ is approximated using $B$ permutations:
+\begin{enumerate}[label=\arabic*.] 
+  \item Generate $B$ random permutations of the $2n$ observations from the period $\mathcal{T}_1(\tau)\cup\mathcal{T}_2(\tau)$. For each permutation, assign the first $n$ observations to one block, and the remaining $n$ observations to the second block. 
+  \item For each permutation $b\in\{1,\ldots,B\}$, estimate the CE model parameters and, subsequently, the matrix estimates, yielding estimates $\hat{M}^{(1)}_b(\tau)$ and $\hat{M}_b^{(2)}(\tau)$.
+  \item Compute the test statistic $N_b$ as defined in \eqref{eq:frob} or \eqref{eq:infinity} using $\hat{M}^{(1)}_b(\tau)$ and $\hat{M}_b^{(2)}(\tau)$. 
 \end{enumerate}
-for the $\mathrm{r}$-norm of choice (Frobenius or Infinity).
-As the CE model fitting and divergence calculation are repeated within each permutation, this procedure naturally propagates the estimation uncertainty in the fitted dependence parameters, somewhat analogous to a bootstrapping approach. \textcolor{red}{Remove reference to bootstrap?}
+The empirical p-value for the test is then
+\begin{equation} 
+\label{eq:perm_pval}
+\hat{p} =
+\frac{ 1+ \sum_{b=1}^{B} \mathbf{1} \left\{ N_b \geq N_{\mathrm{obs}}(\tau) \right\} }{B+1},
+\end{equation}
+where $\mathbf{1}\{\cdot\}$ denotes the indicator function. A value of $\hat{p}$ below the significance level $\alpha$, $\hat{p}<\alpha$, provides evidence for a difference in the pairwise dissimilarity structure of the fitted CE models between the two blocks, suggesting non-stationarity in tail behaviour around time point $\tau$.  
+
+When the number of values considered for $\tau$ is modest, as in Sections 3 and 4, permutation testing can be performed over the complete candidate range. In settings with longer time series or a substantially larger numbers of sites, one may first wish to identify local maxima, thereby reducing computational cost. Moreover, a suitable block size $n$ must be chosen to ensure reliable estimation of the CE model parameters within each time block, while also providing sufficient power to detect changes. To ensure comparability of results in Sections 3 and 4, we apply the same $n$ for each candidate $\tau$ and only consider time points with $\tau\in\{n,\ldots,T-n\}$. Finally, we note that the proposed procedure assesses non-stationarity locally around a given time point $\tau$. To test for non-stationarity across the entire observation period, one may either perform the test for each admissible value of $\tau$ and apply an appropriate multiple-testing correction, or define a global test statistic
+$$
+N_{\max} \coloneq \max_{\tau=n,\ldots,T-n} N_{obs}(\tau).
+$$
+A permutation test can then be constructed using the corresponding maximum statistic under each permutation. This automatically accounts for the multiple testing induced by considering multiple values of $\tau$.
+
+
+
+
+
+
 % Refitting the CE models within each permutation incorporates variation arising from estimation of the extremal dependence structure into the reference distribution.
 
-The empirical $p$-value is then
-\begin{equation} \label{eq:perm_pval}
+
+
+
+
+
+%We construct a statistical test for detecting a difference in tail behaviour in one or more of the random vectors $\boldsymbol{Y}_1^{(t)},\ldots,\boldsymbol{Y}_D^{(t)}$ based on the conditional extremes models fitted using the data for time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$. Specifically, the null hypothesis states that the matrix $M^{(t)}$ in \eqref{eq:distance_matrix} remains unchanged throughout the period $\mathcal{T}_1(\tau)\cup\mathcal{T}_2(\tau)$:
+
+
+%Let $M(T)$ denote the estimated extremal dependence structure for a time block $T$, which could represent a given period of time for which we have sufficient data to fit the CE model and estimate the corresponding divergence matrix.
+%A simple way to compare two time blocks $T_1$ and $T_2$ is via the statistic
+%\begin{equation} \label{eq:frob}
+%D_{\mathrm{obs}} \coloneq \| M(T_1) - M(T_2) \|_{\mathrm{F}},
+%\end{equation}
+%i.e.\ the Frobenius norm of their difference, defined as
+%\[
+%  \| A \|_{\mathrm{F}} \coloneq \sqrt{\sum_{i,j} A_{ij}^2}.
+%\]
+%This statistic captures the overall or global magnitude of change in extremal dependence across all pairs of sites.
+%Another option is the infinity, or maximum-entry, norm, defined as
+%\[
+%  \| A \|_{\infty} \coloneq \max_{i,j}|A_{ij}|,
+%\]
+% which may better highlight the maximum difference between each matrix, placing greater emphasis on more localised changes in tail dependence.
+%which captures the largest difference between corresponding entries of the two matrices and therefore places greater emphasis on localised changes in extremal dependence.
+%Critical values for this statistic could be generated via simulation from fitted models to assess whether observed changes represent significant shifts in tail dependence.
+
+%One key question is how large the observed statistic must be to indicate a significant change in extremal dependence.
+%A natural way to assess whether the difference between two time periods reflects a genuine structural change, rather than sampling variability in the fitted CE models, is via a permutation test. 
+%A permutation test is a non-parametric method for testing hypotheses by comparing the observed test statistic to a reference distribution generated by randomly permuting the data \citep{Good2004}.
+%Such procedures are exact when the observations are exchangeable under the null hypothesis.
+% One advantage of this approach is that it avoids strong parametric assumptions about the sampling distribution of the divergence matrix, which is unknown, and directly respects the dependence structure of the observed data.
+%One advantage of this approach is that it avoids strong parametric assumptions about the sampling distribution of the divergence matrix, which is unknown, and avoids specifying a parametric sampling distribution for the divergence matrix and can accommodate dependence-preserving permutation schemes.
+
+%\subsubsection{Permutation test for temporal changes in extremal dependence}
+
+% \textcolor{red}{Include brief intro to subsubsection introducing screening step and permutation test?}
+%Suppose we wish to test for a change in extremal dependence at a candidate split point $\tau$ by comparing two local time blocks immediately before and after the split. 
+%Let $T_1$ and $T_2$ denote the corresponding pre- and post-change windows, each of size $n$. 
+%We fit the CE model separately in each block, yielding divergence matrices $M(T_1)$ and $M(T_2)$ as defined in Equation~\eqref{eq:distance_matrix} (or their aggregate form in Equation~\eqref{eq:aggregate_matrix}). 
+
+%Our null hypothesis is 
+%\[
+%H_0:\ \text{the extremal dependence structure is identical in } T_1 \text{ and } T_2.
+%\]
+%Under this null hypothesis of stationarity, exceedances from the two blocks arise from the same distribution. 
+%We therefore generate a reference distribution for $D_{\mathrm{obs}}$ by repeatedly permuting the time indices:
+%\begin{enumerate}[label=\arabic*.]
+%  \item \textbf{Pool observations:} For a chosen block size $n \le \min\{|T_1|, |T_2|\}$, combine the final $n$ observations from time block $T_1$ and the first $n$ observations from $T_2$ into a single dataset. 
+  % \item \textbf{Permute time labels:} Randomly permute the time indices of the pooled observations and reassign them to two pseudo-blocks of size $n$. 
+%  \item \textbf{Permute temporal labels:} Randomly reassign the pooled observations, or appropriate dependence-preserving temporal groups, to two pseudo-blocks of size $n$.
+%  \item \textbf{Refit CE models:} For the permuted dataset, reapply the exceedance threshold $u$ for each conditioning variable and refit the CE model in each pseudo-block, yielding divergence matrices  $M^{(b)}(T_1)$ and $M^{(b)}(T_2)$, for $b = 1,\dots,B$ permutations.
+%\item \textbf{Recompute statistic:} Compute the test statistic
+%  \begin{equation} \label{eq:perm_stat}
+%    D^{(b)} \coloneq
+%    \bigl\| M^{(b)}(T_1) - M^{(b)}(T_2) \bigr\|_{\mathrm{r}},
+%    \qquad b = 1,\dots,B, 
+%  \end{equation}
+%\end{enumerate}
+%for the $\mathrm{r}$-norm of choice (Frobenius or Infinity).
+%As the CE model fitting and divergence calculation are repeated within each permutation, this procedure naturally propagates the estimation uncertainty in the fitted dependence parameters, somewhat analogous to a bootstrapping approach. \textcolor{red}{Remove reference to bootstrap?}
+% Refitting the CE models within each permutation incorporates variation arising from estimation of the extremal dependence structure into the reference distribution.
+
+%The empirical $p$-value is then
+%\begin{equation} \label{eq:perm_pval}
 % \hat{p} =
 % \frac{1}{B}
 % \sum_{b=1}^B
 % \mathbf{1}\!\left\{ D^{(b)} \ge D_{\mathrm{obs}} \right\}.
-\hat{p}
-=
-\frac{
-  1+
-  \sum_{b=1}^{B}
-  \mathbf{1}
-  \left\{
-  D^{(b)}
-  \geq
-  D_{\mathrm{obs}}
-  \right\}
-}{
-  B+1
-}.
-\end{equation}
-A small value of $\hat{p}$ provides evidence that the tail-dependence structure differs between the two time periods. 
-In performing the permutation test, a suitable block size $n$ must be chosen to ensure reliable estimation of the CE model parameters within each time block, while also providing sufficient power to detect changes in extremal dependence.
-Using the same $n$ across all permutations ensures that the sampling variability in the fitted parameters is appropriately reflected in the reference distribution of the test statistic.
+%\hat{p}
+%=
+%\frac{
+%  1+
+%  \sum_{b=1}^{B}
+%  \mathbf{1}
+%  \left\{
+%  D^{(b)}
+%  \geq
+%  D_{\mathrm{obs}}
+%  \right\}
+%}{
+%  B+1
+%}.
+%\end{equation}
+%A small value of $\hat{p}$ provides evidence that the tail-dependence structure differs between the two time periods. 
+%In performing the permutation test, a suitable block size $n$ must be chosen to ensure reliable estimation of the CE model parameters within each time block, while also providing sufficient power to detect changes in extremal dependence.
+%Using the same $n$ across all permutations ensures that the sampling variability in the fitted parameters is appropriately reflected in the reference distribution of the test statistic.
 
-\subsubsection{Sliding-window permutation approach for changepoint localisation}
+%\subsubsection{Sliding-window permutation approach for changepoint localisation}
 
 % The permutation test above assesses whether a \emph{given} time split corresponds to a change in extremal dependence. 
 % % We now extend this idea to estimate the location of an unknown changepoint.
@@ -481,53 +563,53 @@ Using the same $n$ across all permutations ensures that the sampling variability
 % Furthermore, in the presence of temporal dependence, block permutations or other dependence-preserving resampling schemes may be required to ensure valid inference.
 % Nevertheless, the approach outlined here offers a natural extension of the divergence-based clustering framework developed in the previous chapter and has the potential to provide new tools for identifying structural changes in extremal dependence across time.
 
-The permutation test above assesses whether a \emph{given} time split corresponds to a change in extremal dependence. 
-We now extend this procedure across a sequence of candidate split points to identify periods at which the extremal dependence structure changes.
+%The permutation test above assesses whether a \emph{given} time split corresponds to a change in extremal dependence. 
+%We now extend this procedure across a sequence of candidate split points to identify periods at which the extremal dependence structure changes.
 
-Given $N$ ordered temporal units and a block size $n$, consider candidate changepoints $\tau \in \{n,\ldots,N-n\}$.
-For each candidate $\tau$, define the adjacent temporal blocks
-\begin{equation}\label{eq:sliding_blocks}
-T_1(\tau)
-\coloneq
-\{\tau-n+1,\ldots,\tau\},
-\qquad
-T_2(\tau)
-=
-\{\tau+1,\ldots,\tau+n\}.
-\end{equation}
-The candidate $\tau$ therefore represents a possible change between temporal units $\tau$ and $\tau+1$.
+%Given $N$ ordered temporal units and a block size $n$, consider candidate changepoints $\tau \in \{n,\ldots,N-n\}$.
+%For each candidate $\tau$, define the adjacent temporal blocks
+%\begin{equation}\label{eq:sliding_blocks}
+%T_1(\tau)
+%\coloneq
+%\{\tau-n+1,\ldots,\tau\},
+%\qquad
+%T_2(\tau)
+%=
+%\{\tau+1,\ldots,\tau+n\}.
+%\end{equation}
+%The candidate $\tau$ therefore represents a possible change between temporal units $\tau$ and $\tau+1$.
 
-We first evaluate the observed discrepancy
-\begin{equation}
-\label{eq:screening_stat}
-D(\tau)
-=
-\left\|
-M\{T_1(\tau)\}
--
-M\{T_2(\tau)\}
-\right\|_{\mathrm{r}}
-\end{equation}
-over the admissible candidate split points, for $r \in \{\mathrm{F},\infty\}$. 
-The resulting profile provides an initial screening of temporal changes in the estimated extremal dependence structure. 
-In particular, local maxima of $D(\tau)$ identify candidate regions where the fitted dependence structures on either side of the split differ most strongly.
+%We first evaluate the observed discrepancy
+%\begin{equation}
+%\label{eq:screening_stat}
+%D(\tau)
+%=
+%\left\|
+%M\{T_1(\tau)\}
+%-
+%M\{T_2(\tau)\}
+%\right\|_{\mathrm{r}}
+%\end{equation}
+%over the admissible candidate split points, for $r \in \{\mathrm{F},\infty\}$. 
+%The resulting profile provides an initial screening of temporal changes in the estimated extremal dependence structure. 
+%In particular, local maxima of $D(\tau)$ identify candidate regions where the fitted dependence structures on either side of the split differ most strongly.
 
-We then apply the permutation test described above at each feasible candidate $\tau$, yielding a corresponding profile of pointwise $p$-values,
-\[
-\left\{
-\hat{p}(\tau):
-\tau \in \{n,\ldots,N-n\}
-\right\}.
-\]
-A small value of $\hat{p}(\tau)$ indicates that the observed difference between the extremal dependence structures in $T_1(\tau)$ and $T_2(\tau)$ is larger than expected under temporal homogeneity.
-Examining the screening statistic and permutation $p$-values together distinguishes pronounced estimated changes from changes that may instead be attributable to sampling variability.
+%We then apply the permutation test described above at each feasible candidate $\tau$, yielding a corresponding profile of pointwise $p$-values,
+%\[
+%\left\{
+%\hat{p}(\tau):
+%\tau \in \{n,\ldots,N-n\}
+%\right\}.
+%\]
+%A small value of $\hat{p}(\tau)$ indicates that the observed difference between the extremal dependence structures in $T_1(\tau)$ and $T_2(\tau)$ is larger than expected under temporal homogeneity.
+%Examining the screening statistic and permutation $p$-values together distinguishes pronounced estimated changes from changes that may instead be attributable to sampling variability.
 
-\textcolor{red}{precipitation or drought data??}
-When the number of admissible split points is modest, as in our application to Spanish temperature and precipitation data in Section~\ref{sec:app}, permutation testing can be performed over the complete candidate range. 
-In settings with longer time series or substantially larger spatial networks, the screening profile may instead be used to restrict permutation testing to neighbourhoods around its most prominent local maxima, thereby reducing computational cost.
+%\textcolor{red}{precipitation or drought data??}
+%When the number of admissible split points is modest, as in our application to Spanish temperature and precipitation data in Section~\ref{sec:app}, permutation testing can be performed over the complete candidate range. 
+%In settings with longer time series or substantially larger spatial networks, the screening profile may instead be used to restrict permutation testing to neighbourhoods around its most prominent local maxima, thereby reducing computational cost.
 
-As changes in environmental dependence structures may occur gradually, a candidate $\tau$ should not necessarily be interpreted as the time of an instantaneous physical transition. 
-Rather, it identifies a division between adjacent periods whose estimated extremal dependence structures differ.
+%As changes in environmental dependence structures may occur gradually, a candidate $\tau$ should not necessarily be interpreted as the time of an instantaneous physical transition. 
+%Rather, it identifies a division between adjacent periods whose estimated extremal dependence structures differ.
 
 \section{Simulation Study}
 \label{sec:sim}
@@ -589,6 +671,8 @@ For the other two baseline groups, the corresponding final correlations are appr
 \end{enumerate}
 The local scenario represents a concentrated change in the extremal dependence structure, whereas the global scenario represents a broader system-wide transition. 
 We therefore expect the infinity norm to be particularly responsive to the local alternative and the Frobenius norm to benefit from the accumulation of pairwise changes under the global alternative.
+
+\textcolor{red}{Say about value of B (number of iterations)}
 
 For each scenario, we generate $100$ independent datasets and apply the changepoint procedure described in Section~\ref{subsec:cp}. 
 For the screening step, we fit using adjacent blocks of $15, 20, 25$ and $30$ season-years, and evaluate candidate split points over the complete feasible range.
@@ -1143,25 +1227,6 @@ Go through PDFs.
 % \end{itemize}
 
 \subsubsection{Covariates and cluster membership}
-
-\begin{itemize}
-\item Cluster membership is associated with broad geographical structure, although geography does not completely determine the solutions.
-\item Autumn exhibits a particularly clear longitudinal ordering, while Summer shows a comparatively strong latitudinal division.
-\item Winter has a more complicated geographical structure and changes substantially after 1998.
-\item Elevation overlaps considerably between clusters and does not provide a consistent explanation of membership across seasons.
-\item Distance to the coast provides clearer separation, particularly in Winter and Summer.
-\item Pre-changepoint Winter cluster 2 and Summer cluster 2 generally contain more coastal locations, whereas other clusters contain more inland locations.
-\item High temperature quantiles clearly distinguish some clusters, including the warmer cluster 2 in pre-changepoint Winter and in Summer.
-\item Some temperature-quantile separation weakens after the changepoints, particularly in Winter and Autumn.
-\item High DPI quantiles provide some of the clearest marginal distinctions between clusters.
-\item Winter cluster 3 has the highest DPI quantiles, post-changepoint Summer cluster 2 has the highest DPI quantiles, and pre-changepoint Autumn shows a progression from lower values in cluster 1 to higher values in cluster 3.
-\item The empirical $\widehat{\chi}(0.9)$ and $\widehat{\overline{\chi}}(0.9)$ estimates also distinguish several clusters, confirming that the solutions represent different extremal-dependence regimes rather than only different marginal climates.
-\item Pre-changepoint Winter cluster 2 has relatively strong tail dependence, whereas cluster 3 has relatively weak tail dependence.
-\item In Autumn, cluster 2 generally has weaker tail dependence, while cluster 3 has especially strong tail dependence after 1986.
-\item Summer shows greater overlap in $\widehat{\chi}(0.9)$, although some separation remains in $\widehat{\overline{\chi}}(0.9)$.
-\item The physical interpretation of a cluster number can change between seasons and periods, so cluster labels should not be treated as having a universal meaning.
-\item The distance-to-coast axis currently appears to contain values in metres despite being labelled in kilometres and should be corrected before presentation.
-\end{itemize}
 
 \subsubsection{Cluster switching}
 
