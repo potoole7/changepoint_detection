@@ -357,236 +357,236 @@ readr::write_csv(
   paste0("data/01_sim/screen_res_all_", cp_type, ".csv.gz")
 )
 
-changepoint_res_all <- list.files(
-  "data/01_sim/changepoints",
-  pattern = sprintf("%s_\\d{3}\\.RDS$", cp_type),
-  full.names = TRUE
-) |>
-  lapply(readRDS)
+# changepoint_res_all <- list.files(
+#   "data/01_sim/changepoints",
+#   pattern = sprintf("%s_\\d{3}\\.RDS$", cp_type),
+#   full.names = TRUE
+# ) |>
+#   lapply(readRDS)
 
 
-#### Screening Plots ####
-
-# plot screening results
-screen_res_all_plt <- screen_res_all |>
-  # add rep number
-  group_by(n_years_per_block, change_after_year) |>
-  mutate(rep = row_number()) |>
-  ungroup() |> # stack metrics into one column
-  pivot_longer(c(frob, inf, spec)) |>
-  # scale between 0 and 1
-  group_by(name, n_years_per_block) |>
-  mutate(value = boot::inv.logit(scale(value))) |>
-  ungroup() |>
-  mutate(
-    name = case_when(
-      name == "frob" ~ "Frobenius",
-      name == "inf" ~ "Infinity",
-      TRUE ~ "Spectral"
-    )
-  )
-
-p_screen1 <- screen_res_all_plt |>
-  ggplot(
-    aes(x = change_after_year, y = value, colour = factor(n_years_per_block))
-  ) +
-  geom_smooth(show.legend = FALSE) +
-  # geom_line(aes(group = interaction(name, rep)), alpha = 0.2) +
-  geom_line(aes(group = interaction(n_years_per_block, rep)), alpha = 0.2) +
-  # facet_wrap(~n_years_per_block) +
-  facet_wrap(~name) +
-  labs(colour = "Years per block") +
-  cecl_theme() +
-  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
-
-p_screen1
-
-ggsave(
-  filename = paste0("plots/01_sim/screen_facet_norm_", cp_type, ".png"),
-  plot = p_screen1,
-  width = 8,
-  height = 6
-)
-
-p_screen2 <- screen_res_all_plt |>
-  filter(name != "Spectral") |>
-  ggplot(aes(x = change_after_year, y = value, colour = name)) +
-  geom_smooth(show.legend = FALSE) +
-  geom_line(aes(group = interaction(n_years_per_block, rep)), alpha = 0.2) +
-  facet_wrap(~n_years_per_block) +
-  labs(colour = "Norm Type") +
-  cecl_theme() +
-  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
-
-p_screen2
-
-ggsave(
-  filename = paste0("plots/01_sim/screen_facet_years_", cp_type, ".png"),
-  plot = p_screen2,
-  width = 8,
-  height = 6
-)
-
-
-#### Changepoint Plotting ####
-
-changepoint_df <- bind_rows(
-  lapply(
-    changepoint_res_all,
-    `[[`,
-    "summary"
-  ),
-  .id = "simulation_id"
-) |>
-  mutate(
-    simulation_id = as.integer(
-      simulation_id
-    )
-  )
-
-# For each norm and change_after_year, calculate times p-value < 0.05 and < 0.1
-rejection_df <- changepoint_df |>
-  group_by(change_after_year, norm) |>
-  summarise(
-    pval_0.05 = sum(p_value < 0.05) / n(),
-    pval_0.10 = sum(p_value < 0.1) / n(),
-    n = n(),
-    .groups = "drop"
-  )
-
-rejection_df_plt <- rejection_df |>
-  # filter(norm != "Spectral") |>
-  pivot_longer(cols = c(pval_0.05, pval_0.10), names_to = "pval_threshold", values_to = "rejection_rate") |>
-  mutate(pval_threshold = recode(pval_threshold, pval_0.05 = "p < 0.05", pval_0.10 = "p < 0.1")) |>
-  # convert numeric year to date object
-  mutate(change_after_year = as.Date(paste0(change_after_year, "-01-01")))
-
-# find average rejection rate for each norm and pval_threshold (ignores multiple comparisons)
-rejection_df_plt |>
-  group_by(norm, pval_threshold) |>
-  summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
-  arrange(norm, pval_threshold)
-
-# find rejection rate for years before and after 1990 (when change occurs)
-rejection_df_plt |>
-  filter(change_after_year >= as.Date("1990-01-01")) |>
-  group_by(norm, pval_threshold) |>
-  summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
-  arrange(norm, pval_threshold)
-
-rejection_df_plt |>
-  filter(change_after_year < as.Date("1990-01-01")) |>
-  group_by(norm, pval_threshold) |>
-  summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
-  arrange(norm, pval_threshold)
-
-# plot
-rejection_df_plt |>
-  filter(norm != "Spectral") |>
-  ggplot(aes(x = change_after_year, y = rejection_rate, color = pval_threshold)) +
-  geom_point(size = 2) +
-  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red") +
-  geom_hline(yintercept = 0.1, linetype = "dashed", color = "blue") +
-  facet_wrap(~norm) +
-  labs(
-    x = "Season Year",
-    y = "Rejection Rate",
-    colour = "P-value Threshold"
-  ) +
-  cecl_theme() +
-  scale_x_date(date_labels = "%Y", date_breaks = "1 years") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-# barplot of number of changepoints detected for each change_after_year,
-# for each norm type
-p_cp1 <- rejection_df_plt |>
-  filter(norm != "Spectral") |>
-  ggplot(aes(x = change_after_year, y = rejection_rate, fill = pval_threshold)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_abline(aes(slope = 0, intercept = 0.05), linewidth = 1, linetype = "dashed", color = "black") +
-  geom_abline(aes(slope = 0, intercept = 0.1), linewidth = 1, linetype = "dashed", color = "black") +
-  facet_wrap(~norm) +
-  labs(x = "Season year", y = "Rejection Rate", fill = "P-value Threshold") +
-  cecl_theme() +
-  scale_x_date(date_labels = "%Y", date_breaks = "1 years") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-p_cp1
-
-# save
-ggsave(
-  filename = paste0("plots/01_sim/changepoint_rejection_rate_", cp_type, ".png"),
-  plot = p_cp1,
-  width = 8,
-  height = 6
-)
-
-# calculate pointwise Type I error (rejection rate at each candidate year)
-pointwise_error_1_df <- changepoint_df |>
-  group_by(
-    change_after_year,
-    norm
-  ) |>
-  summarise(
-    type1_05 = mean(
-      p_value < 0.05,
-      na.rm = TRUE
-    ),
-    type1_10 = mean(
-      p_value < 0.10,
-      na.rm = TRUE
-    ),
-    n_valid = sum(!is.na(p_value)),
-    .groups = "drop"
-  )
-pointwise_error_1_df
-
-# calculate familywise Type I error (rejection rate across all candidate years)
-global_error_1_df <- changepoint_df |>
-  group_by(
-    simulation_id,
-    norm
-  ) |>
-  summarise(
-    min_p_value = min(
-      p_value,
-      na.rm = TRUE
-    ),
-    reject_any_05 = any(
-      p_value < 0.05,
-      na.rm = TRUE
-    ),
-    reject_any_10 = any(
-      p_value < 0.10,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  ) |>
-  group_by(norm) |>
-  summarise(
-    familywise_type1_05 =
-      mean(reject_any_05),
-    familywise_type1_10 =
-      mean(reject_any_10),
-    n_simulations = n(),
-    .groups = "drop"
-  )
-
-global_error_1_df
-
-
-#### Changepoint Plotting (old) ####
-
-# add rep number
+# #### Screening Plots ####
+#
+# # plot screening results
+# screen_res_all_plt <- screen_res_all |>
+#   # add rep number
+#   group_by(n_years_per_block, change_after_year) |>
+#   mutate(rep = row_number()) |>
+#   ungroup() |> # stack metrics into one column
+#   pivot_longer(c(frob, inf, spec)) |>
+#   # scale between 0 and 1
+#   group_by(name, n_years_per_block) |>
+#   mutate(value = boot::inv.logit(scale(value))) |>
+#   ungroup() |>
+#   mutate(
+#     name = case_when(
+#       name == "frob" ~ "Frobenius",
+#       name == "inf" ~ "Infinity",
+#       TRUE ~ "Spectral"
+#     )
+#   )
+#
+# p_screen1 <- screen_res_all_plt |>
+#   ggplot(
+#     aes(x = change_after_year, y = value, colour = factor(n_years_per_block))
+#   ) +
+#   geom_smooth(show.legend = FALSE) +
+#   # geom_line(aes(group = interaction(name, rep)), alpha = 0.2) +
+#   geom_line(aes(group = interaction(n_years_per_block, rep)), alpha = 0.2) +
+#   # facet_wrap(~n_years_per_block) +
+#   facet_wrap(~name) +
+#   labs(colour = "Years per block") +
+#   cecl_theme() +
+#   scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
+#
+# p_screen1
+#
+# ggsave(
+#   filename = paste0("plots/01_sim/screen_facet_norm_", cp_type, ".png"),
+#   plot = p_screen1,
+#   width = 8,
+#   height = 6
+# )
+#
+# p_screen2 <- screen_res_all_plt |>
+#   filter(name != "Spectral") |>
+#   ggplot(aes(x = change_after_year, y = value, colour = name)) +
+#   geom_smooth(show.legend = FALSE) +
+#   geom_line(aes(group = interaction(n_years_per_block, rep)), alpha = 0.2) +
+#   facet_wrap(~n_years_per_block) +
+#   labs(colour = "Norm Type") +
+#   cecl_theme() +
+#   scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
+#
+# p_screen2
+#
+# ggsave(
+#   filename = paste0("plots/01_sim/screen_facet_years_", cp_type, ".png"),
+#   plot = p_screen2,
+#   width = 8,
+#   height = 6
+# )
+#
+#
+# #### Changepoint Plotting ####
+#
+# changepoint_df <- bind_rows(
+#   lapply(
+#     changepoint_res_all,
+#     `[[`,
+#     "summary"
+#   ),
+#   .id = "simulation_id"
+# ) |>
+#   mutate(
+#     simulation_id = as.integer(
+#       simulation_id
+#     )
+#   )
+#
+# # For each norm and change_after_year, calculate times p-value < 0.05 and < 0.1
+# rejection_df <- changepoint_df |>
+#   group_by(change_after_year, norm) |>
+#   summarise(
+#     pval_0.05 = sum(p_value < 0.05) / n(),
+#     pval_0.10 = sum(p_value < 0.1) / n(),
+#     n = n(),
+#     .groups = "drop"
+#   )
+#
+# rejection_df_plt <- rejection_df |>
+#   # filter(norm != "Spectral") |>
+#   pivot_longer(cols = c(pval_0.05, pval_0.10), names_to = "pval_threshold", values_to = "rejection_rate") |>
+#   mutate(pval_threshold = recode(pval_threshold, pval_0.05 = "p < 0.05", pval_0.10 = "p < 0.1")) |>
+#   # convert numeric year to date object
+#   mutate(change_after_year = as.Date(paste0(change_after_year, "-01-01")))
+#
+# # find average rejection rate for each norm and pval_threshold (ignores multiple comparisons)
+# rejection_df_plt |>
+#   group_by(norm, pval_threshold) |>
+#   summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
+#   arrange(norm, pval_threshold)
+#
+# # find rejection rate for years before and after 1990 (when change occurs)
+# rejection_df_plt |>
+#   filter(change_after_year >= as.Date("1990-01-01")) |>
+#   group_by(norm, pval_threshold) |>
+#   summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
+#   arrange(norm, pval_threshold)
+#
+# rejection_df_plt |>
+#   filter(change_after_year < as.Date("1990-01-01")) |>
+#   group_by(norm, pval_threshold) |>
+#   summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
+#   arrange(norm, pval_threshold)
+#
+# # plot
+# rejection_df_plt |>
+#   filter(norm != "Spectral") |>
+#   ggplot(aes(x = change_after_year, y = rejection_rate, color = pval_threshold)) +
+#   geom_point(size = 2) +
+#   geom_hline(yintercept = 0.05, linetype = "dashed", color = "red") +
+#   geom_hline(yintercept = 0.1, linetype = "dashed", color = "blue") +
+#   facet_wrap(~norm) +
+#   labs(
+#     x = "Season Year",
+#     y = "Rejection Rate",
+#     colour = "P-value Threshold"
+#   ) +
+#   cecl_theme() +
+#   scale_x_date(date_labels = "%Y", date_breaks = "1 years") +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+#
+# # barplot of number of changepoints detected for each change_after_year,
+# # for each norm type
+# p_cp1 <- rejection_df_plt |>
+#   filter(norm != "Spectral") |>
+#   ggplot(aes(x = change_after_year, y = rejection_rate, fill = pval_threshold)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   geom_abline(aes(slope = 0, intercept = 0.05), linewidth = 1, linetype = "dashed", color = "black") +
+#   geom_abline(aes(slope = 0, intercept = 0.1), linewidth = 1, linetype = "dashed", color = "black") +
+#   facet_wrap(~norm) +
+#   labs(x = "Season year", y = "Rejection Rate", fill = "P-value Threshold") +
+#   cecl_theme() +
+#   scale_x_date(date_labels = "%Y", date_breaks = "1 years") +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# p_cp1
+#
+# # save
+# ggsave(
+#   filename = paste0("plots/01_sim/changepoint_rejection_rate_", cp_type, ".png"),
+#   plot = p_cp1,
+#   width = 8,
+#   height = 6
+# )
+#
+# # calculate pointwise Type I error (rejection rate at each candidate year)
+# pointwise_error_1_df <- changepoint_df |>
+#   group_by(
+#     change_after_year,
+#     norm
+#   ) |>
+#   summarise(
+#     type1_05 = mean(
+#       p_value < 0.05,
+#       na.rm = TRUE
+#     ),
+#     type1_10 = mean(
+#       p_value < 0.10,
+#       na.rm = TRUE
+#     ),
+#     n_valid = sum(!is.na(p_value)),
+#     .groups = "drop"
+#   )
+# pointwise_error_1_df
+#
+# # calculate familywise Type I error (rejection rate across all candidate years)
+# global_error_1_df <- changepoint_df |>
+#   group_by(
+#     simulation_id,
+#     norm
+#   ) |>
+#   summarise(
+#     min_p_value = min(
+#       p_value,
+#       na.rm = TRUE
+#     ),
+#     reject_any_05 = any(
+#       p_value < 0.05,
+#       na.rm = TRUE
+#     ),
+#     reject_any_10 = any(
+#       p_value < 0.10,
+#       na.rm = TRUE
+#     ),
+#     .groups = "drop"
+#   ) |>
+#   group_by(norm) |>
+#   summarise(
+#     familywise_type1_05 =
+#       mean(reject_any_05),
+#     familywise_type1_10 =
+#       mean(reject_any_10),
+#     n_simulations = n(),
+#     .groups = "drop"
+#   )
+#
+# global_error_1_df
+#
+#
+# #### Changepoint Plotting (old) ####
+#
+# # add rep number
 # changepoint_df_plt <- changepoint_df |>
 #   group_by(norm, change_after_year) |>
 #   mutate(rep = row_number()) |>
 #   ungroup()
 #
-
+#
 # # add rep number
 # changepoint_df_plt <- changepoint_df |>
 #   group_by(norm, change_after_year) |>
