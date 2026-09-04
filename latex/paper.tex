@@ -30,7 +30,10 @@
 \usepackage{changes} % highlight my changes in red
 \usepackage[normalem]{ulem} 
 \usepackage{cancel}
-% \usepackage{subfiles}
+
+\usepackage{subfiles}
+\usepackage{xr-hyper}
+\externaldocument{supplementary_material}
 
 % Define custom maths equations 
 \DeclareMathOperator{\KL}{KL}
@@ -1064,64 +1067,76 @@ The horizontal dashed line denotes the pointwise 5\% significance level.
 
 \subsection{Clustering Results}\label{subsec:app_clust}
 
+% % Old!
 % \begin{itemize}
-%   \item We now fit the CE model one last time to the entire timeseries of Spring and Autumn data. 
-%   \item For Summer, we fit the CE model separately for the season years 1960 to 1990 and 1990 to 2020, respectively, while for Winter, we do so for the season years 1960 to 1998 and 1999 to 2020. 
-%   \item The resulting spatial clusterings from these fitted CE models is shown in Figure~\ref{fig:app_clust}. 
-%   \item \todo{Comment on these results!!}
+% \item We finally examine how the detected changes affect the spatial clustering of the fitted extremal dependence structure. 
+% \item For each fitted conditional extremes model, the aggregated dissimilarity matrix is used to partition the 40 stations into three clusters using the clustering procedure described in Section~\ref{sec:method}.
+% \item As the changepoint analysis provides no consistent evidence of a change in spring or autumn, we refit the conditional extremes model to the complete time series for these seasons. 
+% 
+% \item For summer, the pointwise tests identify a broader candidate change region during the late 1980s and early 1990s. 
+% \item We use 1990 as a representative division within this region and fit separate models to season-years 1960--1990 and 1991--2020.
+% 
+% \item For winter, the three norms provide their clearest common evidence at season-year 1998. 
+% \item We therefore fit separate models to winter season-years 1960--1998 and 1999--2020.
+% 
+% \item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$. \textcolor{red}{Confirm or update the selected divisions after completing the multiplicity-adjusted changepoint analysis.}
 % \end{itemize}
 % 
-% \begin{figure}[htb]
-%     \centering
-%     \includegraphics[width = 0.9\linewidth]{plots/clust_map_trim.png}
-%     \caption{ 
-%       Insert here
-%     }
-%    \label{fig:app_clust}
-% \end{figure}
+% \begin{itemize}
+% \item Figure~\ref{fig:app_clust} presents the resulting spatial clusterings. 
+% \item Although station coordinates and elevation do not directly determine the clustering assignments, the fitted clusters exhibit substantial spatial coherence. 
+% \item Neighbouring stations are frequently assigned to the same cluster, suggesting that the estimated extremal dependence structure contains a strong geographical component.
+% 
+% \item The spring clustering broadly separates groups of stations along the northern and Mediterranean coasts (in blue) from groups in the western (orange) and central interior (red). 
+% \item Nevertheless, the boundaries are not determined solely by physical proximity, with some geographically separated stations assigned to the same dependence cluster.
+% 
+% \item The autumn clustering exhibits a stronger broadly coastal--interior structure. 
+% % \item Several stations along the northern and eastern coasts are grouped together, similar to the spring clustering, while clusters containing central, western and southwestern stations form comparatively coherent regional groupings.
+% \item Several stations along the northern and eastern coasts are grouped together, similar to the spring clustering, while the other two clusters comprise locations in the west/south-west and elsewhere, respectively. 
+% 
+% \item For summer, the two fitted periods retain some common large-scale structure.
+% \item However, a number of stations change their clustering relationships after 1990, most visibly in northwestern Spain, along the southern coast and across parts of the western interior. 
+% \item The summer changepoint therefore corresponds to a reorganization of particular regional relationships rather than a complete replacement of the earlier clustering structure.
+% 
+% \item The winter clustering, in contrast, changes more extensively across the 1998 division. 
+% \item In particular, the post-1998 fit produces a different grouping of many stations along the northern coast, in the western and central interior, and along the Mediterranean coast. 
+% \item This broader spatial reorganisation, as opposed to the more localised changes seen in summer, is consistent with the late-1990s signal being identified by all three norms in the changepoint analysis.
+% \end{itemize}
 
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/twgss_dqu_0.8_all_trim.png}
+% \caption{
+% }
+\caption{
+``Elbow'' plots of the total within-group dissimilarity (TWD) against the number of clusters $k$ for the estimated clusters, obtained using the aggregated dissimilarity matrix for each season and their respective changepoint divisions.
+}
+\label{fig:elbow}
+\end{figure}
+
+% Setup and elbow plots
+\textcolor{red}{Are elbow plots briefly alluded to in methods?}
 \begin{itemize}
-\item We finally examine how the detected changes affect the spatial clustering of the fitted extremal dependence structure. 
-\item For each fitted conditional extremes model, the aggregated dissimilarity matrix is used to partition the 40 stations into three clusters using the clustering procedure described in Section~\ref{sec:method}.
-\item As the changepoint analysis provides no consistent evidence of a change in spring or autumn, we refit the conditional extremes model to the complete time series for these seasons. 
+    \item We finally investigate how the detected temporal changes are reflected in the spatial clustering of the fitted extremal dependence structures.
+    \item For each fitted conditional extremes model, the aggregated dissimilarity matrix is used to partition the 40 stations into three clusters using the procedure described in Section~\ref{sec:method}.
+    \item For summer, the pointwise tests identify a broader region of evidence during the late 1980s and early 1990s. We use 1990 as a representative division and fit separate models to season-years 1960--1990 and 1991--2020.
+    \item For winter, the clearest common evidence across the three matrix norms occurs at season-year 1998. Separate models are therefore fitted to season-years 1960--1998 and 1999--2020.
+    \item For autumn, the Infinity norm identifies possible evidence of a change at 1986 at the 10\% pointwise significance level. We consequently examine the periods 1960--1986 and 1987--2020 as an exploratory sensitivity analysis.
+    \item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$.
+    \item The changepoint analysis provides no consistent evidence of temporal change in spring. We therefore fit a single conditional extremes model to the complete spring record.
 
-\item For summer, the pointwise tests identify a broader candidate change region during the late 1980s and early 1990s. 
-\item We use 1990 as a representative division within this region and fit separate models to season-years 1960--1990 and 1991--2020.
-
-\item For winter, the three norms provide their clearest common evidence at season-year 1998. 
-\item We therefore fit separate models to winter season-years 1960--1998 and 1999--2020.
-
-\item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$. \textcolor{red}{Confirm or update the selected divisions after completing the multiplicity-adjusted changepoint analysis.}
-\end{itemize}
-
-\begin{itemize}
-\item Figure~\ref{fig:app_clust} presents the resulting spatial clusterings. 
-\item Although station coordinates and elevation do not directly determine the clustering assignments, the fitted clusters exhibit substantial spatial coherence. 
-\item Neighbouring stations are frequently assigned to the same cluster, suggesting that the estimated extremal dependence structure contains a strong geographical component.
-
-\item The spring clustering broadly separates groups of stations along the northern and Mediterranean coasts (in blue) from groups in the western (orange) and central interior (red). 
-\item Nevertheless, the boundaries are not determined solely by physical proximity, with some geographically separated stations assigned to the same dependence cluster.
-
-\item The autumn clustering exhibits a stronger broadly coastal--interior structure. 
-% \item Several stations along the northern and eastern coasts are grouped together, similar to the spring clustering, while clusters containing central, western and southwestern stations form comparatively coherent regional groupings.
-\item Several stations along the northern and eastern coasts are grouped together, similar to the spring clustering, while the other two clusters comprise locations in the west/south-west and elsewhere, respectively. 
-
-\item For summer, the two fitted periods retain some common large-scale structure.
-\item However, a number of stations change their clustering relationships after 1990, most visibly in northwestern Spain, along the southern coast and across parts of the western interior. 
-\item The summer changepoint therefore corresponds to a reorganization of particular regional relationships rather than a complete replacement of the earlier clustering structure.
-
-\item The winter clustering, in contrast, changes more extensively across the 1998 division. 
-\item In particular, the post-1998 fit produces a different grouping of many stations along the northern coast, in the western and central interior, and along the Mediterranean coast. 
-\item This broader spatial reorganisation, as opposed to the more localised changes seen in summer, is consistent with the late-1990s signal being identified by all three norms in the changepoint analysis.
+    \item The total within-cluster dissimilarity curves for each season and their respective divisions are shown in Figure~\ref{fig:elbow}.
+    \item Together, they generally support $k=3$ as an interpretable compromise between parsimony and within-cluster homogeneity.
+    \item However, as $k=2$ and $k=4$ also appear to be plausible for some elbow plots, we provide the corresponding clustering solutions in the Supplementary Material (Figures~\ref{app_clust_k2}--~\ref{app_clust_k2_4_spring}).
 \end{itemize}
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=0.9\linewidth]{plots/clust_map_trim.png}
+\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
 \caption{
 Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrices. 
-Spring and autumn are fitted using their complete time series. 
-Summer is fitted separately for season-years 1960--1990 and 1991--2020, while winter is fitted separately for season-years 1960--1998 and 1999--2020. 
+% Spring and autumn are fitted using their complete time series. 
+Winter is fitted separately for season-years 1960--1998 and 1999--2020, summer is fitted separately for season-years 1960--1990 and 1991--2020, and autumn is fitted separately for season-years 1960--1986 and 1987--2020.
 Three clusters are used in each fit. 
 Colours distinguish cluster membership within each panel.
 Background shading represents elevation.
@@ -1129,113 +1144,125 @@ Background shading represents elevation.
 \label{fig:app_clust}
 \end{figure}
 
-\newpage
-
-\subsection{Additional Results}
-
-\textcolor{red}{I've just included all the results and plots here, many will go into supplement!}
-
-\subsubsection{Clustering maps for 2 and 4 clusters}
-
-For Summer after the changepoint, the elbow plot suggests 2 clusters.
-For Winter before the changepoint, the elbow plot suggests 4 clusters.
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/twgss_dqu_0.8.png}
-\caption{
-  Elbow plots for each season. 
-}
-% TODO Add label
-\end{figure}
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k2.png}
-\caption{
-  Clustering solutions for $k = 2$ clusters. 
-}
-% TODO Add label
-\end{figure}
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k4.png}
-\caption{
-  Clustering solutions for $k = 4$ clusters. 
-}
-% TODO Add label
-\end{figure}
-
-\newpage
-
-\subsubsection{Changepoints for Autumn}
-
+% Initial broad summary of results
 \begin{itemize}
-    \item Not bad results; South West locations become more like red ones, and Eastern points go from blue to red (orange characterised by being more like red locations than blue ones).
-    \item Evidence of having higher temperature-DPI extremal dependence, as red locations have large $\chi$ \textcolor{red}{double check!}
+  \item Figure~\ref{fig:app_clust} presents the resulting spatial clustering solutions for each season with a detected changepoint.
+  \item The clusters exhibit substantial spatial coherence, despite station coordinates, elevation and other geographical covariates not entering the clustering procedure directly.
+  \item No individual geographical covariate completely determines cluster membership. Nevertheless, longitude, latitude and distance to the coast exhibit clearer associations with membership than elevation, suggesting that the estimated extremal dependence structures contain a broad geographical component.
+  \item Several geographically separated stations are assigned to the same cluster. The clustering therefore does not merely recover contiguous geographical regions, but identifies locations with similar fitted conditional extremal dependence structures.
+  \item Appreciable differences are observed between the pre- and post-division solutions for winter, summer and autumn, although the spatial extent and direction of the reorganisation differ between seasons.
 \end{itemize}
 
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
-\caption{
-  Clustering solutions for $k = 3$ clusters, with a changepoint for Autumn.
-}
-% TODO Add label
-\end{figure}
-
-\newpage
-
-\subsubsection{Dissimilarity Matrices}
-
+% Winter
 \begin{itemize}
-\item Signed differences are calculated as $D_{\mathrm{before}}-D_{\mathrm{after}}$.
-\item Positive differences therefore indicate that a pair of locations became more similar after the changepoint, whereas negative differences indicate that it became more dissimilar.
-\item Winter contains a mixture of positive and negative differences, suggesting heterogeneous restructuring rather than a uniform change.
-\item The Winter changes are concentrated in particular rows and columns, indicating that a limited number of locations contribute disproportionately to the change.
-\item Summer differences are predominantly positive, suggesting a general reduction in pairwise dissimilarity after 1990.
-\item Summer also contains the largest individual absolute differences, reaching approximately $0.10$.
-\item Autumn differences are also predominantly positive but are more widely distributed throughout the matrix, suggesting a relatively widespread convergence in fitted dependence structure.
-\item Colour intensity should not be compared directly between seasons because the panels use different colour-scale limits.
+  \item For winter during 1960--1998, cluster 2 is concentrated principally along the southern and southeastern coast, with one geographically separated member on the northern coast. Cluster 3 is concentrated more strongly across northern and northwestern Spain, while cluster 1 contains most of the remaining stations.
+  \item The early-winter solution is therefore spatially coherent, although geography is not a definitive determinant of membership.
+  \item The corresponding dissimilarity matrix (Supplementary Figure~\ref{diss_winter}) shows comparatively distinct groups, with cluster 3 displaying particularly large dissimilarities from the other two clusters.
+  \item The elbow for 1960--1998 in Figure~\ref{fig:elbow} is less sharply defined than for the later period and indicates that \(k=4\) is also plausible. Under \(k=4\), the original cluster 1 is subdivided into two larger groups, while only a small number of stations remain geographically separated from the other members of their assigned cluster.
+  \item This sensitivity analysis suggests that the pre-1999 winter dependence structure may contain finer geographical variation than is represented by the three-cluster solution. It does not, however, provide unequivocal evidence that four clusters are optimal.
+
+  \item The clustering changes appreciably after 1998, although some broad spatial structure remains. Cluster 1, which dominates the earlier solution, is substantially smaller during 1999--2020, while cluster 2 extends across a wider range of northern and interior locations.
+  \item The post-1998 solution appears less geographically delineated, with a greater number of neighbouring stations assigned to different clusters and several clusters spanning geographically separated regions.
+  \item The elbow curve for 1999--2020 provides clearer support for three clusters. Nevertheless, the corresponding dissimilarity matrix appears less block-structured and contains generally smaller between-station dissimilarities. \textcolor{red}{Support this statement by reporting the mean, median and maximum off-diagonal dissimilarities for each period.}
+
+  \item The signed matrix difference (Supplementary Figure~\ref{fig:sign_matrix_diff}) is defined as
+  \[
+      \Delta M^{(\mathrm{W})}
+      =
+      M^{(\mathrm{W})}_{1960\text{--}1998}
+      -
+      M^{(\mathrm{W})}_{1999\text{--}2020}.
+  \]
+  Positive entries therefore indicate station pairs whose fitted extremal dependence structures became more similar after 1998, whereas negative entries indicate pairs that became less similar.
+  \item The winter difference matrix contains both positive and negative entries. The temporal change is therefore heterogeneous rather than a uniform convergence across all stations.
+  \item Prominent positive bands are associated with Murcia and Ponferrada, indicating that their fitted dependence structures became more similar to those at several other stations after 1998.
+  \item Both stations also change cluster membership: Murcia moves from cluster 2 to cluster 3, while Ponferrada moves from cluster 3 to cluster 2. These transitions illustrate that a reduction in pairwise dissimilarity does not necessarily preserve the original cluster boundaries.
+
+  \item The broad spatial reorganisation in winter is consistent with the changepoint signal being visible under both the Frobenius and Infinity norms: the difference matrix contains several prominent station-specific changes together with more widely distributed moderate changes.
+  \item Overall, the winter results provide evidence that the geographical separation of the fitted extremal dependence regimes weakened after 1998. This should be interpreted as convergence among fitted dependence structures, rather than as evidence that the absolute strength of extremal dependence increased.
 \end{itemize}
 
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/dist_diff_all_dqu_0.8_trim.png}
-\caption{
-  Dissimilarity matrices for differences before and after changepoints.
-}
-% TODO Add label
-\end{figure}
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/dist_diff_abs_all_dqu_0.8_trim.png}
-\caption{
-  Dissimilarity matrices for absolute differences before and after changepoints.
-}
-% TODO Add label
-\end{figure}
+% Spring
+\begin{itemize}
+  \item The full-record spring solution (Supplementary Figure~\ref{fig:app_clust_spring}) also exhibits substantial spatial coherence.
+  \item Cluster 2 extends along much of the northern and northwestern coast, whereas clusters 1 and 3 occupy broader and partially overlapping interior, eastern and southern regions.
+  \item Geography therefore provides a useful broad interpretation of the spring clusters, although several spatial outliers confirm that the clustering is determined by fitted extremal dependence rather than spatial proximity alone.
+  \item The dissimilarity matrix for Spring (Supplementary Figure~\ref{fig:diss_spring}) is fairly well block-structured, with intra-cluster dissimilarities generally smaller than inter-cluster dissimilarities.
+  \item As no consistent changepoint is identified for spring, this solution provides a useful stationary seasonal comparison with the temporally divided solutions for winter, summer and autumn.
+\end{itemize}
 
-\newpage
+% Summer
+\begin{itemize}
+  \item The two summer periods retain a common large-scale structure, although a number of stations change membership after 1990.
+  \item During 1960--1990, cluster 1 is concentrated more strongly across northern and eastern Spain, while cluster 2 contains many southern and western stations. Cluster 3 occupies an intermediate and geographically mixed position.
+  \item After 1990, several cluster-2 stations located away from the southern coast move to cluster 1, producing a somewhat clearer geographical division between northern/eastern and southern/western locations.
+  \item The summer reorganisation is less extensive than that observed for winter and appears to be driven more strongly by a limited number of stations.
+  \item As for Winter, the post-1990 dissimilarity matrix (Supplementary Figure~\ref{fig:diss_summer}) is less clearly block-structured and has a lower overall dissimilarity scale than the earlier matrix.
+  \item The elbow curves in Figure~\ref{fig:elbow} indicate that \(k=2\) is also a plausible representation of the summer structure. In the two-cluster solution, the members of the intermediate cluster are absorbed into cluster 2, indicating weaker separation between these groups than between either group and cluster 1.
 
-\subsubsection{Clustering solutions vs covariates}
+  \item The signed difference matrix between the two summer periods (Supplementary Figure~\ref{fig:sign_matrix_diff})
+  % \[
+  %     \Delta M^{(\mathrm{S})}
+  %     =
+  %     M^{(\mathrm{S})}_{1960\text{--}1990}
+  %     -
+  %     M^{(\mathrm{S})}_{1991\text{--}2020},
+  % \]
+  is predominantly positive, providing evidence of an overall reduction in pairwise dissimilarity after 1990.
+  \item Summer contains the largest individual absolute matrix changes among the three divided seasons, with maximum differences of approximately \(0.10\). These changes are concentrated in several prominent rows and columns rather than being distributed uniformly.
+  \item Donostia/San Sebastián-Igeldo and Granada Base Aérea display particularly pronounced positive bands, indicating that their fitted dependence structures became more similar to those at many other stations after 1990.
+  \item Granada Base Aérea also moves from cluster 2 to cluster 1. This transition is consistent with a weakening of the earlier distinction between its original cluster and the remaining dependence regimes.
+  \item The concentration of the summer changes in a limited number of rows and columns is consistent with the comparatively strong changepoint evidence under the Infinity norm.
+  \item Collectively, the summer results suggest partial convergence of the fitted dependence structures while retaining a broad north/east versus south/west spatial organisation.
+\end{itemize}
 
-Go through PDFs.
-% \begin{itemize}
-%   \item 
-% \end{itemize}
+% Autumn
+\begin{itemize}
+    \item The 1960--1986 autumn clustering resembles the spring solution in retaining a recognisable geographical structure, with distinct groups across western, central and eastern parts of the study region.
+    \item The geographical separation becomes weaker during 1987--2020, with several northern, northeastern, southwestern and Mediterranean stations changing membership.
+    \item This reorganisation is also reflected in the dissimilarity matrices (Supplementary Figure~\ref{diss_autumn}), with the later matrix appearing less distinctly block-structured.
 
-\subsubsection{Covariates and cluster membership}
+    \item The autumn signed difference matrix is predominantly positive, indicating that many station pairs have smaller fitted dissimilarities after 1986.
+    \item In contrast to summer, the positive autumn differences are distributed relatively widely throughout the matrix, rather than being dominated by only one or two stations.
+    \item Autumn therefore provides evidence of a broad but generally moderate convergence in fitted extremal dependence structure.
 
-\subsubsection{Cluster switching}
+    % \item Before 1987, the clusters are clearly differentiated by the upper DPI quantiles and by \(\widehat{\chi}(0.9)\) and \(\widehat{\bar{\chi}}(0.9)\). Some of this separation persists afterwards, although the marginal DPI differences weaken.
+    % \item Stations that change cluster tend to have weaker empirical tail dependence before 1987 but stronger tail dependence afterwards. This apparent reversal provides a possible dependence-based explanation for the observed reassignment, although paired differences should be examined before drawing a firm conclusion.
+\end{itemize}
 
-Go through PDFs.
-% \begin{itemize}
+
+% Overall interpretation
+\begin{itemize}
+    \item The three seasons with candidate temporal changes exhibit appreciable reorganisation of their estimated spatial clusters, but the form of this reorganisation differs between seasons.
+    \item Winter exhibits the broadest redistribution of cluster membership and a mixture of increasing and decreasing pairwise dissimilarities.
+    \item Summer retains its principal large-scale spatial structure, but contains several large station-specific changes that weaken the separation between some clusters.
+    \item Autumn exhibits a more widespread reduction in pairwise dissimilarity, although its changepoint evidence is weaker and should be regarded as exploratory.
+
+    \item Across the divided seasons, the later-period dissimilarity matrices generally exhibit weaker block structure and smaller pairwise dissimilarities. This indicates that the fitted conditional extremal dependence structures became less strongly differentiated across Spain.
+
+    % \item This convergence does not by itself imply that extremal temperature--DPI dependence strengthened. Establishing the direction of dependence change requires paired station-level comparisons of \(\widehat{\chi}(0.9)\), \(\widehat{\bar{\chi}}(0.9)\), or fitted conditional extremes parameters.
+
+    % \item The results likewise do not establish that anthropogenic climate change caused the observed reorganisation, nor that desertification increased. Such conclusions would require separate analysis of marginal drought severity, temporal trends, physical mechanisms and potential confounding factors.
+
+    \item \textcolor{red}{Below two lines should possibly should go in discussion}
+    \item These results suggest that the regional differentiation of compound temperature--DPI extremes appears to have weakened in the later periods, with locations displaying more similar fitted dependence structures despite retaining some broad geographical organisation.
+    \item One must also be cautious that the periods used to estimate each clustering solution differ, particularly in the case of Winter 1999-2020, providing fewer observations for fitting the conditional extremes models. The increase in uncertainty inherent in using these shorter periods may effect our clustering. 
+\end{itemize}
+
+% \subsection{Additional Results}
 % 
+% \subsubsection{Dissimilarity Matrices}
+% 
+% \begin{itemize}
+% \item Signed differences are calculated as $D_{\mathrm{before}}-D_{\mathrm{after}}$.
+% \item Positive differences therefore indicate that a pair of locations became more similar after the changepoint, whereas negative differences indicate that it became more dissimilar.
+% \item Winter contains a mixture of positive and negative differences, suggesting heterogeneous restructuring rather than a uniform change.
+% \item The Winter changes are concentrated in particular rows and columns, indicating that a limited number of locations contribute disproportionately to the change.
+% \item Summer differences are predominantly positive, suggesting a general reduction in pairwise dissimilarity after 1990.
+% \item Summer also contains the largest individual absolute differences, reaching approximately $0.10$.
+% \item Autumn differences are also predominantly positive but are more widely distributed throughout the matrix, suggesting a relatively widespread convergence in fitted dependence structure.
+% \item Colour intensity should not be compared directly between seasons because the panels use different colour-scale limits.
 % \end{itemize}
-
-
 
 \section{Discussion}\label{sec5}
 
