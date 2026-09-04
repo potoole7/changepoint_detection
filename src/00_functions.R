@@ -1,6 +1,307 @@
 #### Functions ####
 
+#### Distance to coast ####
+
+# calculate distance to coast
+dist2coast <- \(dat, areas, convert_to_coastline = TRUE, ...) {
+  coastline <- areas
+  # convert areas to coastline, if required
+  if (convert_to_coastline) {
+    coastline <- sf::st_union(coastline)
+    coastline <- sf::st_cast(coastline, "MULTILINESTRING")
+  }
+
+  # locations to find distance to coast for
+  locs <- dat %>%
+    distinct(name, lon, lat) %>%
+    sf::st_as_sf(...)
+
+  distances <- as.numeric(sf::st_distance(locs, coastline))
+
+  dat %>%
+    left_join(data.frame("name" = locs$name, "dist2coast" = distances)) %>%
+    return()
+}
+
+
 #### Simulate seasonal data with time-varying, site-specific bivariate t-copula dependence ####
+
+# Generate one simulated season with time-varying, site-specific
+# bivariate t-copula dependence (line from start year to end year)
+simulate_t_copula_season_line <- \(
+  n_sites = 40L,
+  n_years = 60L,
+  n_obs_per_year = 12L,
+  season_name = "Winter",
+  first_year = 1961L,
+  site_cluster = c(
+    rep("low", 14L),
+    rep("medium", 13L),
+    rep("high", 13L)
+  ),
+  baseline_rho = c(
+    low = 0.1,
+    medium = 0.5,
+    high = 0.8
+  ),
+  final_rho = c(
+    low = 0.8,
+    medium = 0.8,
+    high = 0.8
+  ),
+  change_type = c(
+    "local",
+    "global",
+    "none"
+  ),
+  affected_sites = 1L,
+  change_start_year = 1980L,
+  change_end_year = 2000L,
+  df_t = 3,
+  gpd_xi = c(
+    -0.05,
+    -0.05
+  ),
+  gpd_sigma = c(
+    1,
+    1
+  ),
+  return_laplace = TRUE,
+  seed = NULL
+) {
+  change_type <- match.arg(
+    change_type
+  )
+
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
+  site_cluster <- as.character(
+    site_cluster
+  )
+
+  cluster_names <- unique(
+    site_cluster
+  )
+
+  final_year <-
+    first_year + n_years - 1L
+
+  stopifnot(
+    n_sites >= 1L,
+    n_years >= 1L,
+    n_obs_per_year >= 1L,
+    length(site_cluster) == n_sites,
+    all(cluster_names %in% names(baseline_rho)),
+    all(cluster_names %in% names(final_rho)),
+    all(abs(baseline_rho) < 1),
+    all(abs(final_rho) < 1),
+    length(gpd_xi) == 2L,
+    length(gpd_sigma) == 2L,
+    all(gpd_sigma > 0),
+    change_start_year >= first_year,
+    change_start_year <= final_year,
+    change_end_year >= change_start_year,
+    change_end_year <= final_year
+  )
+
+  site_ids <- sprintf(
+    "site_%02d",
+    seq_len(n_sites)
+  )
+
+  if (change_type == "none") {
+    affected_index <- integer()
+  } else if (change_type == "global") {
+    affected_index <- seq_len(
+      n_sites
+    )
+  } else {
+    if (is.character(affected_sites)) {
+      affected_index <- match(
+        affected_sites,
+        site_ids
+      )
+
+      if (anyNA(affected_index)) {
+        stop(
+          paste(
+            "At least one value in",
+            "`affected_sites` is invalid."
+          )
+        )
+      }
+    } else {
+      affected_index <- as.integer(
+        affected_sites
+      )
+
+      if (
+        anyNA(affected_index) ||
+        any(
+          !affected_index %in%
+          seq_len(n_sites)
+        )
+      ) {
+        stop(
+          paste(
+            "`affected_sites` contains",
+            "invalid site indices."
+          )
+        )
+      }
+    }
+
+    affected_index <- unique(
+      affected_index
+    )
+  }
+
+  season_years <-
+    first_year + seq_len(n_years) - 1L
+
+  if (
+    change_start_year ==
+    change_end_year
+  ) {
+    change_progress <- as.numeric(
+      season_years >= change_start_year
+    )
+  } else {
+    change_progress <- pmin(
+      1,
+      pmax(
+        0,
+        (
+          season_years -
+            change_start_year
+        ) /
+          (
+            change_end_year -
+              change_start_year
+          )
+      )
+    )
+  }
+
+  site_information <- tibble::tibble(
+    site_index = seq_len(n_sites),
+    name = site_ids,
+    cluster = site_cluster,
+    baseline_rho = unname(
+      baseline_rho[site_cluster]
+    ),
+    final_rho = unname(
+      final_rho[site_cluster]
+    ),
+    affected =
+      site_index %in% affected_index
+  )
+
+  design <- tidyr::crossing(
+    site_index = seq_len(n_sites),
+    year_index = seq_len(n_years)
+  ) |>
+    dplyr::left_join(
+      site_information,
+      by = "site_index"
+    ) |>
+    dplyr::mutate(
+      season = season_name,
+      season_year =
+        first_year + year_index - 1L,
+      change_progress =
+        change_progress[year_index],
+      rho = dplyr::if_else(
+        affected,
+        baseline_rho +
+          change_progress *
+          (
+            final_rho -
+              baseline_rho
+          ),
+        baseline_rho
+      )
+    )
+
+  generated <- lapply(
+    seq_len(nrow(design)),
+    \(i) {
+      cop <- copula::tCopula(
+        param = design$rho[[i]],
+        dim = 2L,
+        df = df_t,
+        df.fixed = TRUE,
+        dispstr = "ex"
+      )
+
+      u <- copula::rCopula(
+        n_obs_per_year,
+        cop
+      )
+
+      tibble::tibble(
+        within_year_index =
+          seq_len(n_obs_per_year),
+        U1 = u[, 1],
+        U2 = u[, 2]
+      )
+    }
+  )
+
+  simulated <- design |>
+    dplyr::mutate(
+      draws = generated
+    ) |>
+    tidyr::unnest(draws) |>
+    dplyr::mutate(
+      X1 = qgpd(
+        U1,
+        xi = gpd_xi[[1]],
+        sigma = gpd_sigma[[1]],
+        u = 0
+      ),
+      X2 = qgpd(
+        U2,
+        xi = gpd_xi[[2]],
+        sigma = gpd_sigma[[2]],
+        u = 0
+      )
+    )
+
+  if (return_laplace) {
+    simulated <- simulated |>
+      dplyr::mutate(
+        X1_laplace = qlaplace(U1),
+        X2_laplace = qlaplace(U2)
+      )
+  }
+
+  simulated |>
+    dplyr::select(
+      name,
+      site_index,
+      cluster,
+      season,
+      season_year,
+      year_index,
+      within_year_index,
+      affected,
+      change_progress,
+      baseline_rho,
+      final_rho,
+      rho,
+      X1,
+      X2,
+      dplyr::any_of(
+        c(
+          "X1_laplace",
+          "X2_laplace"
+        )
+      )
+    )
+}
 
 # Generate one simulated season with time-varying, site-specific
 # bivariate t-copula dependence.
@@ -9,7 +310,7 @@ simulate_t_copula_season <- \(
   n_years = 60L,
   n_obs_per_year = 12L,
   season_name = "Winter",
-  start_year = 1961L,
+  start_year = 1960L,
   baseline_rho = c(
     rep(0.1, 14L),
     rep(0.5, 13L),
@@ -399,7 +700,8 @@ screen_one_setting <- \(
           ),
           frob = NA_real_,
           inf = NA_real_,
-          spec = NA_real_,
+          # spec = NA_real_,
+          inf2 = NA_real_,
           dep = NULL,
           error_stage = "single_run_explore",
           error_message = conditionMessage(e)
@@ -420,7 +722,8 @@ screen_one_setting <- \(
         ),
         frob = NA_real_,
         inf = NA_real_,
-        spec = NA_real_,
+        # spec = NA_real_,
+        inf2 = NA_real_,
         dep = NULL,
         error_stage = "invalid_result",
         error_message = paste0(
@@ -496,11 +799,17 @@ screen_one_setting <- \(
           } else {
             NA_real_
           },
-          spec = if (isTRUE(result$success)) {
-            as.numeric(result$spec)
+          # spec = if (isTRUE(result$success)) {
+          #   as.numeric(result$spec)
+          # } else {
+          #   NA_real_
+          # },
+          inf2 = if (isTRUE(result$success)) {
+            as.numeric(result$inf2)
           } else {
             NA_real_
           },
+
           error_stage = if (
             is.null(result$error_stage)
           ) {
@@ -660,7 +969,7 @@ run_season_permutation_scan <- \(
 
 #### Chi related ####
 
-# function to calc chi, chibar at quantile q (or closest q) at each  site
+# function to calc chi, chibar at quantile q (or closest q) at each site
 calc_chi <- \(data, var1, var2, chi_q) {
   stations <- unique(data$station_id)
   chi_95_df <- bind_rows(lapply(stations, \(x) {
@@ -3305,7 +3614,8 @@ single_run_explore <- \(
       block_info = block_info,
       frob = NA_real_,
       inf = NA_real_,
-      spec = NA_real_,
+      # spec = NA_real_,
+      inf2 = NA_real_,
       # ln_spd = NA_real_,
       dep = NULL,
       error_stage = stage,
@@ -3534,7 +3844,8 @@ single_run_explore <- \(
           norm_type = "F"
         ),
         inf = NA_real_,
-        spec = NA_real_ # ,
+        # spec = NA_real_ # ,
+        inf2 = NA_real_
         # ln_spd = NA_real_
       )
 
@@ -3545,11 +3856,17 @@ single_run_explore <- \(
           norm_type = "M"
         )
 
-        norm_results$spec <- compare_blocks(
+        # norm_results$spec <- compare_blocks(
+        #   dist,
+        #   type = "norm",
+        #   norm_type = "2"
+        # )
+        norm_results$inf2 <- compare_blocks(
           dist,
           type = "norm",
-          norm_type = "2"
+          norm_type = "I"
         )
+
 
         # norm_results$ln_spd <- compare_blocks(
         #   dist,
@@ -3599,7 +3916,8 @@ single_run_explore <- \(
     block_info = block_info,
     frob = norm_attempt$frob,
     inf = norm_attempt$inf,
-    spec = norm_attempt$spec,
+    # spec = norm_attempt$spec,
+    inf2 = norm_attempt$inf2,
     # ln_spd = norm_attempt$ln_spd,
     dep = if (has_dep) {
       dist_obj$dep
@@ -3612,6 +3930,7 @@ single_run_explore <- \(
 }
 
 # plot norms
+# OLD OLD OLD
 plot_norm <- \(block_vec, norm_vals_frob, norm_vals_inf) {
   data.frame(
     block_pos = block_vec,
@@ -3685,13 +4004,19 @@ test_norm_diff <- \(data, block_vec, n_mc = 500, cond_val = 0, ret_all = TRUE, u
   # extract frobenius and infinity norms
   norm_vals_frob <- sapply(norm_vals, \(x) x$frob)
   norm_vals_inf <- sapply(norm_vals, \(x) x$inf)
+  norm_vals_inf2 <- sapply(norm_vals, \(x) x$inf2)
 
   # print values of norms
   print(norm_vals_frob)
   print(norm_vals_inf)
+  print(norm_vals_inf2)
 
   # return differences (and also norms if desired)
-  diff <- c("F" = abs(diff(norm_vals_frob)), "I" = abs(diff(norm_vals_inf)))
+  diff <- c(
+    "F"  = abs(diff(norm_vals_frob)),
+    "I"  = abs(diff(norm_vals_inf)),
+    "I2" = abs(diff(norm_vals_inf2))
+  )
   if (ret_all) {
     return(list("diff" = diff, "norm_vals" = norm_vals))
   } else {
@@ -4299,7 +4624,7 @@ perm_test_prep <- \(
 # }
 
 # Function to process permutation test results
-test_fun <- \(perm_test_res, norm_type = c("frob", "inf"), stat = c("mean", "median")) {
+test_fun <- \(perm_test_res, norm_type = c("frob", "inf", "inf2"), stat = c("mean", "median")) {
   norm_type <- match.arg(norm_type, several.ok = FALSE)
   stat <- match.arg(stat, several.ok = FALSE)
 
@@ -4310,6 +4635,9 @@ test_fun <- \(perm_test_res, norm_type = c("frob", "inf"), stat = c("mean", "med
     } else if (norm_type == "inf") {
       norm_orig <- res$norm_orig_inf
       perm_norms <- res$perm_norms_inf
+    } else if (norm_type == "inf2") {
+      norm_orig <- res$norm_orig_inf2
+      perm_norms <- res$perm_norms_inf2
     }
 
     if (stat == "mean") {
@@ -4814,7 +5142,8 @@ perm_test_fun <- \(
       block_info = block_info,
       p_value_frob = NA_real_,
       p_value_inf = NA_real_,
-      p_value_spec = NA_real_,
+      # p_value_spec = NA_real_,
+      p_value_inf2 = NA_real_,
       norm_orig_frob = if (
         is.null(norm_orig)
       ) {
@@ -4829,16 +5158,24 @@ perm_test_fun <- \(
       } else {
         norm_orig$inf
       },
-      norm_orig_spec = if (
+      # norm_orig_spec = if (
+      #   is.null(norm_orig)
+      # ) {
+      #   NA_real_
+      # } else {
+      #   norm_orig$spec
+      # },
+      norm_orig_inf2 = if (
         is.null(norm_orig)
       ) {
         NA_real_
       } else {
-        norm_orig$spec
+        norm_orig$inf2
       },
       perm_norms_frob = numeric(),
       perm_norms_inf = numeric(),
-      perm_norms_spec = numeric(),
+      # perm_norms_spec = numeric(),
+      perm_norms_inf2 = numeric(),
       n_attempted = 0L,
       n_successful = 0L,
       n_failed = 0L,
@@ -4854,8 +5191,8 @@ perm_test_fun <- \(
       ret$perm_norms_inf <-
         permutation_info$perm_norms_inf
 
-      ret$perm_norms_spec <-
-        permutation_info$perm_norms_spec
+      ret$perm_norms_inf2 <-
+        permutation_info$perm_norms_inf2
 
       ret$n_attempted <-
         permutation_info$n_attempted
@@ -5420,10 +5757,15 @@ perm_test_fun <- \(
             type = "norm",
             norm_type = "M"
           ),
-          spec = compare_blocks(
+          # spec = compare_blocks(
+          #   dist,
+          #   type = "norm",
+          #   norm_type = "2"
+          # )
+          inf2 = compare_blocks(
             dist,
             type = "norm",
-            norm_type = "2"
+            norm_type = "I"
           )
         )
       },
@@ -5498,10 +5840,15 @@ perm_test_fun <- \(
               type = "norm",
               norm_type = "M"
             ),
-            spec = compare_blocks(
+            # spec = compare_blocks(
+            #   dist_perm,
+            #   type = "norm",
+            #   norm_type = "2"
+            # )
+            inf2 = compare_blocks(
               dist_perm,
               type = "norm",
-              norm_type = "2"
+              norm_type = "I"
             )
           )
         },
@@ -5594,15 +5941,22 @@ perm_test_fun <- \(
         numeric(1)
       )
 
-      perm_norms_spec <- vapply(
+      # perm_norms_spec <- vapply(
+      #   norm_vals,
+      #   \(x) x$spec,
+      #   numeric(1)
+      # )
+      perm_norms_inf2 <- vapply(
         norm_vals,
-        \(x) x$spec,
+        \(x) x$inf2,
         numeric(1)
       )
+
     } else {
       perm_norms_frob <- numeric()
       perm_norms_inf <- numeric()
-      perm_norms_spec <- numeric()
+      # perm_norms_spec <- numeric()
+      perm_norms_inf2 <- numeric()
     }
 
     permutation_info <- list(
@@ -5610,8 +5964,10 @@ perm_test_fun <- \(
         perm_norms_frob,
       perm_norms_inf =
         perm_norms_inf,
-      perm_norms_spec =
-        perm_norms_spec,
+      # perm_norms_spec =
+      #   perm_norms_spec,
+      perm_norms_inf2 =
+        perm_norms_inf2,
       n_attempted =
         n_attempted,
       n_successful =
@@ -5708,11 +6064,20 @@ perm_test_fun <- \(
       n_successful + 1
     )
 
-    p_value_spec <- (
+    # p_value_spec <- (
+    #   1 +
+    #     sum(
+    #       perm_norms_spec >=
+    #         observed_norms$spec
+    #     )
+    # ) / (
+    #   n_successful + 1
+    # )
+    p_value_inf2 <- (
       1 +
         sum(
-          perm_norms_spec >=
-            observed_norms$spec
+          perm_norms_inf2 >=
+            observed_norms$inf2
         )
     ) / (
       n_successful + 1
@@ -5731,9 +6096,14 @@ perm_test_fun <- \(
         p_value_inf,
         4
       ),
-      ", p(spectral) = ",
+      # ", p(spectral) = ",
+      # signif(
+      #   p_value_spec,
+      #   4
+      # ),
+      ", p(inf2) = ",
       signif(
-        p_value_spec,
+        p_value_inf2,
         4
       ),
       "; failure rate = ",
@@ -5757,20 +6127,26 @@ perm_test_fun <- \(
         p_value_frob,
       p_value_inf =
         p_value_inf,
-      p_value_spec =
-        p_value_spec,
+      # p_value_spec =
+      #   p_value_spec,
+      p_value_inf2 =
+        p_value_inf2,
       norm_orig_frob =
         observed_norms$frob,
       norm_orig_inf =
         observed_norms$inf,
-      norm_orig_spec =
-        observed_norms$spec,
+      # norm_orig_spec =
+      #   observed_norms$spec,
+      norm_orig_inf2 =
+        observed_norms$inf2,
       perm_norms_frob =
         perm_norms_frob,
       perm_norms_inf =
         perm_norms_inf,
-      perm_norms_spec =
-        perm_norms_spec,
+      # perm_norms_spec =
+      #   perm_norms_spec,
+      perm_norms_inf2 =
+        perm_norms_inf2,
       permutation_unit = if (
         year_window_mode
       ) {
@@ -6042,7 +6418,8 @@ preprocess_permutation_scan <- \(scan_result) {
     frob = "Frobenius",
     # inf = "Maximum",
     inf = "Infinity",
-    spec = "Spectral"
+    # spec = "Spectral"
+    inf2 = "Infinity2"
   )
 
   summary_rows <- vector(
@@ -6080,12 +6457,14 @@ preprocess_permutation_scan <- \(scan_result) {
       observed = c(
         result$norm_orig_frob,
         result$norm_orig_inf,
-        result$norm_orig_spec
+        # result$norm_orig_spec
+        result$norm_orig_inf2
       ),
       p_value = c(
         result$p_value_frob,
         result$p_value_inf,
-        result$p_value_spec
+        # result$p_value_spec
+        result$p_value_inf2
       ),
       success = isTRUE(result$success),
       n_attempted = result$n_attempted,
@@ -6099,7 +6478,7 @@ preprocess_permutation_scan <- \(scan_result) {
     permutation_values <- list(
       Frobenius = result$perm_norms_frob,
       Maximum = result$perm_norms_inf,
-      Spectral = result$perm_norms_spec
+      Infinity2 = result$perm_norms_inf2
     )
 
     permutation_rows[[i]] <- bind_rows(
@@ -6148,7 +6527,8 @@ preprocess_permutation_scan <- \(scan_result) {
           "Frobenius",
           # "Maximum",
           "Infinity",
-          "Spectral"
+          # "Spectral"
+          "Infinity2"
         )
       )
     ) |>
@@ -6167,7 +6547,8 @@ preprocess_permutation_scan <- \(scan_result) {
           "Frobenius",
           # "Maximum",
           "Infinity",
-          "Spectral"
+          # "Spectral"
+          "Infinity2"
         )
       )
     )

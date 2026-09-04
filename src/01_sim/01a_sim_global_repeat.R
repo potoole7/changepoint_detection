@@ -16,7 +16,8 @@
 
 #### libs ####
 
-devtools::load_all("../CeCl")
+# devtools::load_all("../CeCl")
+library(CeCl)
 library(grid)
 library(lubridate)
 library(RColorBrewer)
@@ -36,8 +37,8 @@ source("src/00_functions.R")
 #### metadata ####
 
 # number of times to repeat simulations
-nreps <- 50 # start with 50, then move on to 100
-# nreps <- 100
+# nreps <- 50 # start with 50, then move on to 100
+nreps <- 100
 
 # variables
 # dep_var <- c("drought_local_rev")
@@ -57,15 +58,46 @@ dqu <- 0.8
 n_samples <- 500
 
 # run initially for just 100 permutations across full range
-n_perm_screen <- 200L
+# n_perm_screen <- 200L
+n_perm_screen <- 100L
 n_years_per_block <- 25L # TODO Check this choice? Or just leave as best for app
 
 # set minimum number of exceedances required for a successful fit
 min_exceedances <- 15
 
-# cp_type <- "global"
-cp_type <- "local"
+cp_type <- "global"
+# cp_type <- "local"
 # cp_type <- "none"
+
+baseline_rho <- final_rho <- c(
+  low = 0.1,
+  medium = 0.5,
+  high = 0.8
+)
+
+if (cp_type == "global") {
+  final_rho <- c(
+    low = 0.4,
+    medium = 0.8,
+    high = 0.9
+  )
+} else if (cp_type == "local") {
+  final_rho <- c(
+    low = 0.5,
+    medium = 0.5,
+    high = 0.8
+  )
+}
+
+# start and end years for the changepoint (for global change, all sites affected; for local change, only some sites affected)
+start_year <- 1980L
+end_year   <- 2000L
+
+save_dir <- "data/01_sim"
+if (!dir.exists(save_dir)) {
+  dir.create(save_dir, recursive = TRUE)
+}
+
 
 #### Precalculations ####
 
@@ -100,45 +132,46 @@ laplace_sample <- rlaplace_trunc(
 )
 
 
-
 #### Loop ####
 
 screen_setup_df <- tidyr::crossing(
   "season"            = "Winter",
   # TODO Change back to include 15
-  # "n_years_per_block" = c(15L, 20L, 25L, 30L)
-  "n_years_per_block" = c(20L, 25L, 30L)
+  "n_years_per_block" = c(15L, 20L, 25L, 30L)
+  # "n_years_per_block" = c(20L, 25L, 30L)
 )
 
 # arguments for simulate_t_copula_season function
 sim_args <- list(
   # chosen to emulate the application data
-  "n_sites" = 40L,
-  "n_years" = 60L,
+  "n_sites"        = 40L,
+  "n_years"        = 60L,
   # well separated "clusters" of sites, with different dependence structures
-  "baseline_rho" = c(
-    rep(0.1, 14L),
-    rep(0.5, 13L),
-    rep(0.8, 13L)
-  ),
-  "change_type" = cp_type,
+  # "baseline_rho"   = c(
+  #   rep(0.1, 14L),
+  #   rep(0.5, 13L),
+  #   rep(0.8, 13L)
+  # ),
+  "baseline_rho"   = baseline_rho,
+  "final_rho"      = final_rho,
+  "change_type"    = cp_type,
   # TODO maybe parametrise by desired rho_t??
-  "delta_z" = 0.45,
-  "change_start" = 30L, # starts on middle year
-  "change_end" = 60L,
-  "affected_sites" = ifelse(cp_type == "local", 1:5, NA_integer_),
-  "return_laplace" = TRUE
+  # "delta_z"        = 0.45,  # approx gives 0.5 for first cluster (atan(0.5) - atain(0.1) ~= 0.45)
+  # "delta_z"        = 0.21,  # approx gives 0.3
+  # "delta_z"        = 0.593, # approx gives 0.6
+  # TODO Change to 25:35, see if that helps? More centred around 25 season years
+  # "change_start"   = 30L, # starts on middle year
+  # "change_end"     = 60L,
+  "change_start_year" = start_year,
+  "change_end_year"   = end_year,
+  "affected_sites"    = ifelse(cp_type == "local", 1:5, NA_integer_),
+  "return_laplace"    = TRUE
 )
 
 res <- lapply(seq_len(nreps), \(k) {
   system(sprintf(
     'echo "\n%s\n"',
-    paste0(k, " of ", nreps, " repititions completed")
-  ))
-
-  system(sprintf(
-    'echo "\n%s\n"',
-    paste0(round(k / nreps, 3) * 100, "% completed", collapse = "")
+    paste0(k, " of ", nreps, " repititions")
   ))
 
   # skip iteration if you've already saved the associated file
@@ -299,6 +332,11 @@ res <- lapply(seq_len(nreps), \(k) {
 
   saveRDS(object = permutation_scan_tidy, file)
 
+  system(sprintf(
+    'echo "\n%s\n"',
+    paste0(round(k / nreps, 3) * 100, "% completed", collapse = "")
+  ))
+
   NULL
 })
 
@@ -348,7 +386,7 @@ screen_res_all_plt <- screen_res_all |>
     )
   )
 
-screen_res_all_plt |>
+p_screen1 <- screen_res_all_plt |>
   ggplot(
     aes(x = change_after_year, y = value, colour = factor(n_years_per_block))
   ) +
@@ -363,7 +401,16 @@ screen_res_all_plt |>
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
 
-screen_res_all_plt |>
+p_screen1
+
+ggsave(
+  filename = paste0("plots/01_sim/screen_facet_norm_", cp_type, ".png"),
+  plot = p_screen1,
+  width = 8,
+  height = 6
+)
+
+p_screen2 <- screen_res_all_plt |>
   filter(name != "Spectral") |>
   ggplot(aes(x = change_after_year, y = value, colour = name)) +
   geom_smooth(show.legend = FALSE) +
@@ -375,99 +422,290 @@ screen_res_all_plt |>
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
 
+p_screen2
+
+ggsave(
+  filename = paste0("plots/01_sim/screen_facet_years_", cp_type, ".png"),
+  plot = p_screen2,
+  width = 8,
+  height = 6
+)
+
 
 #### Changepoint Plotting ####
 
-# TODO Plot p-values
-# TODO Plot changepoint locations (barchart)
+changepoint_df <- bind_rows(
+  lapply(
+    changepoint_res_all,
+    `[[`,
+    "summary"
+  ),
+  .id = "simulation_id"
+) |>
+  mutate(
+    simulation_id = as.integer(
+      simulation_id
+    )
+  )
 
-changepoint_df <- bind_rows(lapply(changepoint_res_all, `[[`, "summary"))
+# For each norm and change_after_year, calculate times p-value < 0.05 and < 0.1
+rejection_df <- changepoint_df |>
+  group_by(change_after_year, norm) |>
+  summarise(
+    pval_0.05 = sum(p_value < 0.05) / n(),
+    pval_0.10 = sum(p_value < 0.1) / n(),
+    n = n(),
+    .groups = "drop"
+  )
 
-# add rep number
-changepoint_df_plt <- changepoint_df |>
-  group_by(norm, change_after_year) |>
-  mutate(rep = row_number()) |>
-  ungroup()
+rejection_df_plt <- rejection_df |>
+  # filter(norm != "Spectral") |>
+  pivot_longer(cols = c(pval_0.05, pval_0.10), names_to = "pval_threshold", values_to = "rejection_rate") |>
+  mutate(pval_threshold = recode(pval_threshold, pval_0.05 = "p < 0.05", pval_0.10 = "p < 0.1")) |>
+  # convert numeric year to date object
+  mutate(change_after_year = as.Date(paste0(change_after_year, "-01-01")))
 
-# plot p-values
-changepoint_df_plt |>
-  ggplot(aes(x = change_after_year, y = p_value, colour = norm)) +
-  geom_smooth(show.legend = FALSE) +
-  labs(x = "Season year", y = "p-value", colour = "Norm type") +
-  cecl_theme() +
-  scale_x_continuous(breaks = seq(1985, 1995, by = 1)) +
-  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
+# find average rejection rate for each norm and pval_threshold (ignores multiple comparisons)
+rejection_df_plt |>
+  group_by(norm, pval_threshold) |>
+  summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
+  arrange(norm, pval_threshold)
 
-changepoint_df_plt |>
-  ggplot(aes(x = change_after_year, y = p_value, colour = norm)) +
-  geom_smooth(show.legend = FALSE) +
-  geom_line(aes(group = interaction(norm, rep)), alpha = 0.2) +
-  geom_hline(
-    aes(yintercept = 0.05),
-    linetype = "dashed",
-    alpha = 1,
-    colour = "grey10"
-  ) +
-  geom_hline(
-    aes(yintercept = 0.1),
-    linetype = "dashed",
-    alpha = 1,
-    colour = "darkgreen"
-  ) +
+# find rejection rate for years before and after 1990 (when change occurs)
+rejection_df_plt |>
+  filter(change_after_year >= as.Date("1990-01-01")) |>
+  group_by(norm, pval_threshold) |>
+  summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
+  arrange(norm, pval_threshold)
+
+rejection_df_plt |>
+  filter(change_after_year < as.Date("1990-01-01")) |>
+  group_by(norm, pval_threshold) |>
+  summarise(avg_rejection_rate = mean(rejection_rate), .groups = "drop") |>
+  arrange(norm, pval_threshold)
+
+# plot
+rejection_df_plt |>
+  filter(norm != "Spectral") |>
+  ggplot(aes(x = change_after_year, y = rejection_rate, color = pval_threshold)) +
+  geom_point(size = 2) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red") +
+  geom_hline(yintercept = 0.1, linetype = "dashed", color = "blue") +
   facet_wrap(~norm) +
-  labs(x = "Season year", y = "p-value", colour = "Norm type") +
+  labs(
+    x = "Season Year",
+    y = "Rejection Rate",
+    colour = "P-value Threshold"
+  ) +
   cecl_theme() +
-  scale_x_continuous(breaks = seq(1985, 1995, by = 1)) +
-  scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
-
-# plot changepoint locations (for alpha = 0.05 and alpha = 0.1)
-changepoint_df_bar_plt <- changepoint_df_plt |>
-  mutate(
-    cp_0.05 = ifelse(p_value <= 0.05, 1, 0),
-    cp_0.10 = ifelse(p_value <= 0.10, 1, 0)
-  ) |>
-  pivot_longer(c(cp_0.05, cp_0.10), names_to = "alpha", values_to = "cp") |>
-  mutate(
-    alpha = ifelse(alpha == "cp_0.05", "5% significance", "10% significance"),
-    alpha = factor(alpha, levels = c("5% significance", "10% significance"))
-  ) |>
-  group_by(norm, change_after_year, alpha) |>
-  summarise(cp = sum(cp), .groups = "drop")
-
-lims <- c(0, max(changepoint_df_bar_plt$cp) + 1)
+  scale_x_date(date_labels = "%Y", date_breaks = "1 years") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # barplot of number of changepoints detected for each change_after_year,
 # for each norm type
-changepoint_df_bar_plt |>
+p_cp1 <- rejection_df_plt |>
   filter(norm != "Spectral") |>
-  ggplot(aes(x = change_after_year, y = as.integer(cp), fill = norm)) +
+  ggplot(aes(x = change_after_year, y = rejection_rate, fill = pval_threshold)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~alpha) +
-  labs(x = "Season year", y = "# detected changepoints", fill = "Norm type") +
+  geom_abline(aes(slope = 0, intercept = 0.05), linewidth = 1, linetype = "dashed", color = "black") +
+  geom_abline(aes(slope = 0, intercept = 0.1), linewidth = 1, linetype = "dashed", color = "black") +
+  facet_wrap(~norm) +
+  labs(x = "Season year", y = "Rejection Rate", fill = "P-value Threshold") +
   cecl_theme() +
-  scale_y_continuous(
-    limits = lims, breaks = seq(0, max(changepoint_df_bar_plt$cp) + 1, by = 1)
-  ) +
+  scale_x_date(date_labels = "%Y", date_breaks = "1 years") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p_cp1
 
-# barplot with percentages
-changepoint_df_bar_plt |>
-  filter(norm != "Spectral") |>
-  group_by(norm, change_after_year, alpha) |>
-  mutate(cp_perc = cp / length(changepoint_res_all)) |>
-  ungroup() |>
-  ggplot(aes(x = change_after_year, y = cp_perc, fill = norm)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~alpha) +
-  labs(
-    x = "Season year",
-    y = "Percentage of detected changepoints",
-    fill = "Norm type"
-  ) +
-  cecl_theme() +
-  scale_y_continuous(labels = scales::percent) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# save
+ggsave(
+  filename = paste0("plots/01_sim/changepoint_rejection_rate_", cp_type, ".png"),
+  plot = p_cp1,
+  width = 8,
+  height = 6
+)
+
+# calculate pointwise Type I error (rejection rate at each candidate year)
+pointwise_error_1_df <- changepoint_df |>
+  group_by(
+    change_after_year,
+    norm
+  ) |>
+  summarise(
+    type1_05 = mean(
+      p_value < 0.05,
+      na.rm = TRUE
+    ),
+    type1_10 = mean(
+      p_value < 0.10,
+      na.rm = TRUE
+    ),
+    n_valid = sum(!is.na(p_value)),
+    .groups = "drop"
+  )
+pointwise_error_1_df
+
+# calculate familywise Type I error (rejection rate across all candidate years)
+global_error_1_df <- changepoint_df |>
+  group_by(
+    simulation_id,
+    norm
+  ) |>
+  summarise(
+    min_p_value = min(
+      p_value,
+      na.rm = TRUE
+    ),
+    reject_any_05 = any(
+      p_value < 0.05,
+      na.rm = TRUE
+    ),
+    reject_any_10 = any(
+      p_value < 0.10,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  group_by(norm) |>
+  summarise(
+    familywise_type1_05 =
+      mean(reject_any_05),
+    familywise_type1_10 =
+      mean(reject_any_10),
+    n_simulations = n(),
+    .groups = "drop"
+  )
+
+global_error_1_df
+
+
+#### Changepoint Plotting (old) ####
+
+# add rep number
+# changepoint_df_plt <- changepoint_df |>
+#   group_by(norm, change_after_year) |>
+#   mutate(rep = row_number()) |>
+#   ungroup()
+#
+
+# # add rep number
+# changepoint_df_plt <- changepoint_df |>
+#   group_by(norm, change_after_year) |>
+#   mutate(rep = row_number()) |>
+#   ungroup()
+#
+# # plot p-values
+# p_cp1 <- changepoint_df_plt |>
+#   filter(norm != "Spectral") |>
+#   ggplot(aes(x = change_after_year, y = p_value, colour = norm)) +
+#   geom_smooth(show.legend = FALSE) +
+#   labs(x = "Season year", y = "p-value", colour = "Norm type") +
+#   cecl_theme() +
+#   scale_x_continuous(breaks = seq(1985, 1995, by = 1)) +
+#   scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
+# p_cp1
+#
+# ggsave(
+#   filename = paste0("plots/01_sim/changepoint_pval_", cp_type, ".png"),
+#   plot = p_cp1,
+#   width = 8,
+#   height = 6
+# )
+#
+# p_cp2 <- changepoint_df_plt |>
+#   filter(norm != "Spectral") |>
+#   ggplot(aes(x = change_after_year, y = p_value, colour = norm)) +
+#   geom_smooth(show.legend = FALSE) +
+#   geom_line(aes(group = interaction(norm, rep)), alpha = 0.2) +
+#   geom_hline(
+#     aes(yintercept = 0.05),
+#     linetype = "dashed",
+#     alpha = 1,
+#     colour = "grey10"
+#   ) +
+#   geom_hline(
+#     aes(yintercept = 0.1),
+#     linetype = "dashed",
+#     alpha = 1,
+#     colour = "darkgreen"
+#   ) +
+#   facet_wrap(~norm) +
+#   labs(x = "Season year", y = "p-value", colour = "Norm type") +
+#   cecl_theme() +
+#   scale_x_continuous(breaks = seq(1985, 1995, by = 1)) +
+#   scale_y_continuous(limits = c(0, 1), expand = c(0.01, 0.01)) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   guides(colour = guide_legend(override.aes = list(linewidth = 6, alpha = 1)))
+# p_cp2
+#
+# ggsave(
+#   filename = paste0("plots/01_sim/changepoint_pval_facet_", cp_type, ".png"),
+#   plot = p_cp2,
+#   width = 8,
+#   height = 6
+# )
+#
+# # plot changepoint locations (for alpha = 0.05 and alpha = 0.1)
+# changepoint_df_bar_plt <- changepoint_df_plt |>
+#   mutate(
+#     cp_0.05 = ifelse(p_value <= 0.05, 1, 0),
+#     cp_0.10 = ifelse(p_value <= 0.10, 1, 0)
+#   ) |>
+#   pivot_longer(c(cp_0.05, cp_0.10), names_to = "alpha", values_to = "cp") |>
+#   mutate(
+#     alpha = ifelse(alpha == "cp_0.05", "5% significance", "10% significance"),
+#     alpha = factor(alpha, levels = c("5% significance", "10% significance"))
+#   ) |>
+#   group_by(norm, change_after_year, alpha) |>
+#   summarise(cp = sum(cp), .groups = "drop")
+#
+# lims <- c(0, max(changepoint_df_bar_plt$cp) + 1)
+#
+# # barplot of number of changepoints detected for each change_after_year,
+# # for each norm type
+# p_cp3 <- changepoint_df_bar_plt |>
+#   filter(norm != "Spectral") |>
+#   ggplot(aes(x = change_after_year, y = as.integer(cp), fill = norm)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   facet_wrap(~alpha) +
+#   labs(x = "Season year", y = "# detected changepoints", fill = "Norm type") +
+#   cecl_theme() +
+#   scale_y_continuous(
+#     limits = lims, breaks = seq(0, max(changepoint_df_bar_plt$cp) + 1, by = 1)
+#   ) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# p_cp3
+#
+# ggsave(
+#   filename = paste0("plots/01_sim/changepoint_bar_", cp_type, ".png"),
+#   plot = p_cp3,
+#   width = 8,
+#   height = 6
+# )
+#
+# # barplot with percentages
+# p_cp4 <- changepoint_df_bar_plt |>
+#   filter(norm != "Spectral") |>
+#   group_by(norm, change_after_year, alpha) |>
+#   mutate(cp_perc = cp / length(changepoint_res_all)) |>
+#   ungroup() |>
+#   ggplot(aes(x = change_after_year, y = cp_perc, fill = norm)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   facet_wrap(~alpha) +
+#   labs(
+#     x = "Season year",
+#     y = "Percentage of detected changepoints",
+#     fill = "Norm type"
+#   ) +
+#   cecl_theme() +
+#   scale_y_continuous(labels = scales::percent) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# p_cp4
+#
+# ggsave(
+#   filename = paste0("plots/01_sim/changepoint_bar_perc_", cp_type, ".png"),
+#   plot = p_cp4,
+#   width = 8,
+#   height = 6
+# )

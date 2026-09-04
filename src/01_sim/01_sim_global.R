@@ -56,6 +56,7 @@ n_years_per_block <- 25L # TODO Check this choice? Or just leave as best for app
 # set minimum number of exceedances required for a successful fit
 min_exceedances <- 15
 
+
 #### Precalculations ####
 
 # use the same dependence threshold across all variables and locations
@@ -91,28 +92,56 @@ laplace_sample <- rlaplace_trunc(
 
 #### Simulate Data ####
 
+# # simulate data with global change in dependence
+# sim_local <- simulate_t_copula_season(
+#   n_sites = 40L,
+#   n_years = 60L,
+#   baseline_rho = c(
+#     rep(0.2, 14L),
+#     rep(0.5, 13L),
+#     rep(0.8, 13L)
+#   ),
+#   change_type = "global",
+#   # change_type = "local",
+#   # affected_sites = 1:5,
+#   # affected_sites = 1:30,
+#   affected_sites = 1:40,
+#   # affected_sites = 1:14,
+#   change_start = 30L, # starts on middle year
+#   change_end = 60L,
+#   # TODO maybe parametrise by desired rho_t??
+#   delta_z = 0.45, # controls strength of increase
+#   # delta_z = 0.7, # controls strength of increase
+#   return_laplace = TRUE,
+#   seed = 123L
+# ) |>
+#   group_by(name) |>
+#   dplyr::mutate(
+#     date = as.Date(
+#       paste0(season_year, "-01-01")
+#     ) +
+#       7L * (within_year_index - 1L)
+#   ) |>
+#   ungroup()
+
 # simulate data with global change in dependence
-sim_local <- simulate_t_copula_season(
-  n_sites = 40L,
-  n_years = 60L,
-  baseline_rho = c(
-    rep(0.2, 14L),
-    rep(0.5, 13L),
-    rep(0.8, 13L)
-  ),
+sim_local <- simulate_t_copula_season_line(
   change_type = "global",
-  # change_type = "local",
-  # affected_sites = 1:5,
-  # affected_sites = 1:30,
-  affected_sites = 1:40,
-  # affected_sites = 1:14,
-  change_start = 30L, # starts on middle year
-  change_end = 60L,
-  # TODO maybe parametrise by desired rho_t??
-  delta_z = 0.3, # controls strength of increase
-  # delta_z = 0.7, # controls strength of increase
-  return_laplace = TRUE,
-  seed = 123L
+  baseline_rho = c(
+    low = 0.1,
+    medium = 0.5,
+    high = 0.8
+  ),
+  final_rho = c(
+    low = 0.4,
+    medium = 0.8,
+    high = 0.9
+  ),
+  # change_start_year = 1980L,
+  # change_end_year   = 2000L,
+  change_start_year = 1985L,
+  change_end_year   = 1995L,
+  seed = 123
 ) |>
   group_by(name) |>
   dplyr::mutate(
@@ -397,69 +426,69 @@ year_breaks <- seq(
   # by = 1
 )
 
-# plot_frob <- \(df, spec_year = NULL) {
-#   df_plot <- df
-#   if (!is.null(spec_year)) {
-#     df_plot <- df_plot |>
-#       filter(n_years_per_block == spec_year)
-#   }
-#   df_plot |>
-#     ggplot(
-#       aes(
-#         x = change_after_year,
-#         y = frob
-#       )
-#     ) +
-#     geom_line(
-#       data = \(x) filter(x, success),
-#       aes(
-#         group = interaction(
-#           setting,
-#           success_run
-#         )
-#       ),
-#       colour = "black"
-#     ) +
-#     geom_point(
-#       data = \(x) filter(x, success),
-#       colour = "black"
-#     ) +
-#     geom_point(
-#       data = \(x) filter(x, local_peak_frob),
-#       colour = "red",
-#       size = 3
-#     ) +
-#     geom_rug(
-#       data = \(x) filter(x, !success),
-#       aes(x = change_after_year),
-#       inherit.aes = FALSE,
-#       sides = "b",
-#       colour = "grey50"
-#     ) +
-#     facet_wrap(
-#       ~setting,
-#       scales = "free_y"
-#     ) +
-#     scale_x_continuous(
-#       breaks = year_breaks
-#     ) +
-#     labs(
-#       # x = "Candidate change after seasonal year",
-#       x = "season year",
-#       y = "Frobenius discrepancy",
-#       # caption = paste(
-#       #   "Red points indicate local peaks.",
-#       #   "Grey axis marks indicate failed candidates."
-#       # )
-#     ) +
-#     cecl_theme() +
-#     theme(
-#       axis.text.x = element_text(
-#         angle = 45,
-#         hjust = 1
-#       )
-#     )
-# }
+plot_frob <- \(df, spec_year = NULL) {
+  df_plot <- df
+  if (!is.null(spec_year)) {
+    df_plot <- df_plot |>
+      filter(n_years_per_block == spec_year)
+  }
+  df_plot |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = frob
+      )
+    ) +
+    geom_line(
+      data = \(x) filter(x, success),
+      aes(
+        group = interaction(
+          setting,
+          success_run
+        )
+      ),
+      colour = "black"
+    ) +
+    geom_point(
+      data = \(x) filter(x, success),
+      colour = "black"
+    ) +
+    geom_point(
+      data = \(x) filter(x, local_peak_frob),
+      colour = "red",
+      size = 3
+    ) +
+    geom_rug(
+      data = \(x) filter(x, !success),
+      aes(x = change_after_year),
+      inherit.aes = FALSE,
+      sides = "b",
+      colour = "grey50"
+    ) +
+    facet_wrap(
+      ~setting,
+      scales = "free_y"
+    ) +
+    scale_x_continuous(
+      breaks = year_breaks
+    ) +
+    labs(
+      # x = "Candidate change after seasonal year",
+      x = "season year",
+      y = "Frobenius discrepancy",
+      # caption = paste(
+      #   "Red points indicate local peaks.",
+      #   "Grey axis marks indicate failed candidates."
+      # )
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      )
+    )
+}
 
 p_frob <- plot_frob(screen_res_df_plt)
 p_frob_25 <- plot_frob(screen_res_df_plt, spec_year = 25)
@@ -470,7 +499,8 @@ screen_res_long <- screen_res_df_plt |>
     cols = c(
       frob,
       inf,
-      spec
+      # spec
+      inf2
     ),
     names_to = "norm",
     values_to = "value"
@@ -480,14 +510,16 @@ screen_res_long <- screen_res_df_plt |>
       norm,
       frob = "Frobenius",
       inf = "Maximum",
-      spec = "Spectral"
+      # spec = "Spectral"
+      inf2 = "Infinity"
     ),
     norm = factor(
       norm,
       levels = c(
         "Frobenius",
         "Maximum",
-        "Spectral"
+        # "Spectral"
+        "Infinity"
       )
     )
   ) |>
@@ -621,7 +653,7 @@ top_local_peaks_all <- candidate_peaks_all |>
 #       legend.position = "bottom"
 #     )
 # }
-plot_all_norms <- \(df, spec_year = NULL) {
+plot_all_norms <- \(df, spec_year = NULL, colour_var = "season") {
   df_plot <- df
   if (!is.null(spec_year)) {
     df_plot <- df_plot |>
@@ -638,7 +670,8 @@ plot_all_norms <- \(df, spec_year = NULL) {
         x = change_after_year,
         y = value,
         # colour = norm
-        colour = season
+        # colour = season
+        colour = .data[[colour_var]]
       )
     ) +
     geom_line(
@@ -694,13 +727,13 @@ plot_all_norms <- \(df, spec_year = NULL) {
 }
 
 
-p_all_norms <- plot_all_norms(screen_res_long)
+p_all_norms <- plot_all_norms(screen_res_long) # TODO Buggy, should be coloured by n_years_per_block
 p_all_norms_25 <- plot_all_norms(screen_res_long, spec_year = 25)
 
-# p_frob
-# p_frob_25
-#
-# p_all_norms
+p_frob
+p_frob_25
+
+p_all_norms
 p_all_norms_25
 
 
@@ -739,7 +772,19 @@ saveRDS(
     n_perm_screen,
     "_dqu_",
     dqu,
-    ".rds"
+    "2.rds"
+  )
+)
+
+permutation_scan_results <- readRDS(
+  paste0(
+    "data/01_sim/",
+    "sim_perm_test_",
+    "n_perm_",
+    n_perm_screen,
+    "_dqu_",
+    dqu,
+    "2.rds"
   )
 )
 
