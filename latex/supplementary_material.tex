@@ -196,11 +196,9 @@
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=0.9\linewidth]{plots/clust_map_0.8_spring_trim.png}
+\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_spring_trim.png}
 \caption{
-}
-\caption{
-Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrix for Spring. 
+Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrix for spring, using the complete time siries.
 Three clusters are used in each fit. 
 Colours distinguish cluster membership within each panel.
 Background shading represents elevation.
@@ -214,7 +212,11 @@ Background shading represents elevation.
 \centering
 \includegraphics[width=0.9\linewidth]{plots/dist_dqu_0.8_Winter_trim.png}
 \caption{
-  fill in
+  Aggregated pairwise dissimilarities between the fitted conditional extremes models at the 40 Spanish stations for winter. 
+  Results are shown separately for season-years 1960--1998 and 1999--2020. 
+  Each matrix entry represents the estimated dissimilarity between the extremal temperature--DPI dependence structures at the corresponding pair of stations. 
+  Smaller values indicate more similar fitted dependence structures, while larger values indicate greater dissimilarity. 
+  Stations are ordered according to the corresponding three-cluster solution. 
 }
 \label{fig:diss_winter}
 \end{figure}
@@ -222,7 +224,12 @@ Background shading represents elevation.
 \begin{figure}[htb]
 \centering
 \includegraphics[width=0.9\linewidth]{plots/dist_dqu_0.8_Summer_trim.png}
-\caption{?
+\caption{
+  Aggregated pairwise dissimilarities between the fitted conditional extremes models at the 40 Spanish stations for summer. 
+  Results are shown separately for season-years 1960--1990 and 1991--2020. 
+  Each matrix entry represents the estimated dissimilarity between the extremal temperature--DPI dependence structures at the corresponding pair of stations. 
+  Smaller values indicate more similar fitted dependence structures, while larger values indicate greater dissimilarity. 
+  Stations are ordered according to the corresponding three-cluster solution. 
 }
 \label{fig:diss_summer}
 \end{figure}
@@ -231,7 +238,11 @@ Background shading represents elevation.
 \centering
 \includegraphics[width=0.9\linewidth]{plots/dist_dqu_0.8_Autumn_trim.png}
 \caption{
-  fill in
+  Aggregated pairwise dissimilarities between the fitted conditional extremes models at the 40 Spanish stations for autumn. 
+  Results are shown separately for season-years 1960--1986 and 1987--2020. 
+  Each matrix entry represents the estimated dissimilarity between the extremal temperature--DPI dependence structures at the corresponding pair of stations. 
+  Smaller values indicate more similar fitted dependence structures, while larger values indicate greater dissimilarity. 
+  Stations are ordered according to the corresponding three-cluster solution. 
 }
 \label{fig:diss_autumn}
 \end{figure}
@@ -240,8 +251,10 @@ Background shading represents elevation.
 \centering
 \includegraphics[width=0.9\linewidth]{plots/dist_dqu_0.8_Spring_trim.png}
 \caption{
-  fill in
-}
+  Aggregated pairwise dissimilarities between the fitted conditional extremes models at the 40 Spanish stations for spring, using the complete time series. 
+  Each matrix entry represents the estimated dissimilarity between the extremal temperature--DPI dependence structures at the corresponding pair of stations. 
+  Smaller values indicate more similar fitted dependence structures, while larger values indicate greater dissimilarity.
+  Stations are ordered according to the three-cluster solution. }
 \label{fig:diss_spring}
 \end{figure}
 
@@ -251,7 +264,11 @@ Background shading represents elevation.
 \centering
 \includegraphics[width=0.9\linewidth]{plots/dist_diff_all_dqu_0.8_trim.png}
 \caption{
-  fill in
+  Signed changes in the aggregated pairwise dissimilarities between the periods preceding and following the candidate changepoint in each season. 
+  Differences are calculated as $D_{\mathrm{before}}-D_{\mathrm{after}}$, using season-years 1960--1998 and 1999--2020 for winter, 1960--1990 and 1991--2020 for summer, and 1960--1986 and 1987--2020 for autumn. 
+  Positive entries indicate station pairs that become more similar after the candidate changepoint, whereas negative entries indicate pairs that become more dissimilar. 
+  Diagonal entries are zero by construction. 
+  Colour scales are defined separately by season and period and their intensities should therefore not be compared directly across panels.
 }
 \label{fig:sign_matrix_diff}
 \end{figure}
@@ -262,11 +279,11 @@ Background shading represents elevation.
 \centering
 \includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k2_trim.png}
 \caption{
-Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrices. 
-Winter is fitted separately for season-years 1960--1998 and 1999--2020, summer is fitted separately for season-years 1960--1990 and 1991--2020, and autumn is fitted separately for season-years 1960--1986 and 1987--2020.
-Two clusters are used in each fit. 
-Colours distinguish cluster membership within each panel.
-Background shading represents elevation.
+  Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrices. 
+  Winter is fitted separately for season-years 1960--1998 and 1999--2020, summer for 1960--1990 and 1991--2020, and autumn for 1960--1986 and 1987--2020.
+  Two clusters are used in each fit. 
+  Colours distinguish cluster membership within each panel.
+  Background shading represents elevation.
 }
 \label{fig:app_clust_k2}
 \end{figure}
@@ -275,11 +292,11 @@ Background shading represents elevation.
 \centering
 \includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k4_trim.png}
 \caption{
-Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrices. 
-Winter is fitted separately for season-years 1960--1998 and 1999--2020, summer is fitted separately for season-years 1960--1990 and 1991--2020, and autumn is fitted separately for season-years 1960--1986 and 1987--2020.
-Four clusters are used in each fit. 
-Colours distinguish cluster membership within each panel.
-Background shading represents elevation.
+  Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrices. 
+  Winter is fitted separately for season-years 1960--1998 and 1999--2020, summer for 1960--1990 and 1991--2020, and autumn for 1960--1986 and 1987--2020.
+  Four clusters are used in each fit. 
+  Colours distinguish cluster membership within each panel.
+  Background shading represents elevation.
 }
 \label{fig:app_clust_k4}
 \end{figure}
