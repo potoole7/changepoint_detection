@@ -60,8 +60,8 @@ n_samples <- 500
 mc_cores <- parallel::detectCores() - 1L
 
 # run initially for just 100 permutations across full range
-# n_perm_screen <- 200L
-n_perm_screen <- 100L
+n_perm_screen <- 200L
+# n_perm_screen <- 100L
 n_years_per_block <- 25L # TODO Check this choice? Or just leave as best for app
 
 # set minimum number of exceedances required for a successful fit
