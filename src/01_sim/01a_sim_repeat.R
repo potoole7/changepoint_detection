@@ -57,6 +57,8 @@ dqu <- 0.8
 # dqu <- 0.85
 n_samples <- 500
 
+mc_cores <- parallel::detectCores() - 1L
+
 # run initially for just 100 permutations across full range
 # n_perm_screen <- 200L
 n_perm_screen <- 100L
@@ -91,7 +93,7 @@ if (cp_type == "global") {
 
 # start and end years for the changepoint (for global change, all sites affected; for local change, only some sites affected)
 start_year <- 1980L
-end_year   <- 2000L
+end_year <- 2000L
 
 save_dir <- "data/01_sim"
 if (!dir.exists(save_dir)) {
@@ -144,17 +146,17 @@ screen_setup_df <- tidyr::crossing(
 # arguments for simulate_t_copula_season function
 sim_args <- list(
   # chosen to emulate the application data
-  "n_sites"        = 40L,
-  "n_years"        = 60L,
+  "n_sites" = 40L,
+  "n_years" = 60L,
   # well separated "clusters" of sites, with different dependence structures
   # "baseline_rho"   = c(
   #   rep(0.1, 14L),
   #   rep(0.5, 13L),
   #   rep(0.8, 13L)
   # ),
-  "baseline_rho"   = baseline_rho,
-  "final_rho"      = final_rho,
-  "change_type"    = cp_type,
+  "baseline_rho" = baseline_rho,
+  "final_rho" = final_rho,
+  "change_type" = cp_type,
   # TODO maybe parametrise by desired rho_t??
   # "delta_z"        = 0.45,  # approx gives 0.5 for first cluster (atan(0.5) - atain(0.1) ~= 0.45)
   # "delta_z"        = 0.21,  # approx gives 0.3
@@ -163,9 +165,9 @@ sim_args <- list(
   # "change_start"   = 30L, # starts on middle year
   # "change_end"     = 60L,
   "change_start_year" = start_year,
-  "change_end_year"   = end_year,
-  "affected_sites"    = ifelse(cp_type == "local", 1:5, NA_integer_),
-  "return_laplace"    = TRUE
+  "change_end_year" = end_year,
+  "affected_sites" = ifelse(cp_type == "local", 1:5, NA_integer_),
+  "return_laplace" = TRUE
 )
 
 res <- lapply(seq_len(nreps), \(k) {
@@ -275,7 +277,8 @@ res <- lapply(seq_len(nreps), \(k) {
         data_laplace_season,
         season_name = "Winter",
         n_years_per_block[[i]],
-        min_exceedances = min_exceedances
+        min_exceedances = min_exceedances,
+        mc.cores = mc_cores
       )
     )
   }))
@@ -299,7 +302,8 @@ res <- lapply(seq_len(nreps), \(k) {
           use_start = TRUE,
           ret_dep = TRUE,
           verbose = TRUE,
-          permutation_validation_warnings = TRUE
+          permutation_validation_warnings = TRUE,
+          mc_cores = mc_cores
         )
       }
     ),

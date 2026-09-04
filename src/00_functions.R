@@ -877,7 +877,8 @@ run_season_permutation_scan <- \(
   use_start = TRUE,
   ret_dep = TRUE,
   verbose = TRUE,
-  permutation_validation_warnings = FALSE
+  permutation_validation_warnings = FALSE,
+  mc_cores = 1L
 ) {
   season_data <- data_laplace_season[[season_name]] |>
     select(
@@ -954,7 +955,8 @@ run_season_permutation_scan <- \(
     min_exceedances = min_exceedances,
     validation_warnings = TRUE,
     # permutation_validation_warnings = FALSE
-    permutation_validation_warnings = permutation_validation_warnings
+    permutation_validation_warnings = permutation_validation_warnings,
+    mc.cores = mc_cores
   )
 
   list(
@@ -4898,6 +4900,7 @@ perm_test_fun <- \(
   min_exceedances = 15L,
   validation_warnings = TRUE,
   permutation_validation_warnings = FALSE,
+  mc_cores = 1L,
   ...
 ) {
   #### Validate arguments ####
@@ -5589,7 +5592,8 @@ perm_test_fun <- \(
       parallel::mclapply(
         X,
         FUN,
-        mc.set.seed = TRUE
+        mc.set.seed = TRUE,
+        mc.cores = mc_cores
       )
     } else {
       lapply(
