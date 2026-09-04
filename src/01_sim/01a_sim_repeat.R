@@ -189,7 +189,7 @@ res <- lapply(seq_len(nreps), \(k) {
 
   ## Simulate Data ##
   sim_local <- do.call(
-    simulate_t_copula_season,
+    simulate_t_copula_season_line,
     c(sim_args, list("seed" = seed + k))
   ) |>
     group_by(name) |>
