@@ -130,91 +130,67 @@ Also, \citet{Alouni2026} developed a Bayesian clustering algorithm for multivari
 In \citet{Agarwal2025}, a likelihood-based method for detecting temporal changepoints in spatio-temporal data is developed, and applied to daily wind speed data in Ireland, similar to the data we used in our first paper. 
 We hope to build on these existing approaches and also the divergence-based clustering framework developed in our paper to develop a method for detecting changepoints in multivariate extremal dependence structures, which can be applied to a wide range of datasets and applications.
 
-\section{Spanish drought data}\label{sec:data}
 
-% \todo{See paper on joint temperature and SPI extremes for rough narrative}
-% \begin{itemize}
-%   \item We analyse temperature and precipitation data in Spain at 40 sites in mainland Spain (see left panel of Figure~\ref{fig:data}, from 1960 to 2020, inclusive.
-%   \item Source of data (ECAD) \todo{Write and reference}
-%   \item To aggregate temperature and precipitation into weekly maxes and sums, respectively, which may reduce short-term dependence in the data, as well as reducing the number of zeros observed for precipitation. 
-% \end{itemize}
-% 
-% \begin{itemize}
-%   \item We expect there to be a slight lag between temperature and precipitation \todo{word better}
-%   \item As such, we turn to using a precipitation index, $\ldots$. 
-%   \item \todo{Describe method for precipitation index further}
-%   \item By taking a 13-week rolling precipitation index, $\ldots$ \todo{any more info on SPI calculation needed?}
-%   \item We also take the negative precipitation index, henceforth  so that we can expect positive extremal dependence with temperature.
-% \end{itemize}
-% 
-% \begin{itemize}
-%   \item Describe plot:
-%     \begin{itemize}
-%       \item As an example, showing temperature vs precipitation index Daroca in Aragon and Jerez De La Frontera in and Andalusia)
-%       \item Temperature and ``extreme'' temperature, as defined by its 95th quantile, seems to vary significantly by season for both locations, but only for precipitation index in Jerez De La Frontera \todo{quote 95th quantiles??}
-%     \end{itemize}
-%   % \item To reduce this marginal temporal dependence, we will consider each season separately 
-%   \item To allow for the seasonality present in the marginal data and possibly in the extremal dependence structure, we consider each season separately when modelling dependence and performing our changepoint detection scheme. 
-% \end{itemize}
-% 
-% \begin{figure}[htb]
-%     \centering
-%     \includegraphics[width = 0.9\linewidth]{plots/intro_trim.png}
-%     \caption{
-%       Insert here
-%     }
-%    \label{fig:data}
-% \end{figure}
+\section{Spanish temperature and drought data}\label{sec:data}
 
+% Intro to the data and the application
 \begin{itemize}
-  % \item We analyse temperature and precipitation observations from 40 meteorological stations distributed across mainland Spain.
-  \item Our dataset consists of temperature and precipitation data at 40 meteorological stations distributed across mainland Spain. 
-  \item Their locations are shown in the left panel of Figure~\ref{fig:app_intro}.
-  \item The analysis covers the period 1960-2020, inclusive. 
+  \item We analyse daily maximum temperature and precipitation observations from 40
+meteorological stations distributed across mainland Spain over the period 1960--2020. 
   \item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
-  \item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) \citep{ECADdaily}. 
-  \item The ECAD provides quality-controlled daily meteorological observations from stations across Europe.
+  \item The station locations are shown in the left-hand panel of Figure~\ref{fig:app_intro}. 
+  \item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) which provides quality-controlled daily meteorological records from stations across Europe \citep{ECADdaily}. 
+  \item Daily observations are aggregated to weekly resolution. 
   \item We aggregate the daily observations to a weekly resolution, taking the maximum recorded temperature and total accumulated precipitation within each week. 
   \item This aggregation reduces the influence of very short-range temporal variation and decreases the proportion of zero precipitation observations, although it does not necessarily remove temporal dependence completely.
 \end{itemize}
 
+% SPI description
 \begin{itemize}
-  \item We want to model the relationship between extreme drought (i.e.\ lack of precipitation) and temperatures at each of these stations, and specifically whether and how the extremal dependence between them changes over time. 
-  \item However, this relationship may depend more strongly on precipitation accumulated over preceding weeks than on precipitation observed during the same week. 
+  \item Our interest is in the extremal dependence between high temperatures and dry conditions. 
+  \item The relationship between high temperature and dry conditions may depend more strongly on precipitation accumulated over preceding weeks than on precipitation observed during the same week. 
   \item We therefore represent precipitation conditions using the Standardised Precipitation Index (SPI) of \citet{McKee1993}, rather than using weekly precipitation totals directly.
-  \item At each station, we calculate SPI from precipitation accumulated over a rolling 13-week window. 
-  \item Thus, the value assigned to a given week summarises precipitation during that week and the preceding 12 weeks, providing a measure of precipitation conditions over an approximately three-month period.
-  \item The accumulated precipitation is modelled using a Gamma distribution, whose parameters are estimated using unbiased probability-weighted moments. 
-  \item Its fitted cumulative probability is then transformed to a standard Gaussian scale. 
-  % \item The calculation is implemented using the \texttt{spi} function from the \texttt{SPEI} package \citep{Begueria2023}, with a rectangular kernel assigning equal weight to each of the 13 weeks.
+  \item At each station, SPI is calculated from precipitation accumulated over a rolling 13-week window, so that the value assigned to a week summarises precipitation during that week and the preceding 12 weeks. 
+  \item The accumulated precipitation is modelled using a Gamma distribution whose parameters are estimated using unbiased probability-weighted moments, and its fitted cumulative probability is transformed to the standard Gaussian scale.
   \item Under the usual SPI convention, negative values represent drier-than-normal conditions and positive values represent wetter-than-normal conditions. 
   \item For the dependence analysis, we therefore define the drought index
   $D=-\mathrm{SPI}$,
-  so that larger values correspond to drier conditions. 
-  \item This sign convention means that high temperatures and dry conditions are expected to exhibit positive extremal dependence.
+  so that larger values correspond to drier conditions and positive association with high temperature has a natural interpretation.
 \end{itemize}
 
+% Brie motivation of seasonal analysis
 \begin{itemize}
-\item The right-hand panels of Figure~\ref{fig:app_intro} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
-\item These stations are highlighted in the map in the left-hand panel.
-\item At both stations, the distribution of weekly maximum temperature differs substantially between seasons. 
-\item The seasonal separation in drought-index values is less pronounced at Daroca, whereas Jerez de la Frontera exhibits clearer seasonal variation in both temperature and drought conditions. \textcolor{red}{Mention explicit figures for means/95th quantiles??}
-% \item These seasonal differences motivate fitting the dependence model and applying the changepoint procedure separately within each season. 
-\item For our analysis, these seasonal differences motivate modelling each season separately. 
-\item This allows both the marginal behaviour and the extremal dependence structure to vary seasonally. \textcolor{red}{would be nice if this flowed better with last line}
+  \item The right-hand panels of Figure~\ref{fig:app_intro} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
+  \item Both variables exhibit spatial and seasonal heterogeneity. 
+  \item In particular, weekly maximum temperature differs substantially between seasons at both stations, while the seasonal separation in drought-index values is more pronounced at Jerez de la Frontera.
+  \item These seasonal differences motivate fitting the dependence model and applying the changepoint procedure separately within each season. 
+  \item This allows both the marginal behaviour and the extremal dependence structure to vary seasonally, and avoids the need to model seasonal variation explicitly.
+\end{itemize}
+
+% season-year setup
+\begin{itemize}
+  \item We organise the observations into \emph{season-years}, which form the temporal units used throughout the simulation study and the Spanish application. 
+  \item For spring, summer and autumn, the season-year is the calendar year in which the observations occur. 
+  \item Winter spans two calendar years; December is therefore assigned to the same season-year as the following January and February. 
+  \item Each season-year contains 12 weekly observations. 
+  \item A candidate season-year $t$ represents a possible change between season-years $t$ and $t+1$, i.e.\ the dependence structure is assumed to be constant before $t$ and after $t+1$, but may differ between these two blocks.
+  % \item In a permutation procedure, complete season-years are reassigned as indivisible units, using the same reassignment for both variables and all stations. \textcolor{red}{Will have mentioned permutation procedure in the introduction.}
+  % \item This preserves dependence among the weekly observations within a season-year and the contemporaneous spatial correspondence among stations.
+  \item Every weekly observation belonging to a given season-year is moved as a single unit, and the same reassignment is applied simultaneously to both variables and all 40 stations.
+  \item This preserves the dependence between observations within a season-year and the spatial correspondence between stations.
+  \item The validity of this permutation procedure relies on treating season-years as exchangeable under the null hypothesis of no change in the extremal dependence structure. 
+  \item Although permuting complete season-years preserves within-year dependence, it does not preserve any residual dependence between successive season-years.
 \end{itemize}
 
 \begin{figure}[htb]
 \centering
 \includegraphics[width=0.9\linewidth]{plots/intro_trim.png}
 \caption{
-Left: Elevation (m) profile of mainland Spain along with locations of 40 meteorological stations.
-Daroca and Jerez de la Frontera highlighted. 
-Right: Weekly maximum temperature against 13-week drought index, ($D=-\mathrm{SPI}$), at these two stations, with observations coloured by season.
+Left: elevation profile of mainland Spain and locations of the 40 meteorological stations, with Daroca and Jerez de la Frontera highlighted.
+Right: weekly maximum temperature against the 13-week drought index $D=-\mathrm{SPI}$ at the two highlighted stations, with observations coloured by season.
 }
 \label{fig:app_intro}
 \end{figure}
-
 
 \section{Methodology}\label{sec:method}
 
@@ -492,7 +468,7 @@ The empirical p-value for the test is then
 \end{equation}
 where $\mathbf{1}\{\cdot\}$ denotes the indicator function. A value of $\hat{p}$ below the significance level $\alpha$, $\hat{p}<\alpha$, provides evidence for a difference in the pairwise dissimilarity structure of the fitted CE models between the two blocks, suggesting non-stationarity in tail behaviour around time point $\tau$.  
 
-When the number of values considered for $\tau$ is modest, as in Sections 3 and 4, permutation testing can be performed over the complete candidate range. In settings with longer time series or a substantially larger numbers of sites, one may first wish to identify local maxima, thereby reducing computational cost. Moreover, a suitable block size $n$ must be chosen to ensure reliable estimation of the CE model parameters within each time block, while also providing sufficient power to detect changes. To ensure comparability of results in Sections 3 and 4, we apply the same $n$ for each candidate $\tau$ and only consider time points with $\tau\in\{n,\ldots,T-n\}$. Finally, we note that the proposed procedure assesses non-stationarity locally around a given time point $\tau$. To test for non-stationarity across the entire observation period, one may either perform the test for each admissible value of $\tau$ and apply an appropriate multiple-testing correction, or define a global test statistic
+When the number of values considered for $\tau$ is modest, as in the simulation study and Spanish application in Sections~\ref{sec:sim} and \ref{sec:app}, permutation testing can be performed over the complete candidate range. In settings with longer time series or a substantially larger number of sites, one may first identify local maxima, thereby reducing computational cost. Moreover, a suitable block size $n$ must be chosen to ensure reliable estimation of the CE model parameters within each time block while providing sufficient power to detect changes. We apply the same $n$ at every candidate $\tau$ within an analysis and consider only time points satisfying $\tau\in\{n,\ldots,T-n\}$. Finally, the proposed procedure assesses non-stationarity locally around a given $\tau$. To test for non-stationarity across the entire observation period, one may either test every admissible $\tau$ with an appropriate multiple-testing correction or define a global test statistic
 $$
 N_{\max} \coloneq \max_{\tau=n,\ldots,T-n} N_{obs}(\tau).
 $$
@@ -710,7 +686,7 @@ A permutation test can then be constructed using the corresponding maximum stati
 % We demonstrate the performance of our proposed changepoint detection procedure through a simulation study.
 % To assess the ability of our method to detect changes in extremal dependence, we generate synthetic datasets with known changepoints designed to mimic the application to Spanish temperature and precipitation data in Section~\ref{sec:app}. \textcolor{red}{More emphasis on ``gradual'' change?}
 We demonstrate the ability of the proposed procedure to detect temporal changes in multivariate extremal dependence through a simulation study. 
-The simulation design broadly reflects the structure of the Spanish application in Section~\ref{sec:app}, with two variables observed weekly at multiple sites over a sequence of ``season-years'' (defined as the period from October to September).
+The simulation design follows the observational structure of the Spanish drought data introduced in Section~\ref{sec:data}, with two variables observed weekly at multiple sites and grouped over a sequence of ``season-years'' (defined as the period from October to September)
 Rather than imposing an instantaneous changepoint, we allow the extremal dependence structure to evolve gradually over a specified transition period, to better reflect the types of changes that may occur in environmental systems.
 The objective is therefore not to recover a single exact change time, but to assess whether the procedure identifies evidence of a transition and whether the Frobenius and infinity norms respond differently to widespread and localised changes.
 
@@ -720,7 +696,7 @@ Section~\ref{subsec:sim_results} presents the results of the simulation study, c
 \subsection{Simulation setup}
 \label{subsec:sim_setup}
 
-We simulate two variables at $D=40$ sites over $60$ season-years, with $12$ weekly observations in each season-year. 
+Following Section~\ref{sec:data}, we simulate two variables at $D=40$ sites over 60 season-years, with 12 weekly observations in each season-year.
 At each site and time point, the two variables are generated from a bivariate Student $t$-copula with three degrees of freedom \citep{Demarta2007-ap}. 
 The sites are generated independently, and the weekly observations are conditionally independent given the site- and year-specific copula parameters. 
 % Known generalised Pareto marginal distributions, with shape parameter $\xi=-0.05$, scale parameter $\sigma=1$ and threshold zero, are used for both variables. 
@@ -770,8 +746,11 @@ We therefore expect the infinity norm to be particularly responsive to the local
 
 
 For each scenario, we generate $100$ independent datasets and apply the changepoint procedure described in Section~\ref{subsec:cp}. 
-For the screening step, we fit using adjacent blocks of $15, 20, 25$ and $30$ season-years, and evaluate candidate split points over the complete feasible range.
-The CE model is fitted using adjacent blocks of $25$ season-years, which was identified as optimal, in terms of balancing estimation accuracy and power to detect changes, for our application in Section~\ref{sec:app}, and candidate split points are evaluated over the complete feasible range. 
+The CE models are fitted using adjacent blocks of 25 season-years on either
+side of each candidate, and candidate split points are evaluated over the
+complete feasible range. This block length retains a useful range of candidate
+locations while providing sufficiently many observations for stable tail
+estimation.
 For each replicate and norm, we record the screening statistic $D(\tau)$ and the corresponding permutation $p$-values $\hat{p}(\tau)$ for each candidate split point $\tau$, for $B = 100$ permutations.
 Under the null scenario, the $p$-values give an empirical frequency with which the procedure identifies an apparent change in a temporally stationary dependence structure. 
 Under the local and global alternatives, they measure the ability of the procedure to detect the simulated transition and identify the region to which the estimated change is localised.
@@ -893,10 +872,10 @@ Under the local and global alternatives, they measure the ability of the procedu
 \section{Application to Spanish data}\label{sec:app}
 
 \begin{itemize}
-  \item We now apply our changepoint detection algorithm to the Spanish drought data introduced in Section~\ref{sec:data}.
-  % \item In Section~\ref{subsec:data}, we introduce the dataset of temperatures and precipitation indexes used in our application. 
-  \item Section~\ref{subsec:app_screen} shows the results of our initial screening step, while in Section~\ref{subsec:app_cp}, we discuss the results of our changepoint detection algorithm. 
-  \item Finally, Section~\ref{subsec:app_clust} shows the clustering results for seasons before and after identified changepoints. 
+  \item We now apply the proposed changepoint procedure to the Spanish temperature and drought data introduced in Section~\ref{sec:data}. 
+  \item Section~\ref{subsec:app_setup} describes the application-specific preprocessing and tuning choices,
+  \item Section~\ref{subsec:app_screen} presents the screening results, and Section~\ref{subsec:app_cp} reports the permutation test. 
+  \item Finally, Section~\ref{subsec:app_clust} examines how the spatial clustering of fitted extremal dependence changes across the identified temporal divisions.
 \end{itemize}
 
 \subsection{Setup}\label{subsec:app_setup}
@@ -928,18 +907,18 @@ Under the local and global alternatives, they measure the ability of the procedu
 
 % Marginal preprocessing
 \begin{itemize}
-\item The conditional extremes framework is applied after transforming each variable to a common marginal distribution. 
-\item Consequently, systematic changes in the marginal distributions over time could otherwise be confounded with changes in the extremal dependence structure.
-\item Both variables exhibit seasonal variation, while weekly maximum temperature in particular also displays a long-term marginal trend. 
-\item We therefore preprocess the marginal distributions before fitting the conditional extremes models.
-\item At each station, and for each variable, we consider observations from each calendar month separately and fit a linear trend in year. 
-\item The estimated trend is removed from the observations for that month. 
-\item Treating months separately allows the magnitude of the temporal trend to vary throughout the year while accounting for the pronounced marginal seasonality.
-\item This detrending removes an estimated linear change in the location of each monthly marginal distribution; it does not imply that all temporal dependence has been removed. 
-\item In particular, some short-range dependence may remain between successive weekly observations, and consecutive values of the 13-week drought index are constructed from overlapping precipitation windows.
-\item Following detrending, the observations are grouped by meteorological season. 
-\item For each station and variable, the resulting seasonal observations are transformed standard Laplace margins using the empirical rank transform.
-\item The conditional extremes and changepoint analyses are then performed separately for winter, spring, summer and autumn.
+  \item The conditional extremes framework is applied after transforming each variable to a common marginal distribution. 
+  \item Consequently, systematic changes in the marginal distributions over time could otherwise be confounded with changes in the extremal dependence structure.
+  \item Both variables exhibit seasonal variation, while weekly maximum temperature in particular also displays a long-term marginal trend. 
+  \item We therefore preprocess the marginal distributions before fitting the conditional extremes models.
+  \item At each station, and for each variable, we consider observations from each calendar month separately and fit a linear trend in year. 
+  \item The estimated trend is removed from the observations for that month. 
+  \item Treating months separately allows the magnitude of the temporal trend to vary throughout the year while accounting for the pronounced marginal seasonality.
+  \item This detrending removes an estimated linear change in the location of each monthly marginal distribution; it does not imply that all temporal dependence has been removed. 
+  \item In particular, some short-range dependence may remain between successive weekly observations, and consecutive values of the 13-week drought index are constructed from overlapping precipitation windows.
+  \item Following detrending, the observations are grouped by meteorological season. 
+  \item For each station and variable, the resulting seasonal observations are transformed to standard Laplace margins using the empirical rank transform.
+  \item The conditional extremes and changepoint analyses are then performed separately for winter, spring, summer and autumn.
 \end{itemize}
 
 % Conditional extremes specification
@@ -957,18 +936,14 @@ Under the local and global alternatives, they measure the ability of the procedu
 
 % Screening and changepoint-test specification
 \begin{itemize}
-\item For the Spanish application, the permutation procedure is adapted to preserve the temporal and spatial structure within each season. 
-\item Rather than permuting individual weekly observations, we permute complete season-years.
-\item For spring, summer and autumn, the season-year is the calendar year in which the observations occur. 
-\item Winter spans two calendar years; December is therefore assigned to the same season-year as the following January and February. 
-% \item For example, December 1997 and January-February 1998 jointly constitute winter 1998.
-\item At a candidate season-year $(t)$, the two temporal blocks consist of the (25) season-years ending at $(t)$ and the (25) season-years beginning at $(t+1)$, respectively. 
-\item Thus, $(t)$ denotes a possible change between season-years $(t)$ and $(t+1)$.
-\item In each pointwise permutation, the 50 season-years from the two blocks are pooled and randomly divided into two pseudo-blocks containing 25 season-years each. 
-\item Every weekly observation belonging to a given season-year is moved as a single unit, and the same reassignment is applied simultaneously to both variables and all 40 stations. 
-\item This preserves the dependence between observations within a season-year and the spatial correspondence between stations.
-\item The validity of this permutation procedure relies on treating season-years as exchangeable under the null hypothesis of no change in the extremal dependence structure. 
-\item Although permuting complete season-years preserves within-year dependence, it does not preserve any residual dependence between successive season-years.
+  \item We use the season-year organisation defined in Section~\ref{sec:data} and apply the permutation procedure in Section~\ref{subsec:cp} separately within each season.
+  \item At candidate season-year $t$, the two temporal blocks contain the 25 season-years ending at $t$ and the 25 season-years beginning at $t+1$, respectively.
+  \item In each pointwise permutation, the 50 complete season-years are pooled and randomly reassigned to two pseudo-blocks of 25 season-years each, using the same reassignment for both variables and all 40 stations.
+  \item The validity of this permutation procedure relies on treating season-years as exchangeable under the null hypothesis of no change in the extremal dependence structure. 
+  \item Although permuting complete season-years preserves within-year dependence, it does not preserve any residual dependence between successive season-years.
+  \item Permuting complete season-years preserves the dependence between observations within a season-year and the spatial correspondence between stations.
+  \item The validity of this permutation procedure relies on treating season-years as exchangeable under the null hypothesis of no change in the extremal dependence structure. 
+  \item Although permuting complete season-years preserves within-year dependence, it does not preserve any residual dependence between successive season-years.
 \end{itemize}
 
 % Choice of block length
@@ -999,7 +974,7 @@ Under the local and global alternatives, they measure the ability of the procedu
 \begin{itemize}
 \item We first perform a computationally less intensive screening step, in which the observed discrepancy between the two estimated dissimilarity matrices is calculated at every feasible candidate season-year without generating a permutation distribution.
 \item Figure~\ref{fig:app_screen} presents the screening statistics for each season using the Frobenius, infinity and spectral norms. 
-\item As discussed in Section~2, these norms provide complementary summaries of the difference between the dissimilarity matrices on either side of a candidate change.
+\item As discussed in Section~\ref{subsec:cp}, these norms provide complementary summaries of the difference between the dissimilarity matrices on either side of a candidate change.
 \item The three norms have different numerical scales, and their absolute values should therefore not be compared directly. 
 \item Instead, we compare the timing and relative prominence of features in their respective screening curves.
 \item Red points in Figure~\ref{fig:app_screen} identify local peaks. 
