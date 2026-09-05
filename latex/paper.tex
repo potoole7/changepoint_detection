@@ -130,6 +130,91 @@ Also, \citet{Alouni2026} developed a Bayesian clustering algorithm for multivari
 In \citet{Agarwal2025}, a likelihood-based method for detecting temporal changepoints in spatio-temporal data is developed, and applied to daily wind speed data in Ireland, similar to the data we used in our first paper. 
 We hope to build on these existing approaches and also the divergence-based clustering framework developed in our paper to develop a method for detecting changepoints in multivariate extremal dependence structures, which can be applied to a wide range of datasets and applications.
 
+\section{Spanish drought data}\label{sec:data}
+
+% \todo{See paper on joint temperature and SPI extremes for rough narrative}
+% \begin{itemize}
+%   \item We analyse temperature and precipitation data in Spain at 40 sites in mainland Spain (see left panel of Figure~\ref{fig:data}, from 1960 to 2020, inclusive.
+%   \item Source of data (ECAD) \todo{Write and reference}
+%   \item To aggregate temperature and precipitation into weekly maxes and sums, respectively, which may reduce short-term dependence in the data, as well as reducing the number of zeros observed for precipitation. 
+% \end{itemize}
+% 
+% \begin{itemize}
+%   \item We expect there to be a slight lag between temperature and precipitation \todo{word better}
+%   \item As such, we turn to using a precipitation index, $\ldots$. 
+%   \item \todo{Describe method for precipitation index further}
+%   \item By taking a 13-week rolling precipitation index, $\ldots$ \todo{any more info on SPI calculation needed?}
+%   \item We also take the negative precipitation index, henceforth  so that we can expect positive extremal dependence with temperature.
+% \end{itemize}
+% 
+% \begin{itemize}
+%   \item Describe plot:
+%     \begin{itemize}
+%       \item As an example, showing temperature vs precipitation index Daroca in Aragon and Jerez De La Frontera in and Andalusia)
+%       \item Temperature and ``extreme'' temperature, as defined by its 95th quantile, seems to vary significantly by season for both locations, but only for precipitation index in Jerez De La Frontera \todo{quote 95th quantiles??}
+%     \end{itemize}
+%   % \item To reduce this marginal temporal dependence, we will consider each season separately 
+%   \item To allow for the seasonality present in the marginal data and possibly in the extremal dependence structure, we consider each season separately when modelling dependence and performing our changepoint detection scheme. 
+% \end{itemize}
+% 
+% \begin{figure}[htb]
+%     \centering
+%     \includegraphics[width = 0.9\linewidth]{plots/intro_trim.png}
+%     \caption{
+%       Insert here
+%     }
+%    \label{fig:data}
+% \end{figure}
+
+\begin{itemize}
+  % \item We analyse temperature and precipitation observations from 40 meteorological stations distributed across mainland Spain.
+  \item Our dataset consists of temperature and precipitation data at 40 meteorological stations distributed across mainland Spain. 
+  \item Their locations are shown in the left panel of Figure~\ref{fig:app_intro}.
+  \item The analysis covers the period 1960-2020, inclusive. 
+  \item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
+  \item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) \citep{ECADdaily}. 
+  \item The ECAD provides quality-controlled daily meteorological observations from stations across Europe.
+  \item We aggregate the daily observations to a weekly resolution, taking the maximum recorded temperature and total accumulated precipitation within each week. 
+  \item This aggregation reduces the influence of very short-range temporal variation and decreases the proportion of zero precipitation observations, although it does not necessarily remove temporal dependence completely.
+\end{itemize}
+
+\begin{itemize}
+  \item We want to model the relationship between extreme drought (i.e.\ lack of precipitation) and temperatures at each of these stations, and specifically whether and how the extremal dependence between them changes over time. 
+  \item However, this relationship may depend more strongly on precipitation accumulated over preceding weeks than on precipitation observed during the same week. 
+  \item We therefore represent precipitation conditions using the Standardised Precipitation Index (SPI) of \citet{McKee1993}, rather than using weekly precipitation totals directly.
+  \item At each station, we calculate SPI from precipitation accumulated over a rolling 13-week window. 
+  \item Thus, the value assigned to a given week summarises precipitation during that week and the preceding 12 weeks, providing a measure of precipitation conditions over an approximately three-month period.
+  \item The accumulated precipitation is modelled using a Gamma distribution, whose parameters are estimated using unbiased probability-weighted moments. 
+  \item Its fitted cumulative probability is then transformed to a standard Gaussian scale. 
+  % \item The calculation is implemented using the \texttt{spi} function from the \texttt{SPEI} package \citep{Begueria2023}, with a rectangular kernel assigning equal weight to each of the 13 weeks.
+  \item Under the usual SPI convention, negative values represent drier-than-normal conditions and positive values represent wetter-than-normal conditions. 
+  \item For the dependence analysis, we therefore define the drought index
+  $D=-\mathrm{SPI}$,
+  so that larger values correspond to drier conditions. 
+  \item This sign convention means that high temperatures and dry conditions are expected to exhibit positive extremal dependence.
+\end{itemize}
+
+\begin{itemize}
+\item The right-hand panels of Figure~\ref{fig:app_intro} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
+\item These stations are highlighted in the map in the left-hand panel.
+\item At both stations, the distribution of weekly maximum temperature differs substantially between seasons. 
+\item The seasonal separation in drought-index values is less pronounced at Daroca, whereas Jerez de la Frontera exhibits clearer seasonal variation in both temperature and drought conditions. \textcolor{red}{Mention explicit figures for means/95th quantiles??}
+% \item These seasonal differences motivate fitting the dependence model and applying the changepoint procedure separately within each season. 
+\item For our analysis, these seasonal differences motivate modelling each season separately. 
+\item This allows both the marginal behaviour and the extremal dependence structure to vary seasonally. \textcolor{red}{would be nice if this flowed better with last line}
+\end{itemize}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/intro_trim.png}
+\caption{
+Left: Elevation (m) profile of mainland Spain along with locations of 40 meteorological stations.
+Daroca and Jerez de la Frontera highlighted. 
+Right: Weekly maximum temperature against 13-week drought index, ($D=-\mathrm{SPI}$), at these two stations, with observations coloured by season.
+}
+\label{fig:app_intro}
+\end{figure}
+
 
 \section{Methodology}\label{sec:method}
 
@@ -808,93 +893,11 @@ Under the local and global alternatives, they measure the ability of the procedu
 \section{Application to Spanish data}\label{sec:app}
 
 \begin{itemize}
-  \item We now apply our changepoint detection algorithm to data from Spain. 
-  \item In Section~\ref{subsec:data}, we introduce the dataset of temperatures and precipitation indexes used in our application. 
+  \item We now apply our changepoint detection algorithm to the Spanish drought data introduced in Section~\ref{sec:data}.
+  % \item In Section~\ref{subsec:data}, we introduce the dataset of temperatures and precipitation indexes used in our application. 
   \item Section~\ref{subsec:app_screen} shows the results of our initial screening step, while in Section~\ref{subsec:app_cp}, we discuss the results of our changepoint detection algorithm. 
   \item Finally, Section~\ref{subsec:app_clust} shows the clustering results for seasons before and after identified changepoints. 
 \end{itemize}
-
-\subsection{Spanish Data}\label{subsec:data}
-
-% \todo{See paper on joint temperature and SPI extremes for rough narrative}
-% \begin{itemize}
-%   \item We analyse temperature and precipitation data in Spain at 40 sites in mainland Spain (see left panel of Figure~\ref{fig:data}, from 1960 to 2020, inclusive.
-%   \item Source of data (ECAD) \todo{Write and reference}
-%   \item To aggregate temperature and precipitation into weekly maxes and sums, respectively, which may reduce short-term dependence in the data, as well as reducing the number of zeros observed for precipitation. 
-% \end{itemize}
-% 
-% \begin{itemize}
-%   \item We expect there to be a slight lag between temperature and precipitation \todo{word better}
-%   \item As such, we turn to using a precipitation index, $\ldots$. 
-%   \item \todo{Describe method for precipitation index further}
-%   \item By taking a 13-week rolling precipitation index, $\ldots$ \todo{any more info on SPI calculation needed?}
-%   \item We also take the negative precipitation index, henceforth  so that we can expect positive extremal dependence with temperature.
-% \end{itemize}
-% 
-% \begin{itemize}
-%   \item Describe plot:
-%     \begin{itemize}
-%       \item As an example, showing temperature vs precipitation index Daroca in Aragon and Jerez De La Frontera in and Andalusia)
-%       \item Temperature and ``extreme'' temperature, as defined by its 95th quantile, seems to vary significantly by season for both locations, but only for precipitation index in Jerez De La Frontera \todo{quote 95th quantiles??}
-%     \end{itemize}
-%   % \item To reduce this marginal temporal dependence, we will consider each season separately 
-%   \item To allow for the seasonality present in the marginal data and possibly in the extremal dependence structure, we consider each season separately when modelling dependence and performing our changepoint detection scheme. 
-% \end{itemize}
-% 
-% \begin{figure}[htb]
-%     \centering
-%     \includegraphics[width = 0.9\linewidth]{plots/intro_trim.png}
-%     \caption{
-%       Insert here
-%     }
-%    \label{fig:data}
-% \end{figure}
-
-\begin{itemize}
-\item We analyse temperature and precipitation observations from 40 meteorological stations distributed across mainland Spain.
-\item Their locations are shown in the left panel of Figure~\ref{fig:app_intro}.
-\item The analysis covers the period 1960-2020, inclusive. 
-\item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
-\item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) \citep{ECADdaily}. 
-\item The ECAD provides quality-controlled daily meteorological observations from stations across Europe.
-\item We aggregate the daily observations to a weekly resolution, taking the maximum recorded temperature and total accumulated precipitation within each week. 
-\item This aggregation reduces the influence of very short-range temporal variation and decreases the proportion of zero precipitation observations, although it does not necessarily remove temporal dependence completely.
-\end{itemize}
-
-\begin{itemize}
-\item The relationship between high temperature and dry conditions may depend more strongly on precipitation accumulated over preceding weeks than on precipitation observed during the same week. 
-\item We therefore represent precipitation conditions using the Standardised Precipitation Index (SPI) of \citet{McKee1993}, rather than using weekly precipitation totals directly.
-\item At each station, we calculate SPI from precipitation accumulated over a rolling 13-week window. 
-\item Thus, the value assigned to a given week summarises precipitation during that week and the preceding 12 weeks, providing a measure of precipitation conditions over an approximately three-month period.
-\item The accumulated precipitation is modelled using a Gamma distribution, whose parameters are estimated using unbiased probability-weighted moments. 
-\item Its fitted cumulative probability is then transformed to a standard Gaussian scale. 
-% \item The calculation is implemented using the \texttt{spi} function from the \texttt{SPEI} package \citep{Begueria2023}, with a rectangular kernel assigning equal weight to each of the 13 weeks.
-\item Under the usual SPI convention, negative values represent drier-than-normal conditions and positive values represent wetter-than-normal conditions. 
-\item For the dependence analysis, we therefore define the drought index
-$D=-\mathrm{SPI}$,
-so that larger values correspond to drier conditions. 
-\item This sign convention means that high temperatures and dry conditions are expected to exhibit positive extremal dependence.
-\end{itemize}
-
-\begin{itemize}
-\item The right-hand panels of Figure~\ref{fig:app_intro} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
-\item These stations are highlighted in the map in the left-hand panel.
-\item At both stations, the distribution of weekly maximum temperature differs substantially between seasons. 
-\item The seasonal separation in drought-index values is less pronounced at Daroca, whereas Jerez de la Frontera exhibits clearer seasonal variation in both temperature and drought conditions. \textcolor{red}{Mention explicit figures for means/95th quantiles??}
-\item These seasonal differences motivate fitting the dependence model and applying the changepoint procedure separately within each season. 
-\item This allows both the marginal behaviour and the extremal dependence structure to vary seasonally.
-\end{itemize}
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/intro_trim.png}
-\caption{
-Left: Elevation (m) profile of mainland Spain along with locations of 40 meteorological stations.
-Daroca and Jerez de la Frontera highlighted. 
-Right: Weekly maximum temperature against 13-week drought index, ($D=-\mathrm{SPI}$), at these two stations, with observations coloured by season.
-}
-\label{fig:app_intro}
-\end{figure}
 
 \subsection{Setup}\label{subsec:app_setup}
 
