@@ -30,10 +30,11 @@ dist2coast <- \(dat, areas, convert_to_coastline = TRUE, ...) {
 # bivariate t-copula dependence (line from start year to end year)
 simulate_t_copula_season_line <- \(
   n_sites = 40L,
-  n_years = 60L,
+  # n_years = 60L,
+  n_years = 64L, # from 1960 to 2024
   n_obs_per_year = 12L,
   season_name = "Winter",
-  first_year = 1961L,
+  first_year = 1960L,
   site_cluster = c(
     rep("low", 14L),
     rep("medium", 13L),
@@ -42,12 +43,12 @@ simulate_t_copula_season_line <- \(
   baseline_rho = c(
     low = 0.1,
     medium = 0.5,
-    high = 0.8
+    high = 0.9
   ),
   final_rho = c(
-    low = 0.8,
-    medium = 0.8,
-    high = 0.8
+    low = 0.1,
+    medium = 0.5,
+    high = 0.9
   ),
   change_type = c(
     "local",

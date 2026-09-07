@@ -48,7 +48,8 @@ temp_var <- "temp"
 
 # number of locations, seasons and years to simulate for
 n_locs <- 40
-years <- 1960:2020
+# years <- 1960:2020
+years <- 1960:2024 # application goes up to 2024 actually !!
 # seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
 seed <- 123 # random seed
@@ -71,29 +72,33 @@ cp_type <- "global"
 # cp_type <- "local"
 # cp_type <- "none"
 
-baseline_rho <- final_rho <- c(
+baseline_rho <- c(
   low = 0.1,
   medium = 0.5,
-  high = 0.8
+  high = 0.9
 )
 
-if (cp_type == "global") {
-  final_rho <- c(
-    low = 0.4,
+final_rho <- switch(cp_type,
+  none = baseline_rho,
+  global = c(
+    low = 0.2,
     medium = 0.8,
     high = 0.9
-  )
-} else if (cp_type == "local") {
-  final_rho <- c(
+  ),
+  local = c(
     low = 0.5,
     medium = 0.5,
-    high = 0.8
+    high = 0.9
   )
-}
+)
+
 
 # start and end years for the changepoint (for global change, all sites affected; for local change, only some sites affected)
 start_year <- 1980L
 end_year <- 2000L
+
+# start_year <- 1980L
+# end_year <- 1980L
 
 save_dir <- "data/01_sim"
 if (!dir.exists(save_dir)) {
@@ -147,7 +152,9 @@ screen_setup_df <- tidyr::crossing(
 sim_args <- list(
   # chosen to emulate the application data
   "n_sites" = 40L,
-  "n_years" = 60L,
+  # "n_years" = 60L,
+  n_years = length(years), # or length(years) - 1 ???
+  first_year = min(years),
   # well separated "clusters" of sites, with different dependence structures
   # "baseline_rho"   = c(
   #   rep(0.1, 14L),
@@ -183,9 +190,9 @@ res <- lapply(seq_len(nreps), \(k) {
     k
   )
 
-  if (file.exists(file)) {
-    return(NULL)
-  }
+  # if (file.exists(file)) {
+  #   return(NULL)
+  # }
 
   ## Simulate Data ##
   sim_local <- do.call(
