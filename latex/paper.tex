@@ -133,54 +133,110 @@ We hope to build on these existing approaches and also the divergence-based clus
 
 \section{Spanish temperature and drought data}\label{sec:data}
 
-% Intro to the data and the application
+% Old
+% We analyse daily maximum temperature and precipitation observations from 40 meteorological stations distributed across mainland Spain over the period 1960--2020. 
+% The observations were obtained from the European Climate Assessment Dataset (ECAD), which provides quality-controlled daily meteorological records from stations across Europe \citep{ECADdaily}. 
+% The station locations are shown in the left-hand panel of Figure~\ref{fig:app_intro}.
+% \textcolor{red}{Confirm and state the record-length and data-availability
+% criteria used to select the 40 stations, if applicable.}
+% 
+% We aggregate the daily observations to a weekly resolution, taking the maximum
+% recorded temperature and total accumulated precipitation within each week.
+% This aggregation reduces the influence of very short-range temporal variation
+% and the proportion of zero precipitation observations, although it does not
+% necessarily remove temporal dependence completely.
+
+% Old (Overleaf)
+% \todo{See paper on joint temperature and SPI extremes for rough narrative}
+% \begin{itemize}
+%   \item We analyse temperature and precipitation data in Spain at 40 sites in mainland Spain (see left panel of Figure~\ref{fig:data}, from 1960 to 2020, inclusive.
+%   \item Source of data (ECAD) \todo{Write and reference}
+%   \item To aggregate temperature and precipitation into weekly maxes and sums, respectively, which may reduce short-term dependence in the data, as well as reducing the number of zeros observed for precipitation. 
+% \end{itemize}
+% 
+% \begin{itemize}
+%   \item We expect there to be a slight lag between temperature and precipitation \todo{word better}
+%   \item As such, we turn to using a precipitation index, $\ldots$. 
+%   \item \todo{Describe method for precipitation index further}
+%   \item By taking a 13-week rolling precipitation index, $\ldots$ \todo{any more info on SPI calculation needed?}
+%   \item We also take the negative precipitation index, henceforth  so that we can expect positive extremal dependence with temperature.
+% \end{itemize}
+% 
+% \begin{itemize}
+%   \item Describe plot:
+%     \begin{itemize}
+%       \item As an example, showing temperature vs precipitation index Daroca in Aragon and Jerez De La Frontera in and Andalusia)
+%       \item Temperature and ``extreme'' temperature, as defined by its 95th quantile, seems to vary significantly by season for both locations, but only for precipitation index in Jerez De La Frontera \todo{quote 95th quantiles??}
+%     \end{itemize}
+%   % \item To reduce this marginal temporal dependence, we will consider each season separately 
+%   \item To allow for the seasonality present in the marginal data and possibly in the extremal dependence structure, we consider each season separately when modelling dependence and performing our changepoint detection scheme. 
+% \end{itemize}
+% 
+% \begin{figure}[htb]
+%     \centering
+%     \includegraphics[width = 0.9\linewidth]{plots/intro_trim.png}
+%     \caption{
+%       Insert here
+%     }
+%    \label{fig:data}
+% \end{figure}
+
+Daily maximum temperature and precipitation data for 40 locations across Spain for 1960-2020 were obtained from the European Climate Assessment Dataset (ECAD) \citep{ECADdaily}. Figure~\ref{fig:app_intro} left panel shows that the sites considered cover all areas of Spain. We aggregate to a weekly resolution to reduce temporal dependence, taking the maximum recorded temperature and total accumulated precipitation within each week. 
+
+% Our interest is in the extremal dependence between high temperatures and
+% prolonged dry conditions. Since land degradation is typically associated with
+% sustained precipitation deficits rather than precipitation during a single
+% week, we use the Standardised Precipitation Index (SPI) of \citet{McKee1993}
+% rather than weekly precipitation totals directly. At each station, the SPI for
+% a given week is calculated from precipitation accumulated over a rolling
+% 13-week window comprising that week and the preceding 12 weeks. The accumulated
+% precipitation is modelled using a Gamma distribution whose parameters are
+% estimated using unbiased probability-weighted moments, and the fitted
+% cumulative probability is transformed to the standard Gaussian scale.
+
+Since land degradation is typically associated with prolonged drought rather than short-term precipitation deficits, we consider the Standardised Precipitation Index (SPI) of \cite{McKee1993} instead of the weekly precipitation totals. SPI measures deviations on accumulated precipitation from its long-term climatological distribution and therefore provides a more informative summary of drought conditions. Moreover, temperature dynamics may respond more strongly to drought conditions than the precipitation recorded during the current week. We calculate the SPI for a week and site based on the precipitation accumulated over a 13-week window which includes the current week. 
+
 \begin{itemize}
-  \item We analyse daily maximum temperature and precipitation observations from 40
-meteorological stations distributed across mainland Spain over the period 1960--2020. 
-  \item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. 
-  \item The station locations are shown in the left-hand panel of Figure~\ref{fig:app_intro}. 
-  \item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) which provides quality-controlled daily meteorological records from stations across Europe \citep{ECADdaily}. 
-  \item Daily observations are aggregated to weekly resolution. 
-  \item We aggregate the daily observations to a weekly resolution, taking the maximum recorded temperature and total accumulated precipitation within each week. 
-  \item This aggregation reduces the influence of very short-range temporal variation and decreases the proportion of zero precipitation observations, although it does not necessarily remove temporal dependence completely.
+%\item We analyse temperature and precipitation observations from 40 meteorological stations distributed across mainland Spain.
+%\item Their locations are shown in the left panel of Figure~\ref{fig:app_intro}.
+%\item The analysis covers the period 1960-2020, inclusive. 
+\item Only stations satisfying the required record-length and data-availability criteria are retained. \textcolor{red}{State criteria for choosing stations/locations (description in code)}. \textcolor{orange}{CR: Is this necessary? The map shows 40 locations. Are we really removing any of them? I don't want to look through your code}
+%\item Daily maximum temperature and precipitation totals are obtained from the European Climate Assessment Dataset (ECAD) \citep{ECADdaily}. 
+%\item The ECAD provides quality-controlled daily meteorological observations from stations across Europe.
+%\item We aggregate the daily observations to a weekly resolution, taking the maximum recorded temperature and total accumulated precipitation within each week. 
+%\item This aggregation reduces the influence of very short-range temporal variation and decreases the proportion of zero precipitation observations, although it does not necessarily remove temporal dependence completely.
 \end{itemize}
 
-% SPI description
-\begin{itemize}
-  \item Our interest is in the extremal dependence between high temperatures and dry conditions. 
-  \item The relationship between high temperature and dry conditions may depend more strongly on precipitation accumulated over preceding weeks than on precipitation observed during the same week. 
-  \item We therefore represent precipitation conditions using the Standardised Precipitation Index (SPI) of \citet{McKee1993}, rather than using weekly precipitation totals directly.
-  \item At each station, SPI is calculated from precipitation accumulated over a rolling 13-week window, so that the value assigned to a week summarises precipitation during that week and the preceding 12 weeks. 
-  \item The accumulated precipitation is modelled using a Gamma distribution whose parameters are estimated using unbiased probability-weighted moments, and its fitted cumulative probability is transformed to the standard Gaussian scale.
-  \item Under the usual SPI convention, negative values represent drier-than-normal conditions and positive values represent wetter-than-normal conditions. 
-  \item For the dependence analysis, we therefore define the drought index
-  $D=-\mathrm{SPI}$,
-  so that larger values correspond to drier conditions and positive association with high temperature has a natural interpretation.
-\end{itemize}
+% Under the usual SPI convention, negative values represent drier-than-normal
+% conditions. We therefore define the drought index $D=-\mathrm{SPI}$, so that
+% larger values correspond to more severe drought conditions. Our analysis
+% focuses on the dependence between extremely high weekly maximum temperatures
+% and extremely high values of $D$.
 
-% Brie motivation of seasonal analysis
-\begin{itemize}
-  \item The right-hand panels of Figure~\ref{fig:app_intro} illustrate the relationship between weekly maximum temperature and the drought index at Daroca, in Aragon, and Jerez de la Frontera, in Andalusia. 
-  \item Both variables exhibit spatial and seasonal heterogeneity. 
-  \item In particular, weekly maximum temperature differs substantially between seasons at both stations, while the seasonal separation in drought-index values is more pronounced at Jerez de la Frontera.
-  \item These seasonal differences motivate fitting the dependence model and applying the changepoint procedure separately within each season. 
-  \item This allows both the marginal behaviour and the extremal dependence structure to vary seasonally, and avoids the need to model seasonal variation explicitly.
-\end{itemize}
+Since, under the usual SPI convention, negative values represent drier-than-normal conditions, we define the drought index $D=-\mathrm{SPI}$. Larger values of $D$ therefore correspond to more sever drought conditions. In the following we analyse the dependence between extremely high values for $D$ and the weekly maximum temperature. 
 
-% season-year setup
-\begin{itemize}
-  \item We organise the observations into \emph{season-years}, which form the temporal units used throughout the simulation study and the Spanish application. 
-  \item For spring, summer and autumn, the season-year is the calendar year in which the observations occur. 
-  \item Winter spans two calendar years; December is therefore assigned to the same season-year as the following January and February. 
-  \item Each season-year contains 12 weekly observations. 
-  \item A candidate season-year $t$ represents a possible change between season-years $t$ and $t+1$, i.e.\ the dependence structure is assumed to be constant before $t$ and after $t+1$, but may differ between these two blocks.
-  % \item In a permutation procedure, complete season-years are reassigned as indivisible units, using the same reassignment for both variables and all stations. \textcolor{red}{Will have mentioned permutation procedure in the introduction.}
-  % \item This preserves dependence among the weekly observations within a season-year and the contemporaneous spatial correspondence among stations.
-  \item Every weekly observation belonging to a given season-year is moved as a single unit, and the same reassignment is applied simultaneously to both variables and all 40 stations.
-  \item This preserves the dependence between observations within a season-year and the spatial correspondence between stations.
-  \item The validity of this permutation procedure relies on treating season-years as exchangeable under the null hypothesis of no change in the extremal dependence structure. 
-  \item Although permuting complete season-years preserves within-year dependence, it does not preserve any residual dependence between successive season-years.
-\end{itemize}
+% The right-hand panels of Figure~\ref{fig:app_intro} suggest that the relationship
+% between weekly maximum temperature and the drought index is weaker at Daroca,
+% in Aragon, than at Jerez de la Frontera, in Andalusia. This is broadly
+% consistent with regional climatological differences: Andalusia typically has
+% a pronounced summer dry season, whereas precipitation in Aragon is generally
+% lower but more evenly distributed throughout the year. Drought conditions in
+% Andalusia may therefore be more closely associated with episodes of extreme
+% heat. The panels also indicate seasonal differences in the dependence
+% structure, motivating separate dependence and changepoint analyses for winter,
+% spring, summer and autumn.
+
+Figure \ref{fig:app_intro} suggests that the relationship between weekly maximum temperature and the drought index is weaker for Daroca, Aragon, than for Jerez de la Frontera in Andalusia. These differences are broadly consistent with regional climatological patterns. Andalusia typically experiences a pronounced dry season during summer, with little precipitation over extended periods, whereas Aragon generally receives lower but more evenly distributed precipitation throughout the year. Consequently, drought conditions in Andalusia may be more closely linked to episodes of extreme heat than in Aragon. We also observe slight seasonal differences in the dependence structure and this motivates applying our changepoint procedure separately for each season. 
+
+We organise the observations into \emph{season-years}, which form the temporal units used throughout the simulation study and Spanish application. 
+For spring, summer and autumn, the season-year is the calendar year in which the observations occur. 
+Winter spans two calendar years, so December is assigned to the same season-year as the following January and February. 
+Each season-year contains 12 weekly observations. 
+A candidate season-year $t$ represents a possible change between season-years $t$ and $t+1$.
+
+In the permutation procedure, every weekly observation belonging to a given season-year is moved as part of a single unit, and the same reassignment is applied simultaneously to both variables and all 40 stations. 
+This preserves dependence among observations within a season-year and the contemporaneous spatial correspondence among stations. 
+The procedure treats season-years as exchangeable under the null hypothesis of no change in extremal dependence; permuting complete season-years does not preserve any residual dependence between successive season-years.
 
 \begin{figure}[htb]
 \centering
@@ -686,7 +742,7 @@ A permutation test can then be constructed using the corresponding maximum stati
 % We demonstrate the performance of our proposed changepoint detection procedure through a simulation study.
 % To assess the ability of our method to detect changes in extremal dependence, we generate synthetic datasets with known changepoints designed to mimic the application to Spanish temperature and precipitation data in Section~\ref{sec:app}. \textcolor{red}{More emphasis on ``gradual'' change?}
 We demonstrate the ability of the proposed procedure to detect temporal changes in multivariate extremal dependence through a simulation study. 
-The simulation design follows the observational structure of the Spanish drought data introduced in Section~\ref{sec:data}, with two variables observed weekly at multiple sites and grouped over a sequence of ``season-years'' (defined as the period from October to September)
+The simulation design follows the observational structure of the Spanish drought data introduced in Section~\ref{sec:data}, with two variables observed weekly at multiple sites and grouped into season-years of 12 observations.
 Rather than imposing an instantaneous changepoint, we allow the extremal dependence structure to evolve gradually over a specified transition period, to better reflect the types of changes that may occur in environmental systems.
 The objective is therefore not to recover a single exact change time, but to assess whether the procedure identifies evidence of a transition and whether the Frobenius and infinity norms respond differently to widespread and localised changes.
 
@@ -869,7 +925,10 @@ Under the local and global alternatives, they measure the ability of the procedu
 
 \newpage % TODO Remove once simulation study section is finished
 
-\section{Application to Spanish data}\label{sec:app}
+%\section{Application to Spanish data}\label{sec:app}
+\section{Analysis of drought conditions across Spain}\label{sec:app}
+
+Desertification is one of Spain's most pressing environmental challenges. \citet{SpainDegradation} found that 20\% of Spanish territory was degraded and an additional 1\% was undergoing an active process of environmental deterioration during 2000--2010. While part of this degradation may be attributable to agricultural practices and other land-use pressures, climate change may also have altered the climatic conditions conducive to desertification and land degradation. We focus on this climatic dimension by applying the proposed changepoint methodology to assess potential shifts in the tail dependence structure of temperature and drought-related indicators across Spain.
 
 \begin{itemize}
   \item We now apply the proposed changepoint procedure to the Spanish temperature and drought data introduced in Section~\ref{sec:data}. 
@@ -942,8 +1001,6 @@ Under the local and global alternatives, they measure the ability of the procedu
   \item The validity of this permutation procedure relies on treating season-years as exchangeable under the null hypothesis of no change in the extremal dependence structure. 
   \item Although permuting complete season-years preserves within-year dependence, it does not preserve any residual dependence between successive season-years.
   \item Permuting complete season-years preserves the dependence between observations within a season-year and the spatial correspondence between stations.
-  \item The validity of this permutation procedure relies on treating season-years as exchangeable under the null hypothesis of no change in the extremal dependence structure. 
-  \item Although permuting complete season-years preserves within-year dependence, it does not preserve any residual dependence between successive season-years.
 \end{itemize}
 
 % Choice of block length
