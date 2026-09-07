@@ -83,7 +83,7 @@ final_rho <- switch(cp_type,
   global = c(
     low = 0.2,
     medium = 0.8,
-    high = 0.9
+    high = 0.95
   ),
   local = c(
     low = 0.5,
