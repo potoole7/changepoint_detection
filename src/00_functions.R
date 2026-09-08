@@ -26,6 +26,8 @@ dist2coast <- \(dat, areas, convert_to_coastline = TRUE, ...) {
 
 #### Simulate seasonal data with time-varying, site-specific bivariate t-copula dependence ####
 
+# TODO Code is not very dense, have at 80 characters! So so spread out
+# (i.e. lots of line breaks)
 # Generate one simulated season with time-varying, site-specific
 # bivariate t-copula dependence (line from start year to end year)
 simulate_t_copula_season_line <- \(
@@ -154,13 +156,10 @@ simulate_t_copula_season_line <- \(
       }
     }
 
-    affected_index <- unique(
-      affected_index
-    )
+    affected_index <- unique(affected_index)
   }
 
-  season_years <-
-    first_year + seq_len(n_years) - 1L
+  season_years <- first_year + seq_len(n_years) - 1L
 
   if (
     change_start_year ==
@@ -186,6 +185,8 @@ simulate_t_copula_season_line <- \(
     )
   }
 
+  # Create a tibble with site information, including baseline and final rho
+  # values, and whether the site is affected by the change.
   site_information <- tibble::tibble(
     site_index = seq_len(n_sites),
     name = site_ids,
@@ -193,13 +194,21 @@ simulate_t_copula_season_line <- \(
     baseline_rho = unname(
       baseline_rho[site_cluster]
     ),
-    final_rho = unname(
+    cluster_target_rho = unname(
       final_rho[site_cluster]
     ),
-    affected =
-      site_index %in% affected_index
-  )
+    affected = site_index %in% affected_index
+  ) |>
+    dplyr::mutate(
+      final_rho = dplyr::if_else(
+        affected,
+        cluster_target_rho,
+        baseline_rho
+      )
+    )
 
+  # Create a design tibble that combines site information with year indices and
+  # calculates the time-varying rho values based on the change progress.
   design <- tidyr::crossing(
     site_index = seq_len(n_sites),
     year_index = seq_len(n_years)

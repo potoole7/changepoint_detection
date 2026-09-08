@@ -68,31 +68,6 @@ n_years_per_block <- 25L # TODO Check this choice? Or just leave as best for app
 # set minimum number of exceedances required for a successful fit
 min_exceedances <- 15
 
-cp_type <- "global"
-# cp_type <- "local"
-# cp_type <- "none"
-
-baseline_rho <- c(
-  low = 0.1,
-  medium = 0.5,
-  high = 0.9
-)
-
-final_rho <- switch(cp_type,
-  none = baseline_rho,
-  global = c(
-    low = 0.2,
-    medium = 0.8,
-    high = 0.95
-  ),
-  local = c(
-    low = 0.5,
-    medium = 0.5,
-    high = 0.9
-  )
-)
-
-
 # start and end years for the changepoint (for global change, all sites affected; for local change, only some sites affected)
 start_year <- 1980L
 end_year <- 2000L
@@ -104,6 +79,95 @@ save_dir <- "data/01_sim"
 if (!dir.exists(save_dir)) {
   dir.create(save_dir, recursive = TRUE)
 }
+
+#### metadata: define simulation changepoint magnitude ####
+
+
+# cp_type <- "global"
+cp_type <- "local"
+# cp_type <- "none"
+
+
+# # "Naive" choice
+# cluster_sizes <- c(
+#   rep("low", 14L),
+#   rep("medium", 13L),
+#   rep("high", 13L)
+# )
+#
+# baseline_rho <- c(
+#   low = 0.1,
+#   medium = 0.5,
+#   high = 0.9
+# )
+#
+# final_rho <- switch(cp_type,
+#   none = baseline_rho,
+#   global = c(
+#     low = 0.2,
+#     medium = 0.8,
+#     high = 0.95
+#   ),
+#   local = c(
+#     low = 0.5,
+#     medium = 0.5,
+#     high = 0.9
+#   )
+# )
+# affected_sites <- ifelse(cp_type == "local", 1:5, NA_integer_)
+
+# More "application informed" approach (from Summer results)
+# TODO Which clusters on the map do these match up with for Summer ???
+cluster_sizes <- c(
+  rep("low", 8L),
+  rep("medium", 14L),
+  rep("high", 18L)
+)
+
+baseline_rho <- c(
+  low = 0.15,
+  medium = 0.3,
+  high = 0.45
+)
+
+final_rho <- switch(
+  cp_type,
+  none = baseline_rho,
+  # Low remains low, while medium and high increase quite a bit
+  global = c(
+    low = 0.2,
+    medium = 0.55,
+    high = 0.6
+  ),
+  # # Low moves up to join medium
+  # # TODO Or join medium with high instead??
+  # local = c(
+  #   low = 0.3, # or even to 0.45?
+  #   medium = 0.3,
+  #   high = 0.45
+  # )
+  #
+  local = c(
+    low = 0.15,
+    medium = 0.45, # bring medium up to high (creates greater discrepancies than bringing up low to medium)
+    high = 0.45
+  )
+)
+# affected_sites <- ifelse(cp_type == "local", 1:8, NA_integer_)
+
+# Site indices belonging to each baseline regime
+regime_sites <- split(
+  seq_len(n_locs),
+  cluster_sizes
+)
+
+# Sites whose rho changes
+affected_sites <- switch(
+  cp_type,
+  none = integer(0),
+  global = seq_len(n_locs),
+  local = regime_sites$medium[seq_len(8L)]
+)
 
 
 #### Precalculations ####
@@ -152,6 +216,7 @@ screen_setup_df <- tidyr::crossing(
 sim_args <- list(
   # chosen to emulate the application data
   "n_sites" = 40L,
+  site_cluster = cluster_sizes,
   # "n_years" = 60L,
   n_years = length(years), # or length(years) - 1 ???
   first_year = min(years),
@@ -173,7 +238,8 @@ sim_args <- list(
   # "change_end"     = 60L,
   "change_start_year" = start_year,
   "change_end_year" = end_year,
-  "affected_sites" = ifelse(cp_type == "local", 1:5, NA_integer_),
+  # "affected_sites" = ifelse(cp_type == "local", 1:5, NA_integer_),
+  "affected_sites" = affected_sites,
   "return_laplace" = TRUE
 )
 
