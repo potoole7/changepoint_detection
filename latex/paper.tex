@@ -2,7 +2,8 @@
 
 
 \usepackage{graphicx}%
-\RequirePackage{amsthm,amsmath,mathtools,multirow,amsfonts,bbm,amssymb,xcolor}
+% \RequirePackage{amsthm,amsmath,mathtools,multirow,amsfonts,bbm,amssymb,xcolor}
+\RequirePackage{amsthm,amsmath,mathtools,multirow,amsfonts,bbm,xcolor}
 \usepackage{mathrsfs}%
 \usepackage[title]{appendix}%
 \usepackage{textcomp}%
@@ -738,9 +739,12 @@ To apply the framework in Section~\ref{sec:method}, we select the block length $
 
 \begin{figure}
 \centering
-\includegraphics[width=0.9\linewidth]{plots/screen.png}
+% \includegraphics[width=0.9\linewidth]{plots/screen.png}
+\includegraphics[width=0.9\linewidth]{latex/plots/screen_dqu_0.8.png}
 \caption{
-Test statistics calculated for each candidate season-year with 25-year time blocks. Results are shown for the test statistic $D$ using the Frobenius and infinity norms. Red points denote local peaks in the test statistic. \textcolor{red}{Need to mention that we rescale to be between 0 and 1 for plots!}}
+Test statistics calculated for each candidate season-year with 25-year time blocks. 
+Results are shown for the test statistic $D$ using the Frobenius and infinity norms. Red points denote local peaks in the test statistic. 
+\textcolor{red}{Need to mention that we rescale to be between 0 and 1 for plots!}}
 \label{fig:app_screen}
 \end{figure}
 
@@ -879,7 +883,7 @@ Figure~\ref{fig:app_screen} shows different patterns in the test statistics for 
 % \item Moreover, statistics at neighbouring candidate years are strongly dependent because adjacent 25-year windows share almost all of their observations.
 %\item Although the screening step highlights several candidate regions of particular interest, the total number of feasible candidate season-years is sufficiently small to apply the permutation test at every candidate. 
 %\item We therefore retain the complete candidate range rather than restricting the formal analysis to the local screening peaks.
-\end{itemize}
+% \end{itemize}
 
 
 
@@ -921,7 +925,7 @@ Figure~\ref{fig:app_screen} shows different patterns in the test statistics for 
 % \item For autumn, the infinity norm produces an isolated pointwise-significant result at the beginning of the candidate range, around 1986. \todo{Add changepoint to re-clustering plot!}
 % \item The Frobenius and spectral norms provide no corresponding evidence at this candidate, and no later autumn candidate is significant. 
 % \item This isolated result should therefore be interpreted cautiously, particularly because it occurs at the boundary of the candidate range and is not supported by the other norms.
-\item Also for Autumn, none of the three norms produces a pointwise p-value below 0.05, although the infinity norm came very close for 1986, the year with the highest test statistic in our screening step. 
+\item Also for Autumn, none of the three norms produces a pointwise p-value below 0.05, although the infinity norm came very close for 1986, the year with the highest test statistic in our screening step. \textcolor{red}{May have to rewrite slightly, as Autumn now has a 5\% changepoint (even here, it's significant at the 10\% level)}
 
 \item For winter, the infinity norm provides pointwise evidence of a change over the period 1996--1999. 
 \item The spectral norm supports a narrower region around 1997--1998, while the Frobenius norm is significant in 1998. 
@@ -1022,7 +1026,7 @@ The horizontal dashed line denotes the pointwise 5\% significance level.
 
     \item The total within-cluster dissimilarity curves for each season and their respective divisions are shown in Figure~\ref{fig:elbow}.
     \item Together, they generally support $k=3$ as an interpretable compromise between parsimony and within-cluster homogeneity.
-    \item However, as $k=2$ and $k=4$ also appear to be plausible for some elbow plots, we provide the corresponding clustering solutions in the Supplementary Material (Figures~\ref{app_clust_k2}--~\ref{app_clust_k2_4_spring}).
+    \item However, as $k=2$ and $k=4$ also appear to be plausible for some elbow plots, we provide the corresponding clustering solutions in the Supplementary Material (Figures~\ref{fig:app_clust_k2}--~\ref{fig:app_clust_k2_4_spring}).
 \end{itemize}
 
 \begin{figure}[htb]
@@ -1052,7 +1056,7 @@ Background shading represents elevation.
 \begin{itemize}
   \item For winter during 1960--1998, cluster 2 is concentrated principally along the southern and southeastern coast, with one geographically separated member on the northern coast. Cluster 3 is concentrated more strongly across northern and northwestern Spain, while cluster 1 contains most of the remaining stations.
   \item The early-winter solution is therefore spatially coherent, although geography is not a definitive determinant of membership.
-  \item The corresponding dissimilarity matrix (Supplementary Figure~\ref{diss_winter}) shows comparatively distinct groups, with cluster 3 displaying particularly large dissimilarities from the other two clusters.
+  \item The corresponding dissimilarity matrix (Supplementary Figure~\ref{fig:diss_winter}) shows comparatively distinct groups, with cluster 3 displaying particularly large dissimilarities from the other two clusters.
   \item The elbow for 1960--1998 in Figure~\ref{fig:elbow} is less sharply defined than for the later period and indicates that \(k=4\) is also plausible. Under \(k=4\), the original cluster 1 is subdivided into two larger groups, while only a small number of stations remain geographically separated from the other members of their assigned cluster.
   \item This sensitivity analysis suggests that the pre-1999 winter dependence structure may contain finer geographical variation than is represented by the three-cluster solution. It does not, however, provide unequivocal evidence that four clusters are optimal.
 
@@ -1115,7 +1119,7 @@ Background shading represents elevation.
 \begin{itemize}
     \item The 1960--1986 autumn clustering resembles the spring solution in retaining a recognisable geographical structure, with distinct groups across western, central and eastern parts of the study region.
     \item The geographical separation becomes weaker during 1987--2024, with several northern, northeastern, southwestern and Mediterranean stations changing membership.
-    \item This reorganisation is also reflected in the dissimilarity matrices (Supplementary Figure~\ref{diss_autumn}), with the later matrix appearing less distinctly block-structured.
+    \item This reorganisation is also reflected in the dissimilarity matrices (Supplementary Figure~\ref{fig:diss_autumn}), with the later matrix appearing less distinctly block-structured.
 
     \item The autumn signed difference matrix is predominantly positive, indicating that many station pairs have smaller fitted dissimilarities after 1986.
     \item In contrast to summer, the positive autumn differences are distributed relatively widely throughout the matrix, rather than being dominated by only one or two stations.
