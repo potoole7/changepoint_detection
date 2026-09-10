@@ -130,8 +130,7 @@ baseline_rho <- c(
   high = 0.45
 )
 
-final_rho <- switch(
-  cp_type,
+final_rho <- switch(cp_type,
   none = baseline_rho,
   # Low remains low, while medium and high increase quite a bit
   global = c(
@@ -139,22 +138,20 @@ final_rho <- switch(
     medium = 0.55,
     high = 0.6
   ),
-  # # Low moves up to join medium
-  # # TODO Or join medium with high instead??
+  # bring medium up to high (may create greater discrepancies than bringing up low to medium)
   # local = c(
-  #   low = 0.3, # or even to 0.45?
-  #   medium = 0.3,
+  #   low = 0.15,
+  #   medium = 0.45,
   #   high = 0.45
-  # )
-  #
-  local = c(
-    low = 0.15,
-    medium = 0.45, # bring medium up to high (creates greater discrepancies than bringing up low to medium)
-    high = 0.45
+  # ),
+   local = c(
+    low    = 0.45, # bring low up to high
+    medium = 0.3,
+    high   = 0.45
   )
 )
-# affected_sites <- ifelse(cp_type == "local", 1:8, NA_integer_)
 
+# affected_sites <- ifelse(cp_type == "local", 1:8, NA_integer_)
 # Site indices belonging to each baseline regime
 regime_sites <- split(
   seq_len(n_locs),
@@ -162,11 +159,11 @@ regime_sites <- split(
 )
 
 # Sites whose rho changes
-affected_sites <- switch(
-  cp_type,
+affected_sites <- switch(cp_type,
   none = integer(0),
   global = seq_len(n_locs),
-  local = regime_sites$medium[seq_len(8L)]
+  # local = regime_sites$medium[seq_len(8L)] # bring medium sites to high regime
+  local = regime_sites$low[seq_len(8L)] # bring up low sites to high regime
 )
 
 
@@ -242,6 +239,11 @@ sim_args <- list(
   "affected_sites" = affected_sites,
   "return_laplace" = TRUE
 )
+
+# sink all of these options to a text file in case you want to check them later
+sink(paste0("data/01_sim/simulation_options_", cp_type, ".txt"))
+sim_args
+sink()
 
 res <- lapply(seq_len(nreps), \(k) {
   system(sprintf(
