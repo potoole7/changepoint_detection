@@ -578,13 +578,13 @@ We therefore expect the infinity norm to be particularly responsive to the local
 
 \textcolor{red}{Say about value of B (number of iterations)}
 
-For each scenario, we generate $100$ independent datasets and apply the changepoint procedure described in Section~\ref{subsec:cp}. 
+For each scenario, we generate $200$ independent datasets and apply the changepoint procedure described in Section~\ref{subsec:cp}. 
 The CE models are fitted using adjacent blocks of 25 season-years on either
 side of each candidate, and candidate split points are evaluated over the
 complete feasible range. This block length retains a useful range of candidate
 locations while providing sufficiently many observations for stable tail
 estimation.
-For each replicate and norm, we record the screening statistic $D(\tau)$ and the corresponding permutation $p$-values $\hat{p}(\tau)$ for each candidate split point $\tau$, for $B = 100$ permutations.
+For each replicate and norm, we record the screening statistic $D(\tau)$ and the corresponding permutation $p$-values $\hat{p}(\tau)$ for each candidate split point $\tau$, for $B = 200$ permutations.
 Under the null scenario, the $p$-values give an empirical frequency with which the procedure identifies an apparent change in a temporally stationary dependence structure. 
 Under the local and global alternatives, they measure the ability of the procedure to detect the simulated transition and identify the region to which the estimated change is localised.
 
@@ -622,7 +622,7 @@ Under the local and global alternatives, they measure the ability of the procedu
   Pointwise rejection rates under the null and global-change scenarios for the Frobenius and infinity norms. 
   Red and blue curves correspond to significance levels of 5\% and 10\%, respectively, and the horizontal dashed lines indicate the corresponding nominal levels. 
   The vertical dotted line marks the onset of the gradual change in 1990; in the null panels, it is included only as a reference.
-  Points show the proportion of the 100 simulation replicates rejected at each candidate split point, and vertical bars give 95\% Wilson confidence intervals.
+  Points show the proportion of the 200 simulation replicates rejected at each candidate split point, and vertical bars give 95\% Wilson confidence intervals.
 }
 \label{fig:sim_global}
 \end{figure}
@@ -636,7 +636,7 @@ Under the local and global alternatives, they measure the ability of the procedu
   
   \item The Wilson confidence intervals generally contain the nominal
   significance levels. 
-  \item The observed variation between candidate split points is therefore compatible with the Monte Carlo uncertainty associated with 100 simulation replicates, suggesting that both statistics are reasonably well calibrated pointwise.
+  \item The observed variation between candidate split points is therefore compatible with the Monte Carlo uncertainty associated with 200 simulation replicates, suggesting that both statistics are reasonably well calibrated pointwise.
   % \item This result concerns pointwise Type~I error. Inspecting all candidate split points and declaring a change whenever any pointwise test rejects would not, without further adjustment, control the family-wise Type~I error at the nominal level.
 \end{itemize}
 
@@ -681,7 +681,7 @@ Under the local and global alternatives, they measure the ability of the procedu
   The local alternatives increase the correlation parameter at the five affected sites from 0.1 towards 0.3 or 0.6. 
   Red and blue curves correspond to significance levels of 5\% and 10\%, respectively, and the horizontal dashed lines indicate the corresponding nominal levels. 
   The vertical dotted line marks the onset of the gradual change in 1990; in the null panels, it is included only as a reference. 
-  Points show the proportion of the 100 simulation replicates rejected at each candidate split point, and vertical bars give 95\% Wilson confidence intervals.
+  Points show the proportion of the 200 simulation replicates rejected at each candidate split point, and vertical bars give 95\% Wilson confidence intervals.
 }
 \label{fig:sim_local}
 \end{figure}
@@ -734,8 +734,6 @@ We organise the observations into \emph{season-years}, with 12 weekly observatio
 
 The time series of maximum weekly temperature and drought index exhibit seasonality and possibly a long-term trend due to climate change. Since we assume that the marginal distribution function in \eqref{eq:Laplace} is stationary across the time block, changes in the marginal distributions over time may confound changes in the tail dependence if not modelled directly. Therefore, for each of the four datasets, we fit a linear trend for the average maximum weekly temperature for each month and station separately, which allows for a varying magnitude of temporal trend across space and time. After removing the trend, observations are transformed to Laplace margins using \eqref{eq:Laplace}, with $F_{i,s}^{(j)}$ being set to the empirical cumulative distribution function of all observations in the same season. \textcolor{orange}{CR: Is there an issue that variance may be different across months too and we have not account for it?}
 
-To apply the framework in Section~\ref{sec:method}, we select the block length $n$ such that each time block contains 25 season-years and only consider $\tau$ within the period 1985 -- 1998, which ensures a sufficient number of data within each block. Sensitivity to the choice of $n$ was explored, but a block size of 15 years or smaller was found to include too few exceedances to achieve a reliable fit of the CE models. For each $\tau$ and season, parameters of the CE model \eqref{eq:ce_model_spat} are estimated separately for each site using the data within the time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$. The threshold $u_{i,s}^{(j)}$ is set to the 80th percentile of the standard Laplace distribution, because it provides a good compromise between restricting attention to the joint tail while retaining sufficient exceedances for inference. For each of the 24 candidates years, we derive the test statistics $N_{obs}^{(F)}(\tau)$ and $N_{obs}^{(I)}(\tau)$ defined in Equations~\eqref{eq:frob} and \eqref{eq:infinity}. \textcolor{red}{How to justify choice of 25 season-years without forward referencing to application?}
-
 \begin{figure}
 \centering
 % \includegraphics[width=0.75\linewidth]{latex/plots/screen_dqu_0.8.png}
@@ -747,7 +745,23 @@ Local maximum are highlighted by the crosses. %, and test statistics have been t
 \label{fig:app_screen}
 \end{figure}
 
-Figure~\ref{fig:app_screen} shows different patterns in the test statistics for the four seasons. For the winter months, the highest value is obtained for 1998 for both test statistics, while for the other seasons the highest test statistic is observed between 1988 and 1992. We also note a difference in scale, with the test statistic being smaller in spring than in the other seasons. Consequently, there appears to be a stronger signal for a shift in tail dependence for summer, autumn and winter than for spring. We then compute empirical p-values for the observed test statistics using the permutation procedure described in Section~\ref{subsec:cp}, with the number of permutations in \eqref{eq:perm_pval} set to $B=200$, and all conclusions being made at the 5\% significance level. Figure~\ref{fig:app_cp} suggests that there is evidence of a significant difference fir winter when $\tau$ is around 1998, and for summer for $\tau\in\{1987,\ldots,1993\}$. Conversely, there is insufficient evidence for a change for spring and autumn, which is in line with the highest test statistic for the seasons illustrated in Figure~\ref{fig:app_screen}. Moreover, the conclusions are similar for the two test statistics used, with the infinity norm producing smaller p-values when the null hypothesis of no change is rejected at the 5\% significance level.
+Figure~\ref{fig:app_screen} shows different patterns in the test statistics for the four seasons. For the winter months, the highest value is obtained for 1998 for both test statistics, while for the other seasons the highest test statistic is observed between 1988 and 1992. We also note a difference in scale, with the test statistic being smaller in spring than in the other seasons. Consequently, there appears to be a stronger signal for a shift in tail dependence for summer, autumn and winter than for spring. We then compute empirical p-values for the observed test statistics using the permutation procedure described in Section~\ref{subsec:cp}, with the number of permutations in \eqref{eq:perm_pval} set to $B=200$, and all conclusions being made at the 5\% significance level. Figure~\ref{fig:app_cp} suggests that there is evidence of a significant difference for winter when $\tau$ is around 1998, and for summer for $\tau\in\{1987,\ldots,1993\}$. Conversely, there is insufficient evidence for a change for spring and autumn, which is in line with the highest test statistic for the seasons illustrated in Figure~\ref{fig:app_screen}. Moreover, the conclusions are similar for the two test statistics used, with the infinity norm producing smaller p-values when the null hypothesis of no change is rejected at the 5\% significance level.
+
+{\color{red}
+For each season in Figure~5, the minimum pointwise $p$-values across
+candidate changepoint years are:
+\begin{itemize}
+    \item Winter: $0.0299$ for the Frobenius norm (for 1998) and
+          $0.0149$ for the infinity norm (for 1997).
+    \item Spring: $0.144$ for the Frobenius norm and $0.134$ for the
+          infinity norm (both for 1992).
+    \item Summer: $0.0348$ for the Frobenius norm (for 1992) and
+          $0.0149$ for the infinity norm (for 1989).
+    \item Autumn: $0.194$ for the Frobenius norm and $0.0896$ for the
+          infinity norm (both for 1986).
+\end{itemize}
+These minimum pointwise $p$-values are not adjusted for the search across candidate years.
+}
 
 \begin{figure}
 \centering
