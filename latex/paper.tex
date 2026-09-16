@@ -289,7 +289,7 @@ N_{\mathrm{obs}}^{(F)}(\tau) \coloneq \left\| \hat{M}^{(1)}(\tau) - \hat{M}^{(2)
 The second statistic is the infinity, or maximum-entry, norm:
 \begin{equation}
 \label{eq:infinity}
-N_{\mathrm{obs}}^{(I)}(\tau) \coloneq \max_{s,s'=1,\ldots,D}\left|\hat{M}^{(1)}_{s,s'}(\tau) - \hat{M}^{(2)}_{s,s'}(\tau)\right|.
+N_{\mathrm{obs}}^{(I)}(\tau) \coloneq \max_{s=1,\ldots,D} \sum_{s'=1}^D \left|\hat{M}^{(1)}_{s,s'}(\tau) - \hat{M}^{(2)}_{s,s'}(\tau)\right|.
 \end{equation}
 The Frobenius norm~\eqref{eq:frob} captures the overall magnitude of change, whereas the infinity norm~\eqref{eq:infinity} is only sensitive to the largest pairwise difference. 
 Consequently, their relative performance under non-stationarity is expected to depend on whether changes occur across many sites or are concentrated in a small number of locations. 
@@ -316,19 +316,9 @@ N_{\max} \coloneq \max_{\tau=n,\ldots,T-n} N_{obs}(\tau).
 $$
 A permutation test can then be constructed using the corresponding maximum statistic under each permutation. This automatically accounts for the multiple testing induced by considering multiple values of $\tau$.
 
-
-
-
-
-
 % Refitting the CE models within each permutation incorporates variation arising from estimation of the extremal dependence structure into the reference distribution.
 
-
-
-
-
-
-%We construct a statistical test for detecting a difference in tail behaviour in one or more of the random vectors $\boldsymbol{Y}_1^{(t)},\ldots,\boldsymbol{Y}_D^{(t)}$ based on the conditional extremes models fitted using the data for time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$. Specifically, the null hypothesis states that the matrix $M^{(t)}$ in \eqref{eq:distance_matrix} remains unchanged throughout the period $\mathcal{T}_1(\tau)\cup\mathcal{T}_2(\tau)$:
+% We construct a statistical test for detecting a difference in tail behaviour in one or more of the random vectors $\boldsymbol{Y}_1^{(t)},\ldots,\boldsymbol{Y}_D^{(t)}$ based on the conditional extremes models fitted using the data for time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$. Specifically, the null hypothesis states that the matrix $M^{(t)}$ in \eqref{eq:distance_matrix} remains unchanged throughout the period $\mathcal{T}_1(\tau)\cup\mathcal{T}_2(\tau)$:
 
 
 %Let $M(T)$ denote the estimated extremal dependence structure for a time block $T$, which could represent a given period of time for which we have sufficient data to fit the CE model and estimate the corresponding divergence matrix.
@@ -538,6 +528,8 @@ Section~\ref{subsec:sim_results} presents the results of the simulation study, c
 \subsection{Simulation setup}
 \label{subsec:sim_setup}
 
+\textcolor{red}{Rewrite to reflect new setup}
+
 Following Section~\ref{sec:data}, we simulate two variables at $D=40$ sites over 60 season-years, with 12 weekly observations in each season-year.
 At each site and time point, the two variables are generated from a bivariate Student $t$-copula with three degrees of freedom \citep{Demarta2007-ap}.
 The sites are generated independently, and the weekly observations are conditionally independent given the site- and year-specific copula parameters. 
@@ -586,7 +578,6 @@ We therefore expect the infinity norm to be particularly responsive to the local
 
 \textcolor{red}{Say about value of B (number of iterations)}
 
-
 For each scenario, we generate $100$ independent datasets and apply the changepoint procedure described in Section~\ref{subsec:cp}. 
 The CE models are fitted using adjacent blocks of 25 season-years on either
 side of each candidate, and candidate split points are evaluated over the
@@ -602,6 +593,7 @@ Under the local and global alternatives, they measure the ability of the procedu
 
 \textcolor{red}{Design experiment which has better power!}
 \textcolor{red}{Design local experiment which has better power for infinity norm!}
+\textcolor{red}{Should we say anything about the results of the screening step? Need to plot!}
 
 
 % Introduce Type I error and power
@@ -728,27 +720,35 @@ Under the local and global alternatives, they measure the ability of the procedu
 %\item Finally, Section~\ref{subsec:app_clust} examines how the spatial clustering of fitted extremal dependence changes across the identified temporal divisions.
 %\end{itemize}
 
-\subsection{Estimation of conditional extremes models}
+\subsection{Testing for a shift in tail dependence structure}
 \label{subsec:app_setup}
 
-We organise the observations into \emph{season-years}, with 12 weekly observations per season. For spring, summer and autumn, the season-year is the calendar year in which the observations occur, while December is assigned to the same season-year as the following January and February for the winter season. This results in four datasets, one per season, and we aim to apply our permutation test separately to each. When performing the permutation test later, observations in the same season-year form a single unit that is not split across permutations, and the candidate time $\tau$ refers to a year instead of a specific date. By permuting complete season-years, we preserve both the dependence between observations within a season-year and the spatial correspondence between stations.
+We organise the observations into \emph{season-years}, with 12 weekly observations per season. For spring, summer and autumn, the season-year is the calendar year in which the observations occur, while December is assigned to the same season-year as the following January and February for the winter season. The observations per season are then grouped into separate datasets, resulting in four datasets, one per season. In what follows, the framework in Section~\ref{sec:method}, including the marginal standardisation, is applied to each dataset individually. When performing the permutation test later, observations in the same season-year form a single unit that is not split across permutations, and the candidate time $\tau$ refers to a year instead of a specific date. By permuting complete season-years, we preserve both the dependence between observations within a season-year and the spatial correspondence between stations.
 
-The time series of maximum weekly temperature and drought index exhibit seasonality and possibly a long-term trend due to climate change. Since we assume that the marginal distribution function in \eqref{eq:Laplace} is stationary across the time block, changes in the marginal distributions over time may confound changes in the tail dependence if not modelled directly. Therefore, we fit a linear trend by year for each month and station separately, which allows for a varying magnitude of temporal trend across space and time. After removing the trend, observations are transformed to Laplace margins using \eqref{eq:Laplace}, with $F_{i,s}^{(j)}$ being set to the empirical cumulative distribution function of all observations in the same season.
+The time series of maximum weekly temperature and drought index exhibit seasonality and possibly a long-term trend due to climate change. Since we assume that the marginal distribution function in \eqref{eq:Laplace} is stationary across the time block, changes in the marginal distributions over time may confound changes in the tail dependence if not modelled directly. Therefore, for each of the four datasets, we fit a linear trend for the average maximum weekly temperature for each month and station separately, which allows for a varying magnitude of temporal trend across space and time. After removing the trend, observations are transformed to Laplace margins using \eqref{eq:Laplace}, with $F_{i,s}^{(j)}$ being set to the empirical cumulative distribution function of all observations in the same season. \textcolor{orange}{CR: Is there an issue that variance may be different across months too and we have not account for it?}
 
-To apply the framework in Section~\ref{sec:method}, we select the block length $n$ such that each time block contains 25 season-years and only consider $\tau$ within the period 1985 -- 1998, which ensures a sufficient number of data within each block. Sensitivity to the choice of $n$ was explored, but a block size of 15 years or smaller was found to include too few exceedances to achieve a reliable fit of the CE models. For each $\tau$ and season, parameters of the CE model \eqref{eq:ce_model_spat} are estimated separately for each site using the data within the time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$. The threshold $u_{i,s}^{(j)}$ is set to the 80th percentile of the standard Laplace distribution, because it provides a good compromise between restricting attention to the joint tail while retaining sufficient exceedances for inference. For each of the 24 candidates years, we derive the test statistics $N_{obs}^{(F)}(\tau)$ and $N_{obs}^{(I)}(\tau)$ defined in Equations~\eqref{eq:frob} and \eqref{eq:infinity}. 
+To apply the framework in Section~\ref{sec:method}, we select the block length $n$ such that each time block contains 25 season-years and only consider $\tau$ within the period 1985 -- 1998, which ensures a sufficient number of data within each block. Sensitivity to the choice of $n$ was explored, but a block size of 15 years or smaller was found to include too few exceedances to achieve a reliable fit of the CE models. For each $\tau$ and season, parameters of the CE model \eqref{eq:ce_model_spat} are estimated separately for each site using the data within the time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$. The threshold $u_{i,s}^{(j)}$ is set to the 80th percentile of the standard Laplace distribution, because it provides a good compromise between restricting attention to the joint tail while retaining sufficient exceedances for inference. For each of the 24 candidates years, we derive the test statistics $N_{obs}^{(F)}(\tau)$ and $N_{obs}^{(I)}(\tau)$ defined in Equations~\eqref{eq:frob} and \eqref{eq:infinity}. \textcolor{red}{How to justify choice of 25 season-years without forward referencing to application?}
 
 \begin{figure}
 \centering
-% \includegraphics[width=0.9\linewidth]{plots/screen.png}
-\includegraphics[width=0.9\linewidth]{latex/plots/screen_dqu_0.8.png}
+\includegraphics[width=0.75\linewidth]{latex/plots/screen_dqu_0.8.png}
 \caption{
-Test statistics calculated for each candidate season-year with 25-year time blocks. 
-Results are shown for the test statistic $D$ using the Frobenius and infinity norms. Red points denote local peaks in the test statistic. 
-\textcolor{red}{Need to mention that we rescale to be between 0 and 1 for plots!}}
+Test statistics based on the Frobenius (left) and infinity (right) norm for each candidate season-year based on 25-year time blocks. Local maximum are highlighted by the crosses, and test statistics have been transformed to a common scale.\textcolor{red}{Check that standardising to common scale is correct}
+}
 \label{fig:app_screen}
 \end{figure}
 
-Figure~\ref{fig:app_screen} shows different patterns in the test statistics for the four seasons. For the winter months, the highest value is obtained for 1998 for both test statistics, while for the other seasons the highest test statistic is observed between 1988 and 1992. We also note a difference in scale, with the test test statistic being smaller in spring. Note, the two test statistics have different numerical scales, and their absolute values should not be compared directly. 
+Figure~\ref{fig:app_screen} shows different patterns in the test statistics for the four seasons. For the winter months, the highest value is obtained for 1998 for both test statistics, while for the other seasons the highest test statistic is observed between 1988 and 1992. We also note a difference in scale, with the test statistic being smaller in spring than in the other seasons. Consequently, there appears to be a stronger signal for a shift in tail dependence for summer, autumn and winter than for spring. We then compute empirical p-values for the observed test statistics using the permutation procedure described in Section~\ref{subsec:cp}, with the number of permutations in \eqref{eq:perm_pval} set to $B=200$, and all conclusions being made at the 5\% significance level. Figure~\ref{fig:app_cp} suggests that there is evidence of a significant difference fir winter when $\tau$ is around 1998, and for summer for $\tau\in\{1987,\ldots,1993\}$. Conversely, there is insufficient evidence for a change for spring and autumn, which is in line with the highest test statistic for the seasons illustrated in Figure~\ref{fig:app_screen}. Moreover, the conclusions are similar for the two test statistics used, with the infinity norm producing smaller p-values when the null hypothesis of no change is rejected at the 5\% significance level.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.9\linewidth]{plots/change.png}
+\caption{
+Empirical p-values for the different candidate years $\tau$ for the test statistics based on the Frobenius (red) and infinity (blue) norm. Estimates are based on 25 season-years per temporal block and $B=200$ permutations. The horizontal dashed line corresponds to the pointwise 5\% significance level.}
+\label{fig:app_cp}
+\end{figure}
+
+
 
 
 %The conditional extremes framework is applied after transforming each variable to a common marginal distribution. 
@@ -827,19 +827,17 @@ Figure~\ref{fig:app_screen} shows different patterns in the test statistics for 
 
 % Choice of block length
 \begin{itemize}
-\item The choice of block length involves a bias-variance trade-off. 
-\item Shorter blocks provide better temporal localisation but contain fewer threshold exceedances, resulting in unstable or failed conditional extremes fits. 
-\item Longer blocks provide more stable estimates but leave fewer feasible candidate changepoints and smooth changes over a wider temporal interval.
-\item We investigated block lengths of 15, 20, 25 and 30 season-years. 
-\item With 15-year blocks, many candidate comparisons failed because at least one conditional fit contained too few exceedances. 
+%\item The choice of block length involves a bias-variance trade-off. 
+%\item Shorter blocks provide better temporal localisation but contain fewer threshold exceedances, resulting in unstable or failed conditional extremes fits. 
+%\item Longer blocks provide more stable estimates but leave fewer feasible candidate changepoints and smooth changes over a wider temporal interval.
+%\item We investigated block lengths of 15, 20, 25 and 30 season-years. 
+%\item With 15-year blocks, many candidate comparisons failed because at least one conditional fit contained too few exceedances. 
 \item Twenty-year blocks were reliable for winter but produced substantial failure rates for several other seasons. 
-\item All candidate comparisons fitted successfully with 25-year blocks. 
-\item Increasing the length to 30 years also produced stable fits, but left only two to five candidate changepoints per season.
-\item We therefore use 25 season-years on either side of each candidate throughout the primary analysis. 
-\item This was the shortest common block length that produced stable fits across all seasons while retaining a useful range of candidate changepoints. \textcolor{red}{Present the alternative block lengths as a sensitivity analysis or in the supplementary material(?).}
+%\item All candidate comparisons fitted successfully with 25-year blocks. 
+%\item Increasing the length to 30 years also produced stable fits, but left only two to five candidate changepoints per season.
+%\item We therefore use 25 season-years on either side of each candidate throughout the primary analysis. 
+%\item This was the shortest common block length that produced stable fits across all seasons while retaining a useful range of candidate changepoints. \textcolor{red}{Present the alternative block lengths as a sensitivity analysis or in the supplementary material(?).}
 \end{itemize}
-
-\subsection{Screening}\label{subsec:app_screen}
 
 % \todo{Say something about uses of spectral norm, even just for notes}
 % % Point of spectral norm: 
@@ -885,10 +883,6 @@ Figure~\ref{fig:app_screen} shows different patterns in the test statistics for 
 %\item We therefore retain the complete candidate range rather than restricting the formal analysis to the local screening peaks.
 % \end{itemize}
 
-
-
-\subsection{Changepoint detection}\label{subsec:app_cp}
-
 % \begin{itemize}
 %   \item Figure~\ref{fig:app_cp} shows, for each season, the p-values of the changepoint detection algorithm with 200 permutations at each season year, for each choice of norm. 
 %   \item No changepoints are observed for Spring and Autumn at the 5\% significance level, for any season year or norm choice \todo{May have to revise, changepoint is found for Autumn! For now act as if not}
@@ -909,59 +903,44 @@ Figure~\ref{fig:app_screen} shows different patterns in the test statistics for 
 %    \label{fig:app_cp}
 % \end{figure}
 
-\begin{itemize}
-\item We next apply the permutation test at every feasible candidate season-year. 
-\item For each candidate and norm, the null distribution is estimated using 1000 permutations of complete season-years between the two 25-year blocks.
-\item Figure~\ref{fig:app_cp} shows the resulting pointwise Monte Carlo p-values for the Frobenius, infinity and spectral norms. 
-\item A candidate season-year $(t)$ represents a possible change between season-years $(t)$ and $(t+1)$, and the horizontal dashed line denotes the pointwise 5\% significance level.
-\item The p-values in Figure~\ref{fig:app_cp} are pointwise: each tests a change at one specified candidate season-year. 
+%\begin{itemize}
+%\item We next apply the permutation test at every feasible candidate season-year. 
+%\item For each candidate and norm, the null distribution is estimated using 1000 permutations of complete season-years between the two 25-year blocks.
+%\item Figure~\ref{fig:app_cp} shows the resulting pointwise Monte Carlo p-values for the Frobenius, infinity and spectral norms. 
+%\item A candidate season-year $(t)$ represents a possible change between season-years $(t)$ and $(t+1)$, and the horizontal dashed line denotes the pointwise 5\% significance level.
+%\item The p-values in Figure~\ref{fig:app_cp} are pointwise: each tests a change at one specified candidate season-year. 
 % \item Because the procedure examines multiple candidate years and three norms, values below 0.05 should initially be interpreted as pointwise evidence rather than as multiplicity-adjusted confirmation of a changepoint. \todo{Replace or supplement these results with Holm-adjusted p-values or a permutation maximum-statistic test for the final analysis.}
-\end{itemize}
+%\end{itemize}
 
 \begin{itemize}
-\item For spring, none of the three norms produces a pointwise p-value below 0.05. 
-\item The smallest values occur around 1992, in agreement with the dominant feature identified during screening, but remain above the pointwise significance threshold.
+%\item For spring, none of the three norms produces a pointwise p-value below 0.05. 
+%\item The smallest values occur around 1992, in agreement with the dominant feature identified during screening, but remain above the pointwise significance threshold.
 
 % \item For autumn, the infinity norm produces an isolated pointwise-significant result at the beginning of the candidate range, around 1986. \todo{Add changepoint to re-clustering plot!}
 % \item The Frobenius and spectral norms provide no corresponding evidence at this candidate, and no later autumn candidate is significant. 
 % \item This isolated result should therefore be interpreted cautiously, particularly because it occurs at the boundary of the candidate range and is not supported by the other norms.
-\item Also for Autumn, none of the three norms produces a pointwise p-value below 0.05, although the infinity norm came very close for 1986, the year with the highest test statistic in our screening step. \textcolor{red}{May have to rewrite slightly, as Autumn now has a 5\% changepoint (even here, it's significant at the 10\% level)}
-
-\item For winter, the infinity norm provides pointwise evidence of a change over the period 1996--1999. 
-\item The spectral norm supports a narrower region around 1997--1998, while the Frobenius norm is significant in 1998. 
-\item Thus, all three norms identify 1998, and the overall pattern provides consistent evidence for a change in the winter extremal dependence structure during the late 1990s.
-
-\item For summer, the infinity norm produces pointwise-significant p-values over an extended period from approximately 1987 to 1993. 
-\item The Frobenius and spectral norms support narrower subsets of this region, with particularly small p-values around 1988-1990 and 1992.
-\item The agreement among the norms indicates that the early-1990s signal is not confined to a single choice of discrepancy statistic.
-
-\item After approximately 1994, the summer p-values generally increase, particularly for the infinity norm.
-\item These results provide no pointwise evidence for a change at these later candidates. 
-\item However, the relatively large p-values should not be interpreted as affirmative evidence that the dependence structure is unchanged; they indicate only that the observed discrepancies are not unusual under the corresponding permutation null distributions.
+\item Also for Autumn, none of the three norms produces a pointwise p-value below 0.05, although the infinity norm came very close for 1986, the year with the highest test statistic in our screening step. \textcolor{red}{May have to rewrite slightly, as Autumn now has a 5\% changepoint (even here, it's significant at the 10\% level)} \textcolor{orange}{CR: I would say we stick with the 5\% level, because it is consistent with our cluster analysis.}
+%\item For winter, the infinity norm provides pointwise evidence of a change over the period 1996--1999. 
+%\item The spectral norm supports a narrower region around 1997--1998, while the Frobenius norm is significant in 1998. 
+%\item Thus, all three norms identify 1998, and the overall pattern provides consistent evidence for a change in the winter extremal dependence structure during the late 1990s.
+%\item For summer, the infinity norm produces pointwise-significant p-values over an extended period from approximately 1987 to 1993. 
+%\item The Frobenius and spectral norms support narrower subsets of this region, with particularly small p-values around 1988-1990 and 1992.
+%\item The agreement among the norms indicates that the early-1990s signal is not confined to a single choice of discrepancy statistic.
+%\item After approximately 1994, the summer p-values generally increase, particularly for the infinity norm.
+%\item These results provide no pointwise evidence for a change at these later candidates. 
+%\item However, the relatively large p-values should not be interpreted as affirmative evidence that the dependence structure is unchanged; they indicate only that the observed discrepancies are not unusual under the corresponding permutation null distributions.
 \end{itemize}
 
-\begin{itemize}
-\item The infinity norm identifies broader pointwise-significant candidate ranges than the Frobenius and spectral norms for both summer and winter. 
-\item As discussed in Section~\ref{sec:method}, this may indicate that some changes are more pronounced in particular entries of the dissimilarity matrix than across its entire structure.
+%\begin{itemize}
+%\item The infinity norm identifies broader pointwise-significant candidate ranges than the Frobenius and spectral norms for both summer and winter. 
+%\item As discussed in Section~\ref{sec:method}, this may indicate that some changes are more pronounced in particular entries of the dissimilarity matrix than across its entire structure.
+%\item Nevertheless, the principal summer and winter candidate regions are supported by more than one norm. 
+%\item In particular, all three norms provide pointwise evidence around 1990 for summer and around 1998 for winter.
+%\item Taken together, the results suggest candidate changes in the summer extremal dependence structure during the late 1980s or early 1990s and in the winter structure during the late 1990s. 
+%\item No comparable evidence is found for spring or autumn. % , while the isolated autumn infinity-norm result requires further assessment after accounting for the scan over candidate years.
+%\end{itemize}
 
-\item Nevertheless, the principal summer and winter candidate regions are supported by more than one norm. 
-\item In particular, all three norms provide pointwise evidence around 1990 for summer and around 1998 for winter.
 
-\item Taken together, the results suggest candidate changes in the summer extremal dependence structure during the late 1980s or early 1990s and in the winter structure during the late 1990s. 
-\item No comparable evidence is found for spring or autumn. % , while the isolated autumn infinity-norm result requires further assessment after accounting for the scan over candidate years.
-\end{itemize}
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/change.png}
-\caption{
-Pointwise permutation-test p-values for candidate changes in the seasonal extremal dependence structure, calculated using 25 season-years per temporal block and 200 permutations at each candidate. 
-Results are shown for the Frobenius, infinity and spectral norms. 
-A candidate $(t)$ represents a possible change between season-years $(t)$ and $(t+1)$. 
-The horizontal dashed line denotes the pointwise 5\% significance level. 
-}
-\label{fig:app_cp}
-\end{figure}
 
 
 \subsection{Clustering Results}\label{subsec:app_clust}
