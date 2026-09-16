@@ -591,13 +591,21 @@ Under the local and global alternatives, they measure the ability of the procedu
 \subsection{Simulation results}
 \label{subsec:sim_results}
 
-\textcolor{red}{Design experiment which has better power!}
-\textcolor{red}{Design local experiment which has better power for infinity norm!}
-\textcolor{red}{Should we say anything about the results of the screening step? Need to plot!}
+% \textcolor{red}{Design experiment which has better power!}
+% \textcolor{red}{Design local experiment which has better power for infinity norm!}
+% \textcolor{red}{Should we say anything about the results of the screening step? Need to plot!}
 
+\textcolor{red}{Insert screening step section analysis here}
+\begin{figure}
+\centering
+\includegraphics[width=0.9\linewidth]{plots/sim_screening_plot.png}
+\caption{
+  ???
+}
+\label{fig:sim_screen}
+\end{figure}
 
 % Introduce Type I error and power
-\textcolor{red}{Do we need to explain Type I error and power?}
 \begin{itemize}
   \item At each candidate split point, the pointwise rejection rate is the proportion of simulation replicates for which the permutation $p$-value is below the specified significance level. 
   \item Under the null scenario, this estimates the pointwise Type~I error rate; under either alternative, it estimates the pointwise power. 
@@ -666,7 +674,7 @@ Under the local and global alternatives, they measure the ability of the procedu
 \begin{figure}[htb]
 \centering
 \includegraphics[width=0.95\linewidth]{
-  plots/sim_changepoint_local_change_pointwise_power_curve.png
+  plots/sim_changepoint_local_change_pointwise_power.png
 }
 \caption{
   Pointwise rejection rates under the null scenario and the two local-change scenarios for the Frobenius and infinity norms. 
@@ -731,9 +739,11 @@ To apply the framework in Section~\ref{sec:method}, we select the block length $
 
 \begin{figure}
 \centering
+% \includegraphics[width=0.75\linewidth]{latex/plots/screen_dqu_0.8.png}
 \includegraphics[width=0.75\linewidth]{latex/plots/screen_dqu_0.8.png}
 \caption{
-Test statistics based on the Frobenius (left) and infinity (right) norm for each candidate season-year based on 25-year time blocks. Local maximum are highlighted by the crosses, and test statistics have been transformed to a common scale.\textcolor{red}{Check that standardising to common scale is correct}
+Test statistics based on the Frobenius (left) and infinity (right) norm for each candidate season-year based on 25-year time blocks. 
+Local maximum are highlighted by the crosses, and test statistics have been transformed to a common scale. \textcolor{red}{Check that standardising to common scale is correct}
 }
 \label{fig:app_screen}
 \end{figure}
