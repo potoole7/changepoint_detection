@@ -1,58 +1,137 @@
 \begin{thebibliography}{}
 
 \bibitem [\protect \citeauthoryear {%
-Elbaum%
-, Malishevsky%
-\BCBL {}\ \BBA {} Rothermel%
+Agarwal%
+, Eckley%
+\BCBL {}\ \BBA {} Fearnhead%
 }{%
-Elbaum%
+Agarwal%
 \ \protect \BOthers {.}}{%
-{\protect \APACyear {February 2002}}%
+{\protect \APACyear {2025}}%
 }]{%
-Elbaum2002}
+Agarwal2025}
 \APACinsertmetastar {%
-Elbaum2002}%
+Agarwal2025}%
 \begin{APACrefauthors}%
-Elbaum, S.%
-, Malishevsky, A\BPBI G.%
-\BCBL {}\ \BBA {} Rothermel, G.%
+Agarwal, G.%
+, Eckley, I\BPBI A.%
+\BCBL {}\ \BBA {} Fearnhead, P.%
 \end{APACrefauthors}%
 \unskip\
 \newblock
-\APACrefYearMonthDay{February 2002}{}{}.
+\APACrefYearMonthDay{2025}{{\APACmonth{10}}}{}.
 \newblock
-{\BBOQ}\APACrefatitle {Test case prioritization: a family of empirical studies}
-  {Test case prioritization: a family of empirical studies}.{\BBCQ}
+{\BBOQ}\APACrefatitle {Efficient likelihood-based temporal changepoint
+  detection in spatio-temporal processes} {Efficient likelihood-based temporal
+  changepoint detection in spatio-temporal processes}.{\BBCQ}
 \newblock
-\APACjournalVolNumPages{IEEE {T}ransactions on {S}oftware
-  {E}ngineering}{28}{2}{159--182}.
-\newblock
-\begin{APACrefDOI} 12345.2345 \end{APACrefDOI}
+\APACjournalVolNumPages{Statistics and Computing}{35}{6}{213}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
-{European Climate Assessment \& Dataset (ECA\&D)}%
+Alouini%
+\ \BBA {} Davison%
 }{%
-{European Climate Assessment \& Dataset (ECA\&D)}%
+Alouini%
+\ \BBA {} Davison%
 }{%
-{\protect \APACyear {{\protect \bibnodate {}}}}%
+{\protect \APACyear {2026}}%
 }]{%
-ECADdaily}
+Alouni2026}
 \APACinsertmetastar {%
-ECADdaily}%
+Alouni2026}%
 \begin{APACrefauthors}%
-{European Climate Assessment \& Dataset (ECA\&D)}.%
+Alouini, S.%
+\BCBT {}\ \BBA {} Davison, A\BPBI C.%
 \end{APACrefauthors}%
 \unskip\
 \newblock
-\APACrefYearMonthDay{{\protect \bibnodate {}}}{}{}.
+\APACrefYearMonthDay{2026}{}{}.
 \newblock
-\APACrefbtitle {Predefined Subsets of Daily Station Data in {ASCII} Format.}
-  {Predefined subsets of daily station data in {ASCII} format.}
+{\BBOQ}\APACrefatitle {Bayesian clustering of multivariate extremes} {Bayesian
+  clustering of multivariate extremes}.{\BBCQ}
 \newblock
-\APAChowpublished {\url{https://www.ecad.eu/dailydata/predefinedseries.php}}.
+\APACjournalVolNumPages{Canadian Journal of Statistics}{}{}{}.
 \newblock
-\APACrefnote{Accessed 30 June 2026}
+\APACrefnote{To appear}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Beguer{\'i}a%
+\ \BBA {} Vicente-Serrano%
+}{%
+Beguer{\'i}a%
+\ \BBA {} Vicente-Serrano%
+}{%
+{\protect \APACyear {2023}}%
+}]{%
+SPEI}
+\APACinsertmetastar {%
+SPEI}%
+\begin{APACrefauthors}%
+Beguer{\'i}a, S.%
+\BCBT {}\ \BBA {} Vicente-Serrano, S.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2023}{}{}.
+\newblock
+\APACrefbtitle {SPEI: Calculation of the Standardized
+  Precipitation-Evapotranspiration Index.} {Spei: Calculation of the
+  standardized precipitation-evapotranspiration index.}
+\newblock
+\begin{APACrefURL} \url{https://spei.csic.es,
+  https://github.com/sbegueria/SPEI} \end{APACrefURL}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Demarta%
+\ \BBA {} McNeil%
+}{%
+Demarta%
+\ \BBA {} McNeil%
+}{%
+{\protect \APACyear {2007}}%
+}]{%
+Demarta2007-ap}
+\APACinsertmetastar {%
+Demarta2007-ap}%
+\begin{APACrefauthors}%
+Demarta, S.%
+\BCBT {}\ \BBA {} McNeil, A\BPBI J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2007}{{\APACmonth{01}}}{}.
+\newblock
+{\BBOQ}\APACrefatitle {The t {Copula} and {Related} {Copulas}} {The t {Copula}
+  and {Related} {Copulas}}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{International Statistical Review}{73}{1}{111--129}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Good%
+}{%
+Good%
+}{%
+{\protect \APACyear {2004}}%
+}]{%
+Good2004}
+\APACinsertmetastar {%
+Good2004}%
+\begin{APACrefauthors}%
+Good, P\BPBI I.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{2004}.
+\newblock
+\APACrefbtitle {Permutation, parametric, and bootstrap tests of hypotheses}
+  {Permutation, parametric, and bootstrap tests of hypotheses}\
+  (\PrintOrdinal{3}\ \BEd).
+\newblock
+\APACaddressPublisher{New York, NY}{Springer}.
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -81,6 +160,214 @@ Heffernan, J\BPBI E.%
 \newblock
 \APACjournalVolNumPages{Journal of the Royal Statistical Society Series B:
   Statistical Methodology}{66}{3}{497--546}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+{IPCC}%
+}{%
+{IPCC}%
+}{%
+{\protect \APACyear {2019}}%
+}]{%
+IPCC2019Land}
+\APACinsertmetastar {%
+IPCC2019Land}%
+\begin{APACrefauthors}%
+{IPCC}.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYear{2019}.
+\newblock
+\APACrefbtitle {Climate Change and Land: An IPCC Special Report on Climate
+  Change, Desertification, Land Degradation, Sustainable Land Management, Food
+  Security, and Greenhouse Gas Fluxes in Terrestrial Ecosystems} {Climate
+  change and land: An ipcc special report on climate change, desertification,
+  land degradation, sustainable land management, food security, and greenhouse
+  gas fluxes in terrestrial ecosystems}.
+\newblock
+\APACaddressPublisher{}{Intergovernmental Panel on Climate Change}.
+\newblock
+\begin{APACrefURL} \url{https://www.ipcc.ch/srccl/} \end{APACrefURL}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Katz%
+}{%
+Katz%
+}{%
+{\protect \APACyear {2010}}%
+}]{%
+katz2010statistics}
+\APACinsertmetastar {%
+katz2010statistics}%
+\begin{APACrefauthors}%
+Katz, R\BPBI W.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2010}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Statistics of extremes in climate change} {Statistics of
+  extremes in climate change}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Climatic change}{100}{1}{71--76}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Keef%
+, Papastathopoulos%
+\BCBL {}\ \BBA {} Tawn%
+}{%
+Keef%
+, Papastathopoulos%
+\BCBL {}\ \BBA {} Tawn%
+}{%
+{\protect \APACyear {2013}}%
+}]{%
+Keef2013}
+\APACinsertmetastar {%
+Keef2013}%
+\begin{APACrefauthors}%
+Keef, C.%
+, Papastathopoulos, I.%
+\BCBL {}\ \BBA {} Tawn, J\BPBI A.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2013}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{Estimation of the conditional distribution of a
+  multivariate variable given that one of its components is large: Additional
+  constraints for the Heffernan and Tawn model}} {{Estimation of the
+  conditional distribution of a multivariate variable given that one of its
+  components is large: Additional constraints for the Heffernan and Tawn
+  model}}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Journal of Multivariate Analysis}{115}{}{396–404}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Keef%
+, Tawn%
+\BCBL {}\ \BBA {} Lamb%
+}{%
+Keef%
+, Tawn%
+\BCBL {}\ \BBA {} Lamb%
+}{%
+{\protect \APACyear {2013}}%
+}]{%
+Keef2012_flooding}
+\APACinsertmetastar {%
+Keef2012_flooding}%
+\begin{APACrefauthors}%
+Keef, C.%
+, Tawn, J\BPBI A.%
+\BCBL {}\ \BBA {} Lamb, R.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2013}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Estimating the probability of widespread flood events}
+  {Estimating the probability of widespread flood events}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Environmetrics}{24}{1}{13-21}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Klein~Tank%
+\ \protect \BOthers {.}}{%
+Klein~Tank%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2002}}%
+}]{%
+Klein2002}
+\APACinsertmetastar {%
+Klein2002}%
+\begin{APACrefauthors}%
+Klein~Tank, A\BPBI M\BPBI G.%
+, Wijngaard, J\BPBI B.%
+, Können, G\BPBI P.%
+, Böhm, R.%
+, Demarée, G.%
+, Gocheva, A.%
+\BDBL {}Petrovic, P.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2002}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Daily dataset of 20th-century surface air temperature
+  and precipitation series for the European Climate Assessment} {Daily dataset
+  of 20th-century surface air temperature and precipitation series for the
+  european climate assessment}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Int. J. of Climatol.}{22}{}{1441-1453}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Martínez-Valderrama%
+\ \protect \BOthers {.}}{%
+Martínez-Valderrama%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2016}}%
+}]{%
+SpainDegradation}
+\APACinsertmetastar {%
+SpainDegradation}%
+\begin{APACrefauthors}%
+Martínez-Valderrama, J.%
+, Ibáñez, J.%
+, {Del Barrio}, G.%
+, Sanjuán, M\BPBI E.%
+, Alcalá, F\BPBI J.%
+, Martínez-Vicente, S.%
+\BDBL {}Puigdefábregas, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2016}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Present and future of desertification in Spain:
+  Implementation of a surveillance system to prevent land degradation} {Present
+  and future of desertification in spain: Implementation of a surveillance
+  system to prevent land degradation}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Science of The Total Environment}{563-564}{}{169-178}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+McGonigle%
+, Pawley%
+, Richards%
+\BCBL {}\ \BBA {} Rohrbeck%
+}{%
+McGonigle%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2026}}%
+}]{%
+McGonigle2025}
+\APACinsertmetastar {%
+McGonigle2025}%
+\begin{APACrefauthors}%
+McGonigle, E\BPBI T.%
+, Pawley, M.%
+, Richards, J.%
+\BCBL {}\ \BBA {} Rohrbeck, C.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2026}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {{MOPED}: A moving sum method for change point detection
+  in pairwise extremal dependence} {{MOPED}: A moving sum method for change
+  point detection in pairwise extremal dependence}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Extremes}{}{}{}.
+\newblock
+\APACrefnote{To appear}
 \PrintBackRefs{\CurrentBib}
 
 \bibitem [\protect \citeauthoryear {%
@@ -113,6 +400,186 @@ McKee, T\BPBI B.%
   (\BPGS\ 179--184).
 \newblock
 \APACaddressPublisher{Anaheim, California}{American Meteorological Society}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Nicolet%
+, Eckert%
+, Morin%
+\BCBL {}\ \BBA {} Blanchet%
+}{%
+Nicolet%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2018}}%
+}]{%
+Gilles2018}
+\APACinsertmetastar {%
+Gilles2018}%
+\begin{APACrefauthors}%
+Nicolet, G.%
+, Eckert, N.%
+, Morin, S.%
+\BCBL {}\ \BBA {} Blanchet, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2018}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Assessing Climate Change Impact on the Spatial
+  Dependence of Extreme Snow Depth Maxima in the French Alps} {Assessing
+  climate change impact on the spatial dependence of extreme snow depth maxima
+  in the french alps}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Water Resources Research}{54}{10}{7820-7840}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Nielsen%
+}{%
+Nielsen%
+}{%
+{\protect \APACyear {2019}}%
+}]{%
+Nielsen2019}
+\APACinsertmetastar {%
+Nielsen2019}%
+\begin{APACrefauthors}%
+Nielsen, F.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2019}{{\APACmonth{05}}}{}.
+\newblock
+{\BBOQ}\APACrefatitle {On the {Jensen-Shannon} {Symmetrization} of {Distances}
+  {Relying} on {Abstract} {Means}} {On the {Jensen-Shannon} {Symmetrization} of
+  {Distances} {Relying} on {Abstract} {Means}}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Entropy}{21}{5}{485}.
+\newblock
+\begin{APACrefURL} \url{http://dx.doi.org/10.3390/e21050485} \end{APACrefURL}
+\newblock
+\begin{APACrefDOI} 10.3390/e21050485 \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+O'Toole%
+, Rohrbeck%
+\BCBL {}\ \BBA {} Richards%
+}{%
+O'Toole%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2025}}%
+}]{%
+OToole2026clustering}
+\APACinsertmetastar {%
+OToole2026clustering}%
+\begin{APACrefauthors}%
+O'Toole, P.%
+, Rohrbeck, C.%
+\BCBL {}\ \BBA {} Richards, J.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2025}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Clustering of multivariate tail dependence using
+  conditional methods} {Clustering of multivariate tail dependence using
+  conditional methods}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{arXiv preprint arXiv:2510.20424}{}{}{}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Panagoulias%
+, Tsihrintzis%
+\BCBL {}\ \BBA {} Virvou%
+}{%
+Panagoulias%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2025}}%
+}]{%
+panagoulias2025extreme}
+\APACinsertmetastar {%
+panagoulias2025extreme}%
+\begin{APACrefauthors}%
+Panagoulias, D\BPBI P.%
+, Tsihrintzis, G\BPBI A.%
+\BCBL {}\ \BBA {} Virvou, M.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2025}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Extreme value analysis applied in dietary data} {Extreme
+  value analysis applied in dietary data}.{\BBCQ}
+\newblock
+\BIn{} \APACrefbtitle {Artificial Intelligence-Empowered Bio-medical
+  Applications: Challenges, Solutions and Development Guidelines} {Artificial
+  intelligence-empowered bio-medical applications: Challenges, solutions and
+  development guidelines}\ (\BPGS\ 83--111).
+\newblock
+\APACaddressPublisher{}{Springer}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Talento%
+, Richards%
+, Pinto-Orellana%
+, Huser%
+\BCBL {}\ \BBA {} Ombao%
+}{%
+Talento%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2025}}%
+}]{%
+Talento2025}
+\APACinsertmetastar {%
+Talento2025}%
+\begin{APACrefauthors}%
+Talento, M\BPBI S\BPBI D.%
+, Richards, J.%
+, Pinto-Orellana, M.%
+, Huser, R.%
+\BCBL {}\ \BBA {} Ombao, H\BPBI C.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2025}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Spectral Extremal Connectivity of two-State Seizure
+  Brain Waves} {Spectral extremal connectivity of two-state seizure brain
+  waves}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{arXiv preprint arXiv:2503.04169}{}{}{}.
+\PrintBackRefs{\CurrentBib}
+
+\bibitem [\protect \citeauthoryear {%
+Zhong%
+, Huser%
+\BCBL {}\ \BBA {} Opitz%
+}{%
+Zhong%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2022}}%
+}]{%
+Zhong2022}
+\APACinsertmetastar {%
+Zhong2022}%
+\begin{APACrefauthors}%
+Zhong, P.%
+, Huser, R.%
+\BCBL {}\ \BBA {} Opitz, T.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2022}{{\APACmonth{03}}}{}.
+\newblock
+{\BBOQ}\APACrefatitle {Modeling nonstationary temperature maxima based on
+  extremal dependence changing with event magnitude} {Modeling nonstationary
+  temperature maxima based on extremal dependence changing with event
+  magnitude}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{Ann. Appl. Stat.}{16}{1}{}.
 \PrintBackRefs{\CurrentBib}
 
 \end{thebibliography}

@@ -47,12 +47,10 @@
 [1] "season = Winter"
 [1] "n_years_per_block = 30"
 Warning messages:
-1: 5 CE fit(s) have fewer than 15 exceedances. Minimum = 11 at location Burgos Aeropuerto, block 2, conditioning variable X2.
-2: `calc_dist()` returned NA at candidate 1992.
-3: No valid common starting values for season Autumn with 15-year windows; screening candidates using default starts.
-4: 3 CE fit(s) have fewer than 15 exceedances. Minimum = 14 at location Alacant/Alicante, block 1, conditioning variable X1.
-5: `calc_dist()` returned NA at candidate 1992.
-6: No valid common starting values for season Summer with 15-year windows; screening candidates using default starts.
+1: `calc_dist()` failed at candidate 1992: object 'min_exceedances' not found
+2: No valid common starting values for season Autumn with 15-year windows; screening candidates using default starts.
+3: In parallel::mclapply(seq_along(block_vec), run_candidate,  ... :
+  all scheduled cores encountered errors in user code
 # A tibble: 16 × 6
    season n_years_per_block n_candidates n_successful n_failed failure_rate
    <chr>              <int>        <int>        <int>    <int>        <dbl>

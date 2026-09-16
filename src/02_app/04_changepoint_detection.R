@@ -2,7 +2,6 @@
 
 # Things to check from writing retreat!
 # TODO - When does it happen that # years on LHS > RHS, or vice versa??
-# TODO -
 
 # Save plots from screening (done)
 # TODO Write up summary of screening results
@@ -86,7 +85,7 @@ n_years_per_block <- 25L # best choice, from screening round
 # set minimum number of exceedances required for a successful fit, based on dqu
 # min_exceedances <- 20
 # if (dqu > 0.8) {
-  min_exceedances <- 15
+min_exceedances <- 15
 # }
 
 #### Load Data ####

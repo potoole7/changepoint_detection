@@ -50,6 +50,7 @@ library(evgam)
 library(ggridges)
 library(sf)
 library(patchwork)
+library(scales)
 
 # source custom functions
 source("src/00_functions.R")
@@ -471,15 +472,15 @@ data_laplace <- bind_rows(lapply(seq_along(marg_season), \(i) {
 }))
 
 # TODO Replace with Laplace transformed data!
-# data_intro <- data |>
-#   filter(name %in% spec_locs, year %in% spec_years) |>
-#   mutate(name = ifelse(
-#     grepl("Aeropuerto", name),
-#     str_remove(name, " Aeropuerto"),
-#     name
-#   ))
+data_intro <- data |>
+  filter(name %in% spec_locs, year %in% spec_years) |>
+  mutate(name = ifelse(
+    grepl("Aeropuerto", name),
+    str_remove(name, " Aeropuerto"),
+    name
+  ))
 
-data_intro <- data_laplace |>
+data_intro_laplace <- data_laplace |>
   filter(name %in% spec_locs) |>
   mutate(name = ifelse(
     grepl("Aeropuerto", name),
@@ -499,6 +500,17 @@ p_scatter <- data_intro |>
   guides(colour = guide_legend(override.aes = list(size = 6)))
 p_scatter
 
+p_scatter_laplace <- data_intro_laplace |>
+  ggplot(aes(x = drought_local, y = temp, colour = season)) +
+  geom_point() +
+  facet_wrap(~name) +
+  labs(y = "Temperature", x = "SPI", colour = "Season") +
+  cecl_theme(legend.position = "right") +
+  # cecl_theme(legend.position = "bottom") +
+  guides(colour = guide_legend(override.aes = list(size = 6)))
+p_scatter_laplace
+
+
 # now, plot time series for each
 # data_intro |>
 #   pivot_longer(c(temp, drought_local), names_to = "var") |>
@@ -516,10 +528,24 @@ p_scatter
 
 # p_intro <- p_loc_names_elev + p_scatter
 p_intro <- wrap_plots(list(p_loc_names_elev, p_scatter))
+p_intro_laplace <- wrap_plots(list(p_loc_names_elev, p_scatter_laplace))
 
-# ggsave(plot = p_intro, "latex/plots/intro.png", width = 12, height = 8)
-ggsave(plot = p_intro, "latex/plots/intro_laplace.png", width = 12, height = 8)
+ggsave(plot = p_intro, "latex/plots/intro.png", width = 12, height = 8)
+ggsave(plot = p_intro_laplace, "latex/plots/intro_laplace.png", width = 12, height = 8)
 
+# Also of interest is means and 90th quantiles for drought and temperature
+data_intro |>
+  group_by(season, name) |>
+  summarise(
+    across(c(temp, drought_local), \(x) mean(x, na.rm = TRUE), .names = "mean_{.col}"),
+    across(c(temp, drought_local), \(x) quantile(x, 0.9, na.rm = TRUE), .names = "q90_{.col}"),
+    .groups = "drop"
+  ) |>
+  arrange(name, season)
+
+# lowest and highest q90 for drought in Daroca: 0.801 in sumemr vs 1.58 in autumn
+# lowest and highest q90 for drought in JDLF: 0.266 in winter vs 2.11 in summer
+# lowest and highest q90 for temp in JDLF: 22.2 in winter vs 40.2 in summer
 
 #### Screening plot ####
 
@@ -610,7 +636,8 @@ screen_res_long <- screen_res_df_plt |>
     cols = c(
       frob,
       inf,
-      spec
+      # spec
+      inf2
     ),
     names_to = "norm",
     values_to = "value"
@@ -619,18 +646,23 @@ screen_res_long <- screen_res_df_plt |>
     norm = recode(
       norm,
       frob = "Frobenius",
-      inf = "Infinity",
-      spec = "Spectral"
+      # inf = "Infinity",
+      inf = "Maximum",
+      # spec = "Spectral"
+      inf2 = "Infinity"
     ),
     norm = factor(
       norm,
       levels = c(
         "Frobenius",
-        "Infinity",
-        "Spectral"
+        # "Infinity",
+        "Maximum",
+        # "Spectral"
+        "Infinity"
       )
     )
   ) |>
+  filter(norm != "Maximum") |>
   arrange(
     season,
     n_years_per_block,
@@ -657,7 +689,6 @@ screen_res_long <- screen_res_df_plt |>
     )
   ) |>
   ungroup()
-
 
 # Peak summaries for every norm
 candidate_peaks_all <- screen_res_long |>
@@ -752,79 +783,93 @@ top_local_peaks_all <- candidate_peaks_all |>
 # }
 
 # Combined plot for all norms
-df <- screen_res_long
-spec_year <- 25
-plot_all_norms <- \(df, spec_year = NULL) {
-  df_plot <- df
-  if (!is.null(spec_year)) {
-    df_plot <- df_plot |>
-      filter(n_years_per_block == spec_year)
-  }
-  p <- df_plot |>
-    group_by(norm, n_years_per_block) |>
-    # scale between 0 and 1
-    # mutate(value = scale(value, center = TRUE, scale = TRUE)) |>
-    mutate(value = boot::inv.logit(scale(value))) |>
-    filter(norm != "Spectral") |>
-    ggplot(
-      aes(
-        x = change_after_year,
-        y = value,
-        # colour = norm
-        colour = season
-      )
-    ) +
-    geom_line(
-      data = \(x) filter(x, success),
-      aes(
-        group = interaction(
-          setting,
-          norm,
-          success_run
-        )
-      ),
-      show.legend = FALSE
-    ) +
-    geom_point(
-      data = \(x) filter(x, success)
-    ) +
-    geom_point(
-      data = \(x) filter(x, local_peak),
-      # colour = "red",
-      colour = "black",
-      shape = 4,
-      size = 5
-    ) +
-    # facet_wrap(
-    #   ~setting,
-    #   scales = "free_y"
-    # ) +
-    facet_wrap(
-      ~norm,
-      scales = "free_y"
-    ) +
-    scale_x_continuous(
-      breaks = year_breaks
-    ) +
-    scale_colour_brewer(
-      palette = "Dark2"
-    ) +
-    labs(
-      x = "Season Year",
-      y = expression(D),
-      # colour = "Norm",
-      colour = "Season",
-    ) +
-    cecl_theme() +
-    theme(
-      axis.text.x = element_text(
-        angle = 45,
-        hjust = 1
-      ),
-      legend.position = "bottom"
-    ) +
-    guides(colour = guide_legend(override.aes = list(size = 6)))
-}
+# plot_all_norms <- \(df, spec_year = NULL) {
+#   df_plot <- df
+#   if (!is.null(spec_year)) {
+#     df_plot <- df_plot |>
+#       filter(n_years_per_block == spec_year)
+#   }
+#   # warning("Currently only keeping 'Maximum' and 'Frobenius' norms for plotting; replace later")
+#   p <- df_plot |>
+#     group_by(norm, n_years_per_block) |>
+#     # scale between 0 and 1
+#     # mutate(value = scale(value, center = TRUE, scale = TRUE)) |>
+#     mutate(value = boot::inv.logit(scale(value))) |>
+#     # TEMP: Only keep "maximum" and frobenius norm
+#     # mutate(
+#     #   norm = case_when(
+#     #     norm == "Infinity" ~ "Spectral", # removed in next step
+#     #     norm == "Maximum"  ~ "Infinity",
+#     #     TRUE               ~ norm
+#     #   )
+#     # ) |>
+#     filter(norm != "Spectral") |>
+#     filter(norm != "Maximum") |>
+#     ggplot(
+#       aes(
+#         x = change_after_year,
+#         y = value,
+#         # colour = norm
+#         colour = season
+#       )
+#     ) +
+#     geom_line(
+#       data = \(x) filter(x, success),
+#       aes(
+#         group = interaction(
+#           setting,
+#           norm,
+#           success_run
+#         )
+#       ),
+#       show.legend = FALSE
+#     ) +
+#     geom_point(
+#       data = \(x) filter(x, success)
+#     ) +
+#     geom_point(
+#       data = \(x) filter(x, local_peak),
+#       # colour = "red",
+#       colour = "black",
+#       shape = 4,
+#       size = 5
+#     ) +
+#     # facet_wrap(
+#     #   ~setting,
+#     #   scales = "free_y"
+#     # ) +
+#     facet_wrap(
+#       ~norm,
+#       scales = "free_y",
+#       nrow = 2
+#     ) +
+#     scale_x_continuous(
+#       breaks = year_breaks
+#     ) +
+#     scale_y_continuous(
+#       limits = c(0, 1),
+#       breaks = seq(0, 1, by = 0.1)
+#     ) +
+#     scale_colour_brewer(
+#       palette = "Dark2"
+#     ) +
+#     labs(
+#       x = "Season Year",
+#       # y = expression(D),
+#       y = "Test Statistic",
+#       # colour = "Norm",
+#       colour = "Season",
+#     ) +
+#     cecl_theme() +
+#     theme(
+#       axis.text.x = element_text(
+#         angle = 45,
+#         hjust = 1
+#       ),
+#       legend.position = "right"
+#     ) +
+#     guides(colour = guide_legend(override.aes = list(size = 6)))
+# }
 
 
 (p_all_norms_25 <- plot_all_norms(screen_res_long, spec_year = 25))
@@ -908,14 +953,36 @@ permutation_scan_plots <- lapply(
 # extract data for plotting for each season so we can facet properly
 data_p <- bind_rows(lapply(names(permutation_scan_plots), \(x) {
   permutation_scan_plots[[x]]$p_value_profile$data
-}))
+})) |>
+  mutate(
+    # norm = case_when(
+    #   norm == "inf" ~ "Maximum",
+    #   norm == "frob" ~ "Frobenius",
+    #   # norm == "spec" ~ "Spectral"
+    #   norm == "inf2" ~ "Infinity"
+    # )
+    norm = recode(
+      norm,
+      Infinity = "Maximum",
+      Infinity2 = "Infinity"
+    )
+  ) |>
+  filter(norm != "Maximum")
 
 year_breaks <- sort(
   unique(data_p$change_after_year)
 )
 
 # plot with faceted
+# warning("Currently only keeping 'Maximum' and 'Frobenius' norms for plotting; replace later")
 p_change <- data_p |>
+  # mutate(
+  #   norm = case_when(
+  #     norm == "Infinity" ~ "Spectral", # removed in next step
+  #     norm == "Maximum"  ~ "Infinity",
+  #     TRUE               ~ norm
+  #   )
+  # ) |>
   filter(norm != "Spectral") |>
   mutate(season = factor(season, levels = seasons)) |>
   ggplot(
@@ -963,7 +1030,8 @@ p_change <- data_p |>
       angle = 45,
       hjust = 1
     ),
-    legend.position = "bottom"
+    # legend.position = "bottom"
+    legend.position = "right"
   ) +
   guides(colour = guide_legend(override.aes = list(size = 6)))
 p_change
@@ -1250,7 +1318,8 @@ map_plot <- \(
   reference_name = "Winter - 1960-1998",
   # indices of plots to remove x and y axes (for better layout)
   wch_rm_x_axis = c(1, 2, 3),
-  wch_rm_y_axis = c(2, 3, 5, 6)
+  wch_rm_y_axis = c(2, 3, 5, 6),
+  ...
 ) {
   # cluster
   clust_cp <- lapply(dist_cp, \(x) {
@@ -1337,31 +1406,22 @@ map_plot <- \(
   # return(wrap_plots(map_plots_cp))
   return(list(
     clust_cp_aligned = clust_cp_aligned,
-    map_plots_join = wrap_plots(map_plots_cp)
+    map_plots_join = wrap_plots(map_plots_cp, ...),
+    map_plots = map_plots_cp
   ))
 }
 
 map_out <- map_plot(dist_cp, marg_laplace_cp, k = 3)
 clust_cp_aligned <- map_out$clust_cp_aligned
-map_plots_join <- map_out$map_plots_join
+map_plots_join_all <- map_out$map_plots_join
 
 # ggsave(plot = map_plots_join, "latex/plots/clust_map.png", width = 12, height = 8)
-ggsave(plot = map_plots_join, paste0("latex/plots/clust_map_dqu_", dqu, ".png"), width = 12, height = 8)
+ggsave(plot = map_plots_join_all, paste0("latex/plots/clust_map_dqu_", dqu, ".png"), width = 12, height = 8)
 
+# also just have plot for Spring
+map_plot_spring <- map_out$map_plots$Spring
 
-#### k = 2, k = 4 ####
-
-# plot for k = 2 and k = 4, for completeness
-k_vals <- c(2, 4)
-map_plots_join_k <- lapply(k_vals, map_plot, dist_cp = dist_cp, marg_laplace_cp = marg_laplace_cp)
-lapply(seq_along(map_plots_join_k), \(i) {
-  ggsave(
-    plot = map_plots_join_k[[i]]$map_plots_join,
-    paste0("latex/plots/clust_map_dqu_", dqu, "_k", k_vals[[i]], ".png"),
-    width = 12, height = 8
-  )
-})
-
+ggsave(plot = map_plot_spring, paste0("latex/plots/clust_map_dqu_", dqu, "_spring.png"), width = 12, height = 8)
 
 #### Changepoints for Autumn, Summer and Winter (i.e. taking sig = 10% lev) ####
 
@@ -1445,6 +1505,37 @@ ggsave(plot = twgss_plot_autumn, paste0("latex/plots/twgss_dqu_", dqu, "_autumn.
 
 k <- 3
 
+# plot all elbows together
+twgss_plot_all <- twgss_vals |>
+  filter(season != "Autumn") |>
+  bind_rows(twgss_vals_autumn) |>
+  mutate(
+    ind = ifelse(
+      !is.na(years), paste0(season, " - ", years), season
+    ),
+    ind = factor(
+      ind,
+      levels = c(
+        "Winter - 1960-1998", "Winter - 1999-2020",
+        "Summer - 1960-1990", "Summer - 1991-2020",
+        "Autumn - 1960-1986", "Autumn - 1987-2020",
+        "Spring"
+      )
+    )
+  ) |>
+  ggplot(aes(x = k, y = twgss)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = unique(twgss_vals$k)) +
+  facet_wrap(~ind, scale = "free_y", ncol = 2) +
+  labs(y = "TWD") +
+  cecl_theme()
+twgss_plot_all
+
+ggsave(plot = twgss_plot_all, paste0("latex/plots/twgss_dqu_", dqu, "_all.png"), width = 12, height = 8)
+
+# also plot
+
 # TODO Fix plot
 # map_plots_join_autumn <- map_plot(
 # TODO May have to re-align solutions with Winter (looks okay to me!)
@@ -1465,6 +1556,35 @@ ggsave(
   width = 12, height = 8
 )
 
+# join all changepoints and plot (also helps align plots)
+dist_cp_all <- c(
+  dist_cp[grepl(c("Winter|Summer"), names(dist_cp))],
+  dist_cp_autumn[grepl(c("Autumn"), names(dist_cp_autumn))]
+)
+
+marg_laplace_cp_all <- c(
+  marg_laplace_cp[grepl(c("Winter|Summer"), names(marg_laplace_cp))],
+  marg_laplace_cp_autumn[grepl(c("Autumn"), names(marg_laplace_cp_autumn))]
+)
+
+map_out_all <- map_plot(
+  dist_cp_all,
+  marg_laplace_cp_all,
+  k              = 3,
+  # wch_rm_x_axis  = NULL,
+  wch_rm_x_axis  = 1:4,
+  wch_rm_y_axis  = c(2, 4, 6),
+  nrow           = 3
+)
+
+clust_cp_plt <- map_out_all$clust_cp_aligned
+map_plots_join_all <- map_out_all$map_plots_join
+
+ggsave(
+  plot = map_plots_join_all,
+  paste0("latex/plots/clust_map_dqu_", dqu, "_inc_autumn.png"),
+  width = 12, height = 10
+)
 
 #### Results for different dissimilarity matrices (before/after changepoint) ####
 
@@ -1478,16 +1598,20 @@ ggsave(
 seasons_diff <- c("Winter", "Summer", "Autumn")
 
 # pull clustering solutions for changepoints
-# TODO May have to re-align solutions
-clust_cp_plt <- c(
-  clust_cp_aligned[grepl(c("Winter|Summer"), names(clust_cp_aligned))],
-  clust_cp_aligned_autumn[grepl(c("Autumn"), names(clust_cp_aligned_autumn))]
-)
+# # TODO May have to re-align solutions
+# clust_cp_plt <- c(
+#   clust_cp_aligned[grepl(c("Winter|Summer"), names(clust_cp_aligned))],
+#   clust_cp_aligned_autumn[grepl(c("Autumn"), names(clust_cp_aligned_autumn))]
+# )
 
 # TODO Make y-axis text slightly bigger etc
 # TODO Maybe add title as facet title, rather than ggtitle?
-dist_plts <- lapply(seasons_diff, \(season) {
-  x <- clust_cp_plt[grepl(season, names(clust_cp_plt))]
+# Also add Spring!
+clust_cp_plt_all <- c(clust_cp_plt, clust_cp_aligned["Spring"])
+# dist_plts <- lapply(seasons_diff, \(season) {
+dist_plts <- lapply(seasons, \(season) {
+  # x <- clust_cp_plt[grepl(season, names(clust_cp_plt))]
+  x <- clust_cp_plt_all[grepl(season, names(clust_cp_plt_all))]
 
   plts <- lapply(seq_along(x), \(i) {
     ggplot(x[[i]]) +
@@ -1506,13 +1630,24 @@ dist_plts <- lapply(seasons_diff, \(season) {
   })
   wrap_plots(plts, nrow = 1)
 })
-names(dist_plts) <- seasons_diff
+# names(dist_plts) <- seasons_diff
+names(dist_plts) <- seasons
 
-# save
+# save clust_cp_plt_all
+saveRDS(clust_cp_plt_all, paste0("data/02_app/clust_cp_plt_all_dqu_", dqu, ".rds"))
+
+# save as pdf
+pdf(paste0("latex/plots/dist_dqu_", dqu, ".pdf"), width = 16, height = 8)
+lapply(seq_along(dist_plts), \(i) {
+  dist_plts[[i]] + plot_annotation(title = names(dist_plts)[[i]])
+})
+dev.off()
+
+# save individually
 lapply(seq_along(dist_plts), \(i) {
   ggsave(
     plot = dist_plts[[i]],
-    paste0("latex/plots/dist_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
+    paste0("latex/plots/dist_dqu_", dqu, "_", seasons[[i]], ".png"),
     width = 16, height = 8
   )
 })
@@ -1520,13 +1655,13 @@ lapply(seq_along(dist_plts), \(i) {
 # calculate differences for seasons with changepoints
 seasons_diff <- c("Winter", "Summer", "Autumn")
 
-dist_cp_diff <- c(
-  dist_cp[grepl(c("Winter|Summer"), names(dist_cp))],
-  dist_cp_autumn[grepl(c("Autumn"), names(dist_cp_autumn))]
-)
+# dist_cp_all <- c(
+#   dist_cp[grepl(c("Winter|Summer"), names(dist_cp))],
+#   dist_cp_autumn[grepl(c("Autumn"), names(dist_cp_autumn))]
+# )
 
 dist_cp_plt <- lapply(seasons_diff, \(season) {
-  dist_cp_season <- dist_cp_diff[which(grepl(season, names(dist_cp_diff)))]
+  dist_cp_season <- dist_cp_all[which(grepl(season, names(dist_cp_all)))]
 
   dist_mat1 <- dist_cp_season[[1]]$dist_mat
   dist_mat2 <- dist_cp_season[[2]]$dist_mat
@@ -1573,13 +1708,15 @@ plt_dist_diff <- \(dist_cp_plt, divergent_colour = TRUE) {
 
 dist_plts <- plt_dist_diff(dist_cp_plt)
 
-# would also be interesting to look at absolute differences!
-dist_cp_plt_abs <- lapply(dist_cp_plt, \(x) {
-  x$dist_mat <- abs(x$dist_mat)
-  x
-})
-
-dist_plts_abs <- plt_dist_diff(dist_cp_plt_abs, divergent_colour = FALSE)
+# # would also be interesting to look at absolute differences!
+# dist_cp_plt_abs <- lapply(dist_cp_plt, \(x) {
+#   x$dist_mat <- abs(x$dist_mat)
+#   x
+# })
+#
+# # dist_plts_abs <- plt_dist_diff(dist_cp_plt_abs, divergent_colour = FALSE)
+# # easier to see on white background
+# dist_plts_abs <- plt_dist_diff(dist_cp_plt_abs, divergent_colour = TRUE)
 
 # save both
 lapply(seq_along(dist_plts), \(i) {
@@ -1589,22 +1726,805 @@ lapply(seq_along(dist_plts), \(i) {
     width = 12, height = 8
   )
 })
-lapply(seq_along(dist_plts_abs), \(i) {
+# lapply(seq_along(dist_plts_abs), \(i) {
+#   ggsave(
+#     plot = dist_plts_abs[[i]],
+#     paste0("latex/plots/dist_diff_abs_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
+#     width = 12, height = 8
+#   )
+# })
+
+# save as pdf
+pdf(paste0("latex/plots/dist_diff_dqu_", dqu, ".pdf"), width = 12, height = 8)
+dist_plts
+dev.off()
+# pdf(paste0("latex/plots/dist_diff_abs_dqu_", dqu, ".pdf"), width = 12, height = 8)
+# dist_plts_abs
+# dev.off()
+
+# save all in one plot, as matrices are small enough
+dist_plt_all <- wrap_plots(lapply(seq_along(dist_plts), \(i) {
+  plt <- dist_plts[[i]] +
+    theme(legend.position = "bottom") +
+    labs(fill = "") +
+    NULL
+  if (i != 1) {
+    plt <- plt +
+      theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+  }
+  plt
+}))
+
+# dist_plts_abs_all <- wrap_plots(lapply(seq_along(dist_plts_abs), \(i) {
+#   plt <- dist_plts_abs[[i]] +
+#     theme(legend.position = "bottom") +
+#     labs(fill = "") +
+#     NULL
+#   if (i != 1) {
+#     plt <- plt +
+#       theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+#   }
+#   plt
+# }))
+
+# TODO Ensure that names along y-axis aren't clipped!
+ggsave(
+  plot = dist_plt_all,
+  paste0("latex/plots/dist_diff_all_dqu_", dqu, ".png"),
+  width = 16, height = 9
+)
+
+# ggsave(
+#   plot = dist_plts_abs_all,
+#   paste0("latex/plots/dist_diff_abs_all_dqu_", dqu, ".png"),
+#   width = 16, height = 9
+# )
+
+#### k = 2, k = 4 ####
+
+# plot for k = 2 and k = 4, for completeness
+k_vals <- c(2, 4)
+# map_plots_join_k <- lapply(k_vals, map_plot, dist_cp = dist_cp, marg_laplace_cp = marg_laplace_cp)
+map_plots_join_k <- lapply(k_vals, map_plot, dist_cp = dist_cp_all, marg_laplace_cp = marg_laplace_cp_all, nrow = 3)
+lapply(seq_along(map_plots_join_k), \(i) {
   ggsave(
-    plot = dist_plts_abs[[i]],
-    paste0("latex/plots/dist_diff_abs_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
-    width = 12, height = 8
+    plot = map_plots_join_k[[i]]$map_plots_join,
+    paste0("latex/plots/clust_map_dqu_", dqu, "_k", k_vals[[i]], ".png"),
+    width = 12, height = 10
   )
 })
 
+# also do separately for Spring
+map_plots_join_k_spring <- lapply(k_vals, map_plot, dist_cp = dist_cp["Spring"], marg_laplace_cp = marg_laplace_cp["Spring"], reference_name = "Spring")
 
-#### Clustering solutions vs distance to coast and elevation ####
+ggsave(
+  plot = wrap_plots(lapply(map_plots_join_k_spring, \(x) x$map_plots$Spring + labs(title = ""))),
+  paste0("latex/plots/clust_map_dqu_", dqu, "_k_2_4_spring.png"),
+  width = 12, height = 8
+)
 
-# TODO Calculate distance to coast using shapefile with France & Portugal inc.
-# TODO Plot clustering solutions vs distance to coast and elevation
-# - Do for each changepoint season, as well as Spring
 
 
+#### Calculate distance to coast, elevation etc ####
+
+# pull through rough shapefiles for Spain, Portugal, France and Andorra
+areas_all <- rnaturalearth::ne_countries(
+  type = "countries",
+  country = c("Spain", "France", "Portugal", "Andorra"),
+  scale = "large", # need large scale or some points end up in the sea lol
+  returnclass = "sf"
+) |>
+  st_transform(st_crs(areas)) |>
+  select(ine.ccaa.name = admin, geometry) |>
+  st_cast("POLYGON") |>
+  mutate(.area = st_area(geometry)) |>
+  group_by(ine.ccaa.name) |>
+  slice_max(.area, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  select(-.area)
+
+# check
+ggplot(areas_all) +
+  geom_sf() +
+  theme_minimal() +
+  coord_sf(datum = NA)
+
+# pull through locations of sites
+pts_plt <- data |>
+  distinct(name, lon, lat)
+
+# check with plot that everything is okay
+pts_plt |>
+  sf::st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas_all)) |>
+  ggplot() +
+  geom_sf(data = areas_all, fill = "lightgrey", color = "white") +
+  geom_sf() +
+  theme_minimal() +
+  coord_sf(datum = NA)
+
+# calculate distance to coast
+coast_dist <- dist2coast(
+  pts_plt, areas_all,
+  coords = c("lon", "lat"), crs = st_crs(areas_all)
+)
+coast_dist
+
+# triangulate the points to nearest elevation using elev_df
+elev_pts <- pts_plt |>
+  sf::st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas_all)) |>
+  st_join(
+    elev_df |>
+      select(lon = x, lat = y, elevation) |>
+      st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas_all)),
+    join = st_nearest_feature
+  ) |>
+  as_tibble() |>
+  mutate(
+    lon = sf::st_coordinates(geometry)[, 1],
+    lat = sf::st_coordinates(geometry)[, 2]
+  ) |>
+  select(-geometry)
+
+
+# join elevation and coast_dist
+elev_cd_pts <- elev_pts |>
+  left_join(coast_dist)
+
+# check for NAs
+stopifnot(
+  0 == elev_cd_pts |>
+    filter(is.na(elevation) | is.na(dist2coast)) |>
+    nrow()
+)
+
+# Also pull through high quantiles of temp and DPI
+
+# first label data with changepoints
+data_cp <- data |>
+  mutate(
+    cp = case_when(
+      season == "Winter" & season_year > 1998 ~ 2,
+      season == "Summer" & season_year > 1990 ~ 2,
+      season == "Autumn" & season_year > 1986 ~ 2,
+      TRUE ~ 1
+    )
+  )
+
+# TODO Create variable that defines what probability to use here
+quant_df <- data_cp |>
+  group_by(name, season, cp) |>
+  summarise(
+    across(.cols = c(temp, drought_local), .fns = \(x) quantile(x, 0.9, na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+# Calculate chi and chibar at each site, for each season-changepoint combo
+chi_settings_df <- tidyr::crossing(
+  "season" = seasons,
+  "cp"     = c(1, 2)
+) |>
+  filter(!(season == "Spring" & cp == 2))
+
+# function to calc chi, chibar at quantile q (or closest q) at each site
+calc_chi_cp <- \(data, var1, var2, chi_q) {
+  stations <- unique(data$name)
+  chi_95_df <- bind_rows(lapply(stations, \(x) {
+    chi <- data %>%
+      filter(name == x) |>
+      dplyr::select(!!var1, !!var2) %>%
+      texmex::chi()
+
+    # whether to show chi or not, based on whether chibar upper extend crosses 1
+    show_chi <- !prod(tail(chi$chibar[, 3]) < 1)
+
+    loc <- which.min(abs(chi$quantile - chi_q))
+    return(data.frame(
+      "name" = x,
+      "chi" = chi$chi[loc, 2, drop = TRUE],
+      "chibar" = chi$chibar[loc, 2, drop = TRUE],
+      "show_chi" = show_chi
+    ))
+  }))
+  rownames(chi_95_df) <- NULL
+
+  # join in area statistics (not for now)
+  chi_95_df %>%
+    # don't bother pivoting longer just yet
+    # pivot_longer(c("chi", "chibar"), names_to = "var") %>%
+    # # always show chibar plot
+    # mutate(show_chi = ifelse(value == "chibar", TRUE, show_chi)) %>%
+    left_join(
+      distinct(data, name, lon, lat)
+    ) %>%
+    # st_as_sf(coords = c("lon", "lat"), crs = st_crs(areas), remove = FALSE)
+    identity()
+}
+
+chi_df <- bind_rows(lapply(seq_len(nrow(chi_settings_df)), \(i) {
+  season_spec <- chi_settings_df$season[[i]]
+  cp_spec <- chi_settings_df$cp[[i]]
+
+  data_spec <- data_cp |>
+    filter(season == season_spec, cp == cp_spec)
+
+  # Check for locations with all missing data for each variable, and ignore
+  na_locs <- data_spec |>
+    group_by(name) |>
+    summarise(
+      n = n(),
+      n_na_temp = sum(is.na(temp)),
+      n_na_drought = sum(is.na(drought_local)),
+      .groups = "drop"
+    ) |>
+    # where there are all NAs for a variable
+    filter(n_na_temp == n | n_na_drought == n)
+
+  data_spec <- anti_join(data_spec, na_locs)
+
+  # calculate chi and chi bar
+  calc_chi_cp(
+    data_spec,
+    # TODO Create variable that defines what probability to use here
+    var1 = "temp", var2 = "drought_local", chi_q = 0.9
+  ) |>
+    # label
+    mutate(season = season_spec, cp = cp_spec)
+})) |>
+  select(-show_chi)
+
+# join and label properly with seaasons to match with clustering info
+quant_chi_df <- left_join(quant_df, chi_df) |>
+  mutate(season = case_when(
+    season == "Winter" & cp == 1 ~ "Winter - 1960-1998",
+    season == "Winter" & cp == 2 ~ "Winter - 1999-2020",
+    season == "Summer" & cp == 1 ~ "Summer - 1960-1990",
+    season == "Summer" & cp == 2 ~ "Summer - 1991-2020",
+    season == "Autumn" & cp == 1 ~ "Autumn - 1960-1986",
+    season == "Autumn" & cp == 2 ~ "Autumn - 1987-2020",
+    TRUE ~ season
+  ))
+
+# Pull clustering solutions for each season, pre- and post-changepoints
+clust_sol_df <- bind_rows(lapply(seq_along(clust_cp_plt), \(i) {
+  data.frame(
+    "name"    = names(clust_cp_plt[[i]]$pam$clustering),
+    "cluster" = clust_cp_plt[[i]]$pam$clustering,
+    "season"  = names(clust_cp_plt)[[i]]
+  ) |> `rownames<-`(NULL)
+}))
+
+# Join in clustering solutions also
+clust_elev_cd <- left_join(elev_cd_pts, clust_sol_df) |>
+  left_join(quant_chi_df) |>
+  select(
+    name,
+    lon,
+    lat,
+    elevation,
+    dist2coast,
+    quant_temp    = temp,
+    quant_drought = drought_local,
+    chi,
+    chibar,
+    cluster,
+    season
+  )
+
+
+#### Plot vs elevation, dist2coast etc ####
+
+# TODOs here:
+# Order seasons properly (done)
+# TODO Include Spring ??
+# TODO Use expression for symbol y-axis labels
+
+site_sf <- pts_plt |>
+  sf::st_as_sf(
+    coords = c("lon", "lat"),
+    crs = 4326,
+    remove = FALSE
+  ) |>
+  sf::st_transform(sf::st_crs(areas_all))
+
+clust_covariates_long <- clust_elev_cd |>
+  sf::st_drop_geometry() |>
+  mutate(
+    cluster = factor(cluster),
+    # Convert units object if dist2coast retains sf units
+    dist2coast_km = as.numeric(
+      units::set_units(dist2coast, "km")
+    )
+  ) |>
+  select(
+    name,
+    season,
+    cluster,
+    longitude = lon,
+    latitude = lat,
+    elevation,
+    dist2coast_km,
+    quant_temp,
+    quant_drought,
+    chi,
+    chibar
+  ) |>
+  pivot_longer(
+    cols = c(
+      longitude,
+      latitude,
+      elevation,
+      dist2coast_km,
+      quant_temp,
+      quant_drought,
+      chi,
+      chibar
+    ),
+    names_to = "variable",
+    values_to = "value"
+  ) |>
+  mutate(
+    variable = factor(
+      variable,
+      levels = c(
+        "longitude",
+        "latitude",
+        "elevation",
+        "dist2coast_km",
+        "quant_temp",
+        "quant_drought",
+        "chi",
+        "chibar"
+      ),
+      labels = c(
+        "Longitude",
+        "Latitude",
+        "Elevation (m)",
+        "Distance to coast (km)",
+        # TODO Replace these with LaTeX fragments with `expression`
+        "quant_temp",
+        "quant_drought",
+        "chi",
+        "chibar"
+      )
+    ),
+    season = factor(
+      season,
+      levels = unique(clust_elev_cd$season)
+    )
+  )
+
+# Too many now to have on one plot
+# cluster_covariate_plot <- ggplot(
+#   clust_covariates_long,
+#   aes(
+#     x = cluster,
+#     y = value,
+#     colour = cluster,
+#     fill = cluster
+#   )
+# ) +
+#   geom_boxplot(
+#     alpha = 0.25,
+#     width = 0.65,
+#     outlier.shape = NA
+#   ) +
+#   geom_jitter(
+#     width = 0.12,
+#     height = 0,
+#     size = 1.8,
+#     alpha = 0.75
+#   ) +
+#   facet_grid(
+#     rows = vars(variable),
+#     cols = vars(season),
+#     scales = "free_y"
+#   ) +
+#   labs(
+#     x = "Cluster",
+#     y = NULL,
+#     colour = "Cluster",
+#     fill = "Cluster"
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     legend.position = "none",
+#     panel.grid.minor = element_blank(),
+#     strip.text = element_text(face = "bold")
+#   )
+#
+# cluster_covariate_plot
+
+variable_labels <- list(
+  "Longitude" = "Longitude",
+  "Latitude" = "Latitude",
+  "Elevation (m)" = "Elevation (m)",
+  "Distance to coast (km)" = "Distance to coast (km)",
+  "quant_temp" = expression(q[0.9](Temperature)),
+  "quant_drought" = expression(q[0.9](DPI)),
+  "chi" = expression(hat(chi)(0.90)),
+  "chibar" = expression(hat(bar(chi))(0.90))
+)
+
+# function to create faceted plot with proper y labels and row specific y-axes
+make_cluster_plot <- \(plot_df, nrow = 3) {
+  seasons <- levels(droplevels(plot_df$season))
+  ncol <- ceiling(length(seasons) / nrow)
+
+  season_rows <- split(
+    seasons,
+    ceiling(seq_along(seasons) / ncol)
+  )
+
+  variable_name <- as.character(plot_df$variable[[1]])
+  y_axis_label <- variable_labels[[variable_name]]
+
+  row_plots <- purrr::map2(
+    season_rows,
+    seq_along(season_rows),
+    \(row_seasons, row_number) {
+      row_df <- plot_df |>
+        filter(season %in% row_seasons) |>
+        mutate(
+          season = factor(
+            season,
+            levels = row_seasons
+          )
+        )
+
+      ggplot(
+        row_df,
+        aes(
+          x = cluster,
+          y = value,
+          colour = cluster,
+          fill = cluster
+        )
+      ) +
+        geom_boxplot(
+          alpha = 0.25,
+          width = 0.65,
+          outlier.shape = NA
+        ) +
+        geom_jitter(
+          width = 0.12,
+          height = 0,
+          size = 2,
+          alpha = 0.75
+        ) +
+        facet_wrap(
+          vars(season),
+          nrow = 1
+        ) +
+        labs(
+          x = if (row_number == length(season_rows)) {
+            "Cluster"
+          } else {
+            NULL
+          },
+          y = if (row_number == 2) {
+            y_axis_label
+          } else {
+            NULL
+          }
+        ) +
+        cecl_theme() +
+        theme(
+          legend.position = "none",
+          axis.title.y = element_text(face = "plain"),
+          axis.title.x = element_text(
+            colour = if (
+              row_number == length(season_rows)
+            ) {
+              "black" #
+            } else {
+              NA
+            },
+            face = "plain"
+          )
+        )
+    }
+  )
+
+  wrap_plots(
+    row_plots,
+    ncol = 1,
+    guides = "collect"
+  )
+}
+
+# generate plots
+cluster_covariate_plots <- clust_covariates_long |>
+  group_split(variable) |>
+  purrr::map(make_cluster_plot)
+
+names(cluster_covariate_plots) <- levels(clust_covariates_long$variable)
+
+cluster_covariate_plots$quant_drought # nicest separation between clusters
+
+# save plot as pdf for easy viewing
+pdf("plots/02_app/covariate_vs_clust_cp.pdf", width = 8, height = 6)
+cluster_covariate_plots
+dev.off()
+
+# TODO Save individually for inclusion in paper/supplementary materials
+
+
+#### Analyse cluster switching ####
+
+# TODO Broken from being copied from Chat GPT, fix!!
+
+# Construct switching indicator
+cluster_switching <- clust_elev_cd |>
+  sf::st_drop_geometry() |>
+  mutate(
+    season_name = sub(
+      " -.*$",
+      "",
+      as.character(season)
+    ),
+
+    # Extract the first year from labels such as
+    # "Winter - 1960-1998"
+    period_start = readr::parse_number(
+      sub(
+        "^.* - ",
+        "",
+        as.character(season)
+      )
+    )
+  ) |>
+  distinct(
+    name,
+    season_name,
+    period_start,
+    cluster
+  ) |>
+  filter(!is.na(cluster)) |>
+  group_by(
+    name,
+    season_name
+  ) |>
+  arrange(
+    period_start,
+    .by_group = TRUE
+  ) |>
+  summarise(
+    cluster_before = first(cluster),
+    cluster_after = last(cluster),
+    n_periods = n_distinct(period_start),
+    .groups = "drop"
+  ) |>
+  # Switching is only defined for seasons with two periods
+  filter(n_periods == 2) |>
+  mutate(
+    switched = cluster_before != cluster_after,
+    switching = factor(
+      switched,
+      levels = c(FALSE, TRUE),
+      labels = c(
+        "Did not switch",
+        "Switched"
+      )
+    ),
+    transition = paste(
+      cluster_before,
+      cluster_after,
+      sep = " \u2192 "
+    ),
+    season_name = factor(
+      season_name,
+      levels = seasons_diff
+    )
+  )
+
+# Check the number and proportion of switching locations
+cluster_switching_summary <- cluster_switching |>
+  summarise(
+    n_locations = n(),
+    n_switched = sum(switched),
+    proportion_switched = mean(switched),
+    .by = season_name
+  )
+
+cluster_switching_summary
+
+# examine individual transitions
+cluster_switching |>
+  count(
+    season_name,
+    transition,
+    sort = TRUE
+  )
+
+# join switching indicator onto existing long dataset
+switch_covariates_long <- clust_covariates_long |>
+  mutate(
+    season_name = sub(
+      " -.*$",
+      "",
+      as.character(season)
+    )
+  ) |>
+  left_join(
+    cluster_switching |>
+      mutate(
+        season_name = as.character(season_name)
+      ) |>
+      select(
+        name,
+        season_name,
+        switching,
+        switched,
+        cluster_before,
+        cluster_after,
+        transition
+      ),
+    by = c(
+      "name",
+      "season_name"
+    )
+  ) |>
+  mutate(
+    season_name = factor(
+      season_name,
+      levels = seasons_diff
+    )
+  )
+
+# ???
+transition_covariates_long <- switch_covariates_long |>
+  mutate(
+    period_start = readr::parse_number(
+      sub(
+        "^.* - ",
+        "",
+        as.character(season)
+      )
+    )
+  ) |>
+  group_by(season_name) |>
+  mutate(
+    period = if_else(
+      perio_star == mn(perid_stat),
+     "efor"
+     "Aftr"    ) ) |>
+ ngrou()|>
+ muate(   period= facto(
+      period,
+      levels = c("Before", "After")
+    ),
+    transition = factor(
+      transition,
+      levels = transition_levels
+    )
+  )
+
+
+# join switching indicator onto existing long dataset
+transition_changes_long <- transition_covariates_long |>
+  select(
+    name,
+    season_name,
+    transition,
+    switching,
+    variable,
+    period,
+    value
+  ) |>
+  pivot_wider(
+    names_from = period,
+    values_from = value
+  ) |>
+  mutate(
+    value = After - Before
+  )
+
+# not applicable for longitude and latitude
+transition_changes_long <- transition_changes_long |>
+  filter(
+    variable %in% c(
+      "quant_temp",
+      "quant_drought",
+      "chi",
+      "chibar"
+    )
+  )
+
+change_variable_labels <- list(
+  quant_temp =
+    expression(
+      Delta * q[0.9](plain("Temperature"))
+    ),
+  quant_drought =
+    expression(
+      Delta * q[0.9](plain("DPI"))
+    ),
+  chi =
+    expression(
+      Delta * hat(chi)(0.9)
+    ),
+  chibar =
+    expression(
+      Delta * hat(bar(chi))(0.9)
+    )
+)
+
+make_transition_change_plot <- \(plot_df) {
+  variable_name <- as.character(
+    plot_df$variable[[1]]
+  )
+
+  y_axis_label <- change_variable_labels[[
+    variable_name
+  ]]
+
+  ggplot(
+    plot_df,
+    aes(
+      x = transition,
+      y = value,
+      colour = switching,
+      fill = switching
+    )
+  ) +
+    geom_hline(
+      yintercept = 0,
+      colour = "grey60",
+      linetype = "dashed"
+    ) +
+    geom_boxplot(
+      alpha = 0.25,
+      width = 0.65,
+      outlier.shape = NA
+    ) +
+    geom_jitter(
+      width = 0.12,
+      height = 0,
+      size = 2,
+      alpha = 0.75
+    ) +
+    facet_wrap(
+      vars(season_name),
+      nrow = 1,
+      # scales = "free_y"
+    ) +
+    labs(
+      x = "Cluster transition",
+      y = y_axis_label,
+      colour = NULL,
+      fill = NULL
+    ) +
+    cecl_theme() +
+    theme(
+      legend.position = "bottom",
+      axis.title = element_text(
+        colour = "black",
+        face = "plain"
+      ),
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      )
+    )
+}
+
+cluster_transition_change_plots <- transition_changes_long |>
+  group_split(
+    variable,
+    .keep = TRUE
+  ) |>
+  purrr::map(
+    make_transition_change_plot
+  )
+
+names(cluster_transition_change_plots) <- levels(
+  droplevels(transition_changes_long$variable)
+)
+
+# save
+pdf("plots/02_app/covariate_vs_cluster_switching.pdf", width = 8, height = 6)
+cluster_switching_plots
+dev.off()
 
 
 #### DQU Sensitivity Plot (for 80 and 85%) ####
