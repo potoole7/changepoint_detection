@@ -638,7 +638,6 @@ The dotted reference line marks 1990, the midpoint of the simulated 1980--2000 t
 \label{fig:sim_global}
 \end{figure}
 
-\textcolor{red}{check results summary}
 Figure~\ref{fig:sim_global} shows null rejection rates fluctuating around the nominal levels for both norms, without a sustained elevation around the transition midpoint. 
 Some candidate years exceed the nominal levels, as expected with 200 replicates, but the figure gives no indication of a systematic pointwise calibration failure.
 Importantly, for the global change scenario we see p-values exceeding the nominal rates. 
@@ -903,8 +902,8 @@ The time series of maximum weekly temperature and drought index exhibit seasonal
 
 \begin{figure}
 \centering
-% \includegraphics[width=0.75\linewidth]{latex/plots/screen_dqu_0.8.png}
-\includegraphics[width=0.75\linewidth]{latex/plots/screen_dqu_0.8.png}
+% \includegraphics[width=0.75\linewidth]{plots/screen_dqu_0.8.png}
+\includegraphics[width=0.75\linewidth]{plots/screen_dqu_0.8.png}
 \caption{
 Test statistics based on the Frobenius (left) and infinity (right) norm for each candidate season-year based on 25-year time blocks. 
 Local maximum are highlighted by the crosses. %, and test statistics have been transformed to a common scale. \textcolor{red}{Check that standardising to common scale is correct}
@@ -933,7 +932,7 @@ These minimum pointwise $p$-values are not adjusted for the search across candid
 \begin{figure}
 \centering
 % \includegraphics[width=0.9\linewidth]{plots/change.png}
-\includegraphics[width=0.9\linewidth]{latex/plots/change_dqu_0.8.png}
+\includegraphics[width=0.9\linewidth]{plots/change_dqu_0.8.png}
 \caption{
 Empirical p-values for the different candidate years $\tau$ for the test statistics based on the Frobenius (red) and infinity (blue) norm. Estimates are based on 25 season-years per temporal block and $B=200$ permutations. The horizontal dashed lines corresponds to the pointwise 5\% (grey) and 10\% (green) significance levels, respectively.}
 \label{fig:app_cp}
@@ -1176,6 +1175,7 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 % }
 \caption{
 ``Elbow'' plots of the total within-group dissimilarity (TWD) against the number of clusters $k$ for the estimated clusters, obtained using the aggregated dissimilarity matrix for each season and their respective changepoint divisions.
+\textcolor{red}{Might look a bit nicer if done for just two rows?}
 }
 \label{fig:elbow}
 \end{figure}
