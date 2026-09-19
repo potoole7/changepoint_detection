@@ -69,7 +69,7 @@ y^{\boldsymbol{\beta}_{\mid i,#1}}
 
 \begin{document}
 
-\title{Testing for non-stationarity in multivariate extremal clusters with application to Spanish droughts}
+\title{Testing for changes in spatial patterns of multivariate extremal dependence with application to Spanish droughts}
 
 \author[1]{Patrick O'Toole*}
 
@@ -87,21 +87,14 @@ y^{\boldsymbol{\beta}_{\mid i,#1}}
 \corres{*{Patrick O'Toole} (\email{pot23@batch.ac.uk})}
 
 
-\abstract[Summary]{This is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text this is sample abstract text.}
+\abstract[Summary]{Changes in extremal dependence can alter the spatial patterns of compound environmental extremes. To identify these changes, we develop a statistical framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. Leveraging conditional extremal models for site-wise tail dependence and a divergence measure that quantifies dissimilarity in estimated extremal dependence, we propose a permutation test for changes in regional extremal clusters. A simulation study investigates detection power under changes of varying magnitude and spatial extent. When applied to seasonal observations of temperature and a drought index across 40 sampling locations in Spain, our method provides evidence for changepoints in the spatial patterns of summer and winter extremal dependence during 1960--2024. Cluster estimates suggest that regional differences in extremal dependence generally diminish in magnitude for later time periods. Our findings highlight season-specific changes in the geographical organisation of compound heat-drought extremes, which may be attributed to desertification as a result of climate change.}
 
-\keywords{keyword1, keyword2, keyword3, keyword4}
+\keywords{changepoint detection, conditional extremes, extremal dependence, structural breaks, temperature extremes}
 
-\jnlcitation{\cname{%
-\author{Williams K.}, 
-\author{B. Hoskins}, 
-\author{R. Lee}, 
-\author{G. Masato}, and 
-\author{T. Woollings}} (\cyear{2016}), 
-\ctitle{A regime analysis of Atlantic winter jet variability applied to evaluate HadGEM3-GC2}, \cjournal{Q.J.R. Meteorol. Soc.}, \cvol{2017;00:1--6}.}
+
 
 \maketitle
 
-\footnotetext{\textbf{Abbreviations:} ANA, anti-nuclear antibodies; APC, antigen-presenting cells; IRF, interferon regulatory factor}
 
 
 \section{Introduction}\label{sec:intro}
@@ -136,7 +129,7 @@ Desertification is one of Spain's most pressing environmental challenges. \citet
 
 \begin{figure}
 \centering
-\includegraphics[width=0.9\linewidth]{plots/intro_trim.png}
+\includegraphics[width=\linewidth]{plots/intro_trim.png}
 \caption{
 Left: elevation profile of mainland Spain and locations of the 40 meteorological stations, with Daroca and Jerez de la Frontera highlighted. Right: weekly maximum temperature against the 13-week drought index $D=-\mathrm{SPI}$ at the two highlighted stations, with observations coloured by season.
 }
@@ -292,11 +285,7 @@ The second statistic uses the matrix infinity norm, defined as the maximum absol
 \label{eq:infinity}
 N_{\mathrm{obs}}^{(I)}(\tau) \coloneq \max_{s=1,\ldots,D} \sum_{s'=1}^D \left|\hat{M}^{(1)}_{s,s'}(\tau) - \hat{M}^{(2)}_{s,s'}(\tau)\right|.
 \end{equation}
-\begin{equation}
-\label{eq:infinity}
-N_{\mathrm{obs}}^{(I)}(\tau) \coloneq \max_{s=1,\ldots,D} \sum_{s'=1}^D \left|\hat{M}^{(1)}_{s,s'}(\tau) - \hat{M}^{(2)}_{s,s'}(\tau)\right|.
-\end{equation}
-The Frobenius norm~\eqref{eq:frob} captures the overall magnitude of change, whereas the infinity norm~\eqref{eq:infinity} is only sensitive to the largest pairwise difference. 
+The Frobenius norm~\eqref{eq:frob} captures the overall magnitude of change, whereas the infinity norm~\eqref{eq:infinity} is the largest aggregate absolute change in a row of the dissimilarity matrix.
 Consequently, their relative performance under non-stationarity is expected to depend on whether changes occur across many sites or are concentrated in a small number of locations. 
 For notational brevity, we write $N_{\mathrm{obs}}(\tau)$ in the rest of the section when referring to $N_{\mathrm{obs}}^{(F)}(\tau)$ or $N_{\mathrm{obs}}^{(I)}(\tau)$.
 We recognise that other statistics for the matrix difference could be considered, but we focus on these two for their popularity, simplicity and interpretability, as an illustration of the proposed permutation testing procedure.
@@ -517,35 +506,38 @@ A permutation test can then be constructed using the corresponding maximum stati
 %As changes in environmental dependence structures may occur gradually, a candidate $\tau$ should not necessarily be interpreted as the time of an instantaneous physical transition. 
 %Rather, it identifies a division between adjacent periods whose estimated extremal dependence structures differ.
 
+\subsection{Screening for changes in extremal dependence}
+\label{subsec:screen}
+Choosing an optimal block length for extremal changepoint detection is a difficult problem \citep{McGonigle2025}, as it requires consideration for both the total sample size and the number of exceedances. The task suffers from the classic bias-variance trade-off; longer blocks provide more observations for fitting the conditional extremes models, but restrict the range of candidate boundaries and may obscure the timing of changes. 
+
+Ideally, we would test for non-stationarity in extremal dependence using all feasible block lengths and candidate boundaries. However, this is computationally prohibitive, particularly if many permutations are required to assess significance of a change. We instead propose a heuristic initial ``screening'' step for reducing the number of block lengths to be considered. Before performing the permutation tests, we examine how the discrepancy between estimated dissimilarity matrices varies across candidate boundaries and block lengths. For a range of candidate block lengths $n$, we evaluate the statistics in Equations~\eqref{eq:frob} and~\eqref{eq:infinity} at every admissible boundary $\tau\in{n,\ldots,T-n}$. Plotting these statistics against $\tau$ gives a \textit{screening} profile, with larger values indicating greater differences between the estimated dissimilarity structures in the two adjacent blocks. 
+
+The screening profiles are descriptive summaries and do not establish statistical significance. Comparing profiles across block lengths helps to assess the sensitivity of these patterns to the temporal scale of analysis, and local maxima in the screening profiles highlight boundaries for further investigation. Following interpretation of the screening profiles, we choose a single block length in our analysis. We subsequently apply the permutation tests in Section~\ref{subsec:cp} at all admissible boundaries for this selected block length, rather than restricting testing to screening peaks.
 \section{Simulation Study}
 \label{sec:sim}
 
-We assess how the proposed procedure responds to gradual changes in extremal dependence using simulated datasets with known dependence trajectories.
-The design has the same number of sites and weekly observations per season-year as the Spanish drought application introduced in Section~\ref{sec:data}, while allowing the strength and spatial extent of the change to be controlled.
-Because dependence changes over a 20-year interval, the objective is to detect evidence of a transition rather than to recover a unique instantaneous changepoint.
-In Section~\ref{subsec:sim_setup}, we describe the simulation setup and the scenarios considered, which include a null scenario with no change, two local change scenarios affecting a subset of sites, and a global change affecting all sites.
-Section~\ref{subsec:sim_results} presents the results of the simulation study, comparing the performance of the Frobenius and infinity norms in detecting changes under each scenario.
+We now assess the ability of the proposed changepoint detection procedure to detect gradual changes in extremal dependence using simulated datasets with known extremal dependence trajectories.
+The simulations are designed to resemble the Spanish drought data introduced in Section~\ref{sec:data}, with the same number of spatial locations and weekly observations within each season-year. Unlike the real data application, the underlying extremal dependence structure is known, allowing us to control both the  magnitude and spatial extent of temporal changes.
+As these changes occur gradually over a relatively short 20-year interval, there is no unique true changepoint. We thus focus on detecting departures from stationarity rather than on accuracy of changepoint estimation.
+In Section~\ref{subsec:sim_setup}, we describe the simulation design, comprising a stationary null scenario, two \textit{local change} scenarios in which dependence changes at a subset of sites, and a \textit{global change} scenario in which dependence changes at all sites.
+Section~\ref{subsec:sim_results} compares the performance of the Frobenius and infinity norms across all scenarios.
 
 \subsection{Simulation setup}
 \label{subsec:sim_setup}
 
-For each replicate, we generate two variables at $D=40$ sites for the 65 season-years 1960--2024, with 12 observations per season-year.
-At each site and season-year, the paired observations are sampled from a bivariate Student $t$-copula with three degrees of freedom and a site- and year-specific correlation parameter $\rho_{s,t}$ \citep{Demarta2007-ap}.
-Observations are generated independently across sites and observation times conditional on these parameters.
+For each temporal replicate, we simulate paired observations of two variables at $D=40$ sites over the 65 season-years 1960--2024, with 12 observations per season-year.
+At each site $s$ in season-year $t$, the paired observations are sampled from a bivariate Student $t$-copula with three degrees of freedom and a correlation parameter $\rho_{s,t}$ \citep{Demarta2007-ap}. This parameter controls the strength of extremal dependence between the two variables and varies across sites and season-years. Conditional on the specified parameters, pairs are generated independently across sites and observation times.
 % Both copula margins are transformed using genePareto distributions with shape $\xi=-0.05$, scale $\sigma=1$, and threshold zero, before transformation to standard Laplace margins using the known generating distributions.
-The observations are transformed to standard Laplace margins using their known marginal distributions.
-Consequently, temporal changes in the simulated data arise from the specified copula dependence, rather than from changing marginal distributions.
+We transform the observations to standard Laplace margins using their known marginal distributions.
+As the margins are therefore fixed across sites and time, temporal changes in the simulated data arise solely from the specified copula dependence, rather than from changing marginal distributions.
 
-The 40 sites are assigned to three baseline regimes of sizes 8, 14, and 18, representing their known initial ``clusters''.
-The corresponding initial copula correlations are $0.15$, $0.30$, and $0.45$, respectively.
-These values produce heterogeneous, relatively weak baseline dependence across the sites.
-Let $\rho_{s,0}$ denote the baseline correlation, let $\rho_{s,1}$ denote its target value if site $s$ is affected, and let $A_s$ equal one for an affected site and zero otherwise.
-The implemented correlation trajectory is
+The 40 sites are partitioned into three baseline groups of sizes 8, 14, and 18, representing their known initial ``clusters''. These groups define the initial clusters and represent differing strengths of baseline dependence. For site $s$, let $\rho_{s,0}$ denote the baseline correlation. For the three clusters of sizes 8, 14, and 18, their corresponding initial copula correlations,  $\rho_{s,0}$, are $0.15$, $0.30$, and $0.45$, respectively; we hereafter refer to these as the low-, medium-, and high-correlation regimes.
+These values produce heterogeneous, relatively weak baseline dependence across the sites. To characterise changing extremal dependence, we specify the correlation trajectory via the target correlation $\rho_{s,1}$ and $A_s$, which is an indicator equal to one if the site $s$ is affected by the change and zero otherwise. Then the correlation for site $s$ at time $t$ is specified as 
 \begin{equation}
 \label{eq:sim_rho}
 \rho_{s,t}=\rho_{s,0}+A_s\bigl(\rho_{s,1}-\rho_{s,0}\bigr)g(t),
 \end{equation}
-where
+where the linear trend in the dependence is determined by 
 \begin{equation}
 \label{eq:sim_transition}
 g(t)=
@@ -555,127 +547,115 @@ g(t)=
 1, & t\geq 2000.
 \end{cases}
 \end{equation}
-The correlation is therefore constant through 1980, changes linearly on the correlation scale until 2000, and remains at its final value thereafter.
-All initial and final correlations lie between $-1$ and $1$, so their interpolated values are valid copula parameters.
+At affected sites, the correlation remains at its baseline value through 1980, changes linearly to its target value between 1980 and 2000, and remains constant thereafter. At unaffected sites, it remains at its baseline value throughout. All baseline and target correlations lie strictly between $-1$ and $1$, ensuring that the interpolated values are valid copula parameters.
 
-Under the null scenario, no sites change from their baseline correlations.
-Under the global alternative, all 40 sites are affected, and the low-, medium-, and high-regime correlations reach $0.20$, $0.55$, and $0.60$, respectively.
-Under the first local alternative, eight of the 14 medium-regime sites change from $0.30$ to $0.45$; the remaining 32 sites retain their baseline correlations.
-Under the second local alternative, all eight low-regime sites change from $0.15$ to $0.45$; the remaining 32 sites retain their baseline correlations.
-These two alternatives separate the effect of restricting a change to eight sites from the effect of its magnitude and the baseline regime in which it occurs.
-\textcolor{red}{Need to explain these choices? E.g. global scenario choosen to replicate instance where global warming affects some clusters more than others?}
-Figure~\ref{fig:sim_rho} displays the corresponding dependence trajectories and distinguishes the changing medium-regime sites from the medium-regime sites that remain unchanged.
+Under the null scenario, $A_s=0$ at every site, so all correlations remain at their baseline values. Under the global alternative, all 40 sites are affected, with correlations in the initially low-, medium-, and high-correlation regimes increasing to $0.20$, $0.55$, and $0.60$, respectively. This scenario represents a widespread change whose magnitude differs across baseline regimes.
+
+Under the first local alternative scenario, the correlations at eight of the 14 medium-correlation regime sites change from $0.30$ to $0.45$, while the remaining 32 sites retain their baseline correlations. 
+Under the second local alternative scenario, all eight sites in the low-correlation regime experience increasing correlation, from $0.15$ to $0.45$, with the remaining 32 sites again unaffected.
+These local alternative scenarios affect the same number of sites but differ in both the magnitude of the change and the initial dependence strength. They therefore allow us to assess changepoint detection performance under two forms of spatially restricted change, without isolating the effects of magnitude and baseline dependence. In both cases, the affected sites attain the baseline correlation of the high-correlation regime, changing the initial cluster structure.
+%\textcolor{red}{Need to explain these choices? E.g. global scenario choosen to replicate instance where global warming affects some clusters more than others?}
+Figure~\ref{fig:sim_rho} displays the dependence trajectories for each scenario, distinguishing the affected medium-correlation regime sites from those that remain unchanged.
 
 \begin{figure}[htb]
 \centering
 \includegraphics[width=0.95\linewidth]{plots/sim_correlation_trajectories.png}
 \caption{
-  $t$-copula correlation trajectories for the null, global, and two local alternatives.
-  The shaded interval marks the gradual transition from 1980 to 2000.
-  The dotted medium-regime trajectory in the local medium-regime panel represents the six medium-regime sites that remain unchanged.
-  The remaining 32 sites are unaffected in each local alternative.
-}
+  True correlation trajectories for the null, global, and two local scenarios used in the simulation study.
+  The shaded interval demarcates the period 1980--2000, where the linear increase in correlation takes place. The red, blue, and yellow lines correspond to correlation trajectories for locations in the low-, medium-, and high-correlation regimes. The blue dotted line represents the six medium-correlation regime sites that remain unchanged in the two local scenarios. \textcolor{red}{Fix y-axis label, and remove 2024 label from x-axis}}
 \label{fig:sim_rho}
 \end{figure}
 
-We generate 200 independent replicates per scenario.
-The conditional extremes models use a fixed threshold at the theoretical $0.8$ quantile of the standard Laplace distribution.
-Because this threshold is specified from the reference distribution rather than estimated separately from each finite sample, it need not equal a sample's empirical $0.8$ quantile and can lie above it. \textcolor{red}{Needed? Found this to be important distinction when fitting}
-Each fit requires at least 15 threshold exceedances, and the expected divergence is evaluated using 500 Monte Carlo draws of the conditioning variable, as in Equation~\eqref{eq:jsga_integral}.
-For the screening step, we compare adjacent blocks of 15, 20, 25, and 30 season-years on either side of each feasible candidate boundary.
-For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its no-change reference distribution.
-This puts the plotted values on a null-standardised scale, although they are descriptive screening summaries rather than permutation $p$-values.
-We use 25 season-years per block for the subsequent pointwise permutation tests, preserving 16 candidate boundaries while retaining sufficient observations for estimation.
-At each boundary in this pointwise analysis, the adjacent 25 season-years on either side form the two comparison blocks.
-The candidate after year $t$ separates season-year $t$ from the following season-year, subject to the availability of both blocks.
-This fixed block length leaves candidate boundaries from 1984 through 1999 while supplying 300 observations per site and block before any missing or excluded fits.
-For each candidate and each norm, the observed difference between the fitted dissimilarity matrices is compared with the results of 200 permutations.
-Each permutation reallocates the paired observations between the two blocks within each site while preserving the original block sizes, after which the conditional extremes models and dissimilarity matrices are refitted.
-The reported $p$-values are computed separately at each candidate boundary.
-Hence, the rejection rates below assess pointwise behaviour and do not measure the probability of at least one rejection over the entire candidate grid.
+We generate 200 independent datasets per scenario. Each dataset contains 12 observations per season-year at each of the 40 sites over 65 years, giving 780 independent temporal replicates per site. For each dataset and site $s$, we fit the conditional extremes model described in Section~\ref{subsec:ce}, with the exceedance threshold $u_{i,s}$ in \eqref{eq:ce_model_spat} fixed to the theoretical $0.8$-quantile of the standard Laplace distribution, rather than a sample-specific empirical quantile.
+%Because this threshold is specified from the reference distribution rather than estimated separately from each finite sample, it need not equal a sample's empirical $0.8$ quantile and can lie above it. \textcolor{red}{Needed? Found this to be important distinction when fitting}
+%Each fit requires at least 15 threshold exceedances, 
+The expected divergence in Equation~\eqref{eq:jsga_integral} is approximated using 500 Monte Carlo draws of the conditioning variable.
+
+For the screening step (see Section~\ref{subsec:screen}), we compare adjacent blocks containing 15, 20, 25, and 30 season-years on either side of each feasible boundary candidate.
+For the subsequent pointwise permutation tests, we fix the block length at 25 season-years, balancing the number of observations available for estimation against the range of candidate boundaries. Each comparison block contains 300 observations per site, and the 16 feasible boundaries run from 1984 through 1999, with a boundary labelled $t$ separating season-years $t$ and $t+1$.
+
+At each candidate boundary, we assess the observed difference between the estimated dissimilarity matrices using 200 permutations and both the Frobenius and infinity norms.
+Each permutation reallocates paired observations between the two blocks within each site, preserving the pairs and original block sizes. We then refit the conditional extremes models and recompute the dissimilarity matrices.
+The resulting $p$-values are calculated separately for each candidate boundary and each norm. 
+Hence, the reported rejection rates  describe pointwise performance, rather than the probability of at least one rejection across the full candidate grid. Note that we do not perform any multiple testing corrections.
 
 \subsection{Simulation results}
 \label{subsec:sim_results}
 
-For our screening step, Figure~\ref{fig:sim_screening} compares the null-standardised test statistics across the four block lengths and three alternatives. 
-The global scenario has by far the largest positive values for both norms, while the low-regime local scenario has the lowest values and eventually falls below zero.
-The sign indicates the direction of departure from the no-change reference on this screening scale, so a negative value should not be equated with an absence of change.
-In the global scenario, the mean curves for 20--30-year blocks have a visible local maximum around the 1990 transition midpoint; the corresponding feature is much weaker under the medium-regime local scenario.
-The 15-year curves have flatter features near 1990, particularly for the medium-regime change.
-The low-regime local curves instead decline through the transition and reach a trough around 2000 for block lengths whose candidate ranges extend that far.
-The shaded bands are generally wider for shorter blocks, consistent with less precise model fitting from fewer observations, although their definition should be confirmed from the plotting code before assigning them a formal confidence level.
-Longer blocks produce stronger and less variable screening curves but restrict the candidate-year range; in particular, the 30-year curves do not extend far enough to show the later low-regime trough.
-The 20- and 25-year blocks therefore provide a useful visual compromise between a distinct feature near the midpoint and enough candidate years to examine its timing, while the plot alone does not establish an optimal block length or how frequently individual replicates identify a peak.
-We use 25-year blocks for the pointwise permutation tests in Figures~\ref{fig:sim_global} and \ref{fig:sim_local}.
-
-\begin{figure}[htb]
+\begin{figure}[t!]
 \centering
-\includegraphics[width=0.98\linewidth]{plots/sim_screening_plot.png}
+\includegraphics[width=\linewidth]{plots/sim_screening_plot.png}
 \caption{
-  Null-standardised screening statistic by candidate season-year, block length, scenario, and matrix norm.
-  Lines show the mean across simulation replicates, and shaded bands show approximate 95\% confidence intervals for that mean, calculated as the mean plus or minus 1.96 standard errors.
-  Colours indicate the number of season-years in each adjacent block, and the vertical dotted line marks 1990, the midpoint of the simulated transition.
+  Null-standardised screening statistics, stratified by candidate season-year, block length, scenario, and matrix norm.
+  Solid curves are the mean across 200 experiments, and shaded bands show approximate 95\% normal confidence intervals.
+  Colours indicate the number of season-years in each adjacent block, and the vertical dotted line marks 1990, which is the midpoint of the period of transition for the correlation.
 }
 \label{fig:sim_screening}
 \end{figure}
+Figure~\ref{fig:sim_screening} presents the screening statistics for the four block lengths under the three alternative dependence scenarios. For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its null reference distribution. These null-standardised values are descriptive summaries rather than permutation $p$-values: positive and negative values indicate statistics above and below the corresponding null mean, respectively, rather than the direction of change in extremal dependence.
 
-For our changepoint permutation test, the pointwise rejection rate for each candidate year is the proportion of replicates with a permutation $p$-value below $0.05$ or $0.10$.
-Under the null, this estimates pointwise Type~I error, while under an alternative, it estimates pointwise power.
-The vertical intervals in Figures~\ref{fig:sim_global} and \ref{fig:sim_local} are 95\% Wilson intervals reflecting uncertainty across the 200 simulation replicates.
-The dotted reference line marks 1990, the midpoint of the simulated 1980--2000 transition, rather than its onset.
+The global scenario produces the most pronounced positive departures from the null mean under both norms, whereas the local alternatives yield weaker and qualitatively different patterns. For the global scenario, the mean curves based on 20--30-year blocks exhibit a local maximum near the transition midpoint in 1990. This feature is less distinct under the medium-regime local alternative, particularly with 15-year blocks. Under the low-regime local alternative, the curves instead decline through the transition, reaching a trough around 2000 where the candidate range extends sufficiently far. This downward departure does not directly support detection by the upper-tail permutation test, which rejects for large values of the discrepancy statistic.
+%In the global scenario, the mean curves for 20--30-year blocks have a visible local maximum around the 1990 transition midpoint; the corresponding feature is much weaker under the medium-regime local scenario.
+%The 15-year curves have flatter features near 1990, particularly for the medium-regime change.
+%The low-regime local curves instead decline through the transition and reach a trough around 2000 for block lengths whose candidate ranges extend that far.
+The shaded bands are generally wider for shorter blocks.
+%consistent with less precise model fitting from fewer observations, although their definition should be confirmed from the plotting code before assigning them a formal confidence level.
+Longer blocks produce less variable curves but restrict the range of feasible candidate boundaries; in particular, the 30-year blocks exclude the later trough observed under the low-regime local alternative.
+Blocks of 20 or 25 years offer a practical compromise between stability and temporal coverage. However, these descriptive patterns alone establish neither an optimal block length nor detection power, which we assess using the pointwise permutation tests below.
+%a distinct feature near the midpoint and enough candidate years to examine its timing, while the plot alone does not establish an optimal block length or how frequently individual replicates identify a peak.
+
+For each candidate year and nominal significance level ($0.05$ or $0.10$), we estimate the pointwise rejection probability as the proportion of the 200 simulation replicates whose permutation $p$-values fall below that level. Under the null scenario, this estimates pointwise Type~I error rate; under an alternative scenario, it estimates pointwise power. Figure~\ref{fig:sim_global} presents the pointwise rejection rate for all scenarios. The vertical intervals are 95\% Wilson confidence intervals quantifying Monte Carlo uncertainty in these estimated probabilities.
+Note that dotted reference lines mark 1990, which is the midpoint of the simulated 1980--2000 transition, rather than its onset or a uniquely defined true changepoint.
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=0.95\linewidth]{
+\includegraphics[width=0.5\linewidth]{
   plots/sim_changepoint_global_change_pointwise_power.png
 }
+\includegraphics[width=0.5\linewidth]{
+  plots/sim_changepoint_local_change_pointwise_power.png
+}
 \caption{
-  Pointwise rejection rates under the null and global-change scenarios for the Frobenius and infinity norms.
-  Red and blue curves correspond to significance levels of 5\% and 10\%, respectively, and the horizontal dashed lines indicate the corresponding nominal levels.
-  The vertical dotted line marks 1990, the midpoint of the gradual change from 1980 to 2000; in the null panels, it is included only as a reference.
-  Points show the proportion of the 200 simulation replicates rejected at each candidate split point, and vertical bars give 95\% Wilson confidence intervals.
+ \textcolor{red}{Combine with Figure 6. If too large, rotate.} Pointwise rejection rates under the null, local-change, and global-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
+  Red and blue curves correspond to nominal significance levels of 5\% and 10\%, respectively, with matching horizontal dashed lines. Each point represents the estimated proportion of rejections across 200 simulation experiments, for a particular candidate split point; vertical bars are 95\% Wilson confidence intervals.
+  The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the null panels. 
 }
 \label{fig:sim_global}
 \end{figure}
 
-Figure~\ref{fig:sim_global} shows null rejection rates fluctuating around the nominal levels for both norms, without a sustained elevation around the transition midpoint. 
-Some candidate years exceed the nominal levels, as expected with 200 replicates, but the figure gives no indication of a systematic pointwise calibration failure.
-Importantly, for the global change scenario we see p-values exceeding the nominal rates. 
-Under the global alternative, the Frobenius norm has substantially greater rejection rates than under the null across the candidate range.
-Across the candidate years 1988--1992, the Frobenius rejection rate ranges from 52.0\% to 56.5\% at the 5\% level and from 66.5\% to 69.5\% at the 10\% level.
-For the infinity norm, the corresponding ranges are 15.5--19.5\% and 27.5--32.5\%, respectively.
-The contrast is consistent with a change at every site contributing differences throughout the pairwise dissimilarity matrix, which the Frobenius norm aggregates.
-Rejection rates remain elevated after the midpoint but decline for candidates near the end of the available range.
-As the change is gradual, a pointwise maximum need not coincide with either endpoint or with the midpoint of the transition.
+Figure~\ref{fig:sim_global} shows that  rejection rates under the null fluctuate around the nominal significance levels for both norms, with no clear evidence of systematic pointwise miscalibration. 
+Although some candidate years have rejection rates that exceed the nominal levels, these deviations should be interpreted in light of Monte Carlo uncertainty from the 200 experiments.
 
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.95\linewidth]{
-  plots/sim_changepoint_local_change_pointwise_power.png
-}
-\caption{
-  Pointwise rejection rates under the null scenario and the two local-change scenarios for the Frobenius and infinity norms.
-  In the medium-regime alternative, eight sites change from a correlation of 0.30 to 0.45, while in the low-regime alternative, eight sites change from 0.15 to 0.45.
-  Red and blue curves correspond to significance levels of 5\% and 10\%, respectively, and the horizontal dashed lines indicate the corresponding nominal levels.
-  The vertical dotted line marks 1990, the midpoint of the gradual change from 1980 to 2000; in the null panels, it is included only as a reference.
-  Points show the proportion of the 200 simulation replicates rejected at each candidate split point, and vertical bars give 95\% Wilson confidence intervals.
-}
-\label{fig:sim_local}
-\end{figure}
+Under the global alternative, rejection rates exceed the nominal levels, with the Frobenius norm attaining substantially greater pointwise power than the infinity norm. Across candidate years 1988--1992, Frobenius rejection rates range from 52.0\% to 56.5\% at the 5\% significance level and from 66.5\% to 69.5\% at the 10\% level. The corresponding ranges for the infinity norm are 15.5--19.5\% and 27.5--32.5\%, respectively. This contrast is consistent with widespread changes contributing differences across many entries of the pairwise dissimilarity matrix, which the Frobenius norm aggregates.
 
-The local alternatives in Figure~\ref{fig:sim_local} show that the size of the change matters even when the number of affected sites is fixed.
-When eight medium-regime sites move from $0.30$ to $0.45$, the highest Frobenius rejection rate is 14.5\% at the 5\% level (1992) and 22.0\% at the 10\% level (1991 and 1994).
-For the same alternative, the infinity norm reaches 12.0\% at the 5\% level (1994) and 19.0\% at the 10\% level (1993).
-This moderate change is therefore difficult to detect reliably with either norm.
-When the eight low-regime sites instead move from $0.15$ to $0.45$, the Frobenius rejection rates peak at 56.5\% and 71.0\% at the 5\% and 10\% levels, respectively, both in 1989.
-The corresponding infinity-norm maxima are 27.0\% at the 5\% level (1987) and 41.0\% at the 10\% level (1988).
-The stronger local alternative produces a clear signal for both norms, although the Frobenius norm is more powerful in this design.
-Its rejection rates are highest before or near 1990 and decline for later candidate boundaries, consistent with the changing composition of the two adjacent 25-year blocks as they move through the transition.
+Rejection rates remain elevated after the transition midpoint but decline towards the end of the candidate range. As the underlying change is gradual and each test compares two adjacent 25-year blocks, the candidate boundary with the highest rejection rate need not coincide with the onset, midpoint, or end of the transition.
 
-Taken together, these results show approximate pointwise null calibration and substantially improved detection under the global and stronger local alternatives.
-The weaker medium-regime change remains challenging despite affecting the same number of sites as the stronger low-regime change.
-The Frobenius norm has higher pointwise power than the infinity norm in the alternatives studied here, suggesting that localisation to eight sites alone does not imply an advantage for the infinity norm.
-Because the plots report pointwise rejection rates at multiple candidate years, they do not establish family-wise error control or a probability of correctly identifying one changepoint year.
+%\begin{figure}[htb]
+%\centering
+%\includegraphics[width=\linewidth]{
+%  plots/sim_changepoint_local_change_pointwise_power.png
+%}
+%\caption{
+%  Pointwise rejection rates under the null and two local-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
+%  Red and blue curves correspond to nominal significance levels of 5\% and 10\%, respectively, with matching horizontal dashed lines. Each point represents the estimated proportion of rejections across 200 simulation experiments, for a particular candidate split point; vertical bars are 95\% Wilson confidence intervals.
+%  The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the null panels.
+%}
+%\label{fig:sim_local}
+%\end{figure}
+
+The local alternatives in Figure~\ref{fig:sim_global} demonstrate that detection power can differ substantially ever when the number of affected sites is fixed. 
+Under the medium-regime, where the correlations at the eight sites increase from $0.30$ to $0.45$, the maximum Frobenius rejection rates are 14.5\% at the 5\% significance level (1992) and 22.0\% at the 10\% level (1991 and 1994).
+The corresponding infinity norm maxima are 12.0\% (1994) and 19.0\% (1993). Both norms therefore have limited power to detect the changepoint in this alternative scenario, where the effective change is small.
+%This moderate change is therefore difficult to detect reliably with either norm.
+On the contrary, under the low-regime, where the correlations increased increase from $0.15$ to $0.45$, the Frobenius rejection rates reach 56.5\% and 71.0\% at the 5\% and 10\% levels, respectively, both in 1989.
+The corresponding infinity norm maxima are 27.0\% (1987) and 41.0\% (1988). Both norms thus attain substantially greater power under this alternative scenario, with the Frobenius norm again outperforming the infinity norm.
+%The stronger local alternative produces a clear signal for both norms, although the Frobenius norm is more powerful in this design.
+This improvement cannot be attributed solely to the larger correlation change, because the baseline dependence also differs between the two local alternative scenarios. Rejection rates are highest before or near 1990 and decline at later candidate boundaries, consistent with the changing composition of the adjacent 25-year blocks as they move through the transition.
+
+Overall, these results indicate approximate pointwise null calibration and good detection power under realistic global and local alternative scenarios.
+The weaker local alternative remains a challenging scenario despite affecting the same number of sites as the stronger alternative.
+The Frobenius norm attains higher pointwise power than the infinity norm in the considered scenarios, indicating that restricting changes in dependence to only eight sites does not itself confer an advantage for the infinity norm. These pointwise results establish neither family-wise error control across candidate years nor the accuracy of changepoint localisation.
+%Because the plots report pointwise rejection rates at multiple candidate years, they do not establish family-wise error control or a probability of correctly identifying one changepoint year.
 
 %%% Prevous Draft %%%
 % \section{Simulation Study}
@@ -903,7 +883,7 @@ The time series of maximum weekly temperature and drought index exhibit seasonal
 \begin{figure}
 \centering
 % \includegraphics[width=0.75\linewidth]{plots/screen_dqu_0.8.png}
-\includegraphics[width=0.75\linewidth]{plots/screen_dqu_0.8.png}
+\includegraphics[width=0.9\linewidth]{plots/screen_dqu_0.8.png}
 \caption{
 Test statistics based on the Frobenius (left) and infinity (right) norm for each candidate season-year based on 25-year time blocks. 
 Local maximum are highlighted by the crosses. %, and test statistics have been transformed to a common scale. \textcolor{red}{Check that standardising to common scale is correct}
@@ -932,7 +912,7 @@ These minimum pointwise $p$-values are not adjusted for the search across candid
 \begin{figure}
 \centering
 % \includegraphics[width=0.9\linewidth]{plots/change.png}
-\includegraphics[width=0.9\linewidth]{plots/change_dqu_0.8.png}
+\includegraphics[width=\linewidth]{plots/change_dqu_0.8.png}
 \caption{
 Empirical p-values for the different candidate years $\tau$ for the test statistics based on the Frobenius (red) and infinity (blue) norm. Estimates are based on 25 season-years per temporal block and $B=200$ permutations. The horizontal dashed lines corresponds to the pointwise 5\% (grey) and 10\% (green) significance levels, respectively.}
 \label{fig:app_cp}
@@ -1198,7 +1178,8 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
+% NOTE: Making this plot any bigger pushes it to the bottom of the document
+\includegraphics[width=0.7\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
 \caption{
 Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrices. 
 % Spring and autumn are fitted using their complete time series. 
@@ -1332,10 +1313,68 @@ Background shading represents elevation.
 
 \section{Discussion}\label{sec5}
 
+We have developed a framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. By combining conditional extremes models with divergence-based comparisons of joint tails, the approach provides a basis for testing for changes in the spatial patterns of extremal dependence exhibited by data observed at multiple sampling locations. Our simulation study indicated approximate pointwise null calibration and appreciable detection power under three realistic data generation scenarios, with the Frobenius norm outperforming the infinity norm in the considered scenarios. The weaker local alternative scenario remains difficult to detect, highlighting the importance of change magnitude and baseline dependence across the number of affected locations.
+
+Our application to temperature and drought indices observed at Spanish measuring stations suggests season-specific changes, with the strongest pointwise evidence in summer and winter. Subsequent extremal clustering of the sites, before and after the estimated changepoints, reveals regional reorganisation and generally weaker differentiation between the estimated dependence structures in the later periods. This increased similarity across stations does not itself imply stronger extremal dependence between Spanish temperatures and drought, but instead suggests a homogenisation of the climate over recent years. As our pointwise tests do not correct for multiple testing across candidate years, the estimated boundaries should be interpreted as divisions between periods with differing extremal dependence structures rather than precise dates of abrupt change.
+
+\textcolor{red}{Possible discussion points} \\
+Simulations:
+\begin{itemize}
+\item Aggregating the fitted CE models into one dissimilarity matrix provides a common basis for comparing sites, but can obscure which conditioning direction or part of the dependence structure drives a detected change.
+Examining these components separately could help interpret the results.
+\item In the simulation study, dependence changes gradually from 1980 to 2000.
+A selected changepoint year is therefore best understood as a useful division between two fitting periods, rather than the precise date of a physical change.
+\item The stronger change at eight sites is much easier to detect than the weaker change at eight sites.
+Detection depends on the magnitude and baseline level of dependence as well as the number of affected sites.
+\item The Frobenius norm has greater pointwise power than the infinity norm even under the stronger local alternative considered here.
+Further simulations with different spatial patterns of change would help identify settings in which the infinity norm may perform better.
+\item Longer comparison blocks provide more observations for fitting but leave fewer candidate years and may combine observations from different stages of a gradual transition.
+The choice of 25 years per block reflects this trade-off and should not be regarded as universally optimal.
+\item The reported permutation $p$-values assess individual candidate boundaries.
+Selecting the smallest $p$-value across years raises a separate question about uncertainty and multiple testing.
+\item Simulated observations are independent across sites conditional on their dependence parameters, whereas observations at real stations may exhibit spatial dependence.
+Further simulations could assess how cross-site dependence affects calibration and power.
+\item The principle assumption of the CE model is that the residuals are initially assumed to be multivariate Gaussian when fitting. 
+\item It may be worth performing a sensitivity analysis on whether departures from that assumption significant affect our dissimilarity and changepoint detection scheme.
+\item The current simulations do not establish the size or direction of any resulting effect on the dissimilarities.
+\end{itemize}
+
+Application:
+\begin{itemize}
+\item \textcolor{red}{discuss results} Taken together, the screening, elbow plots, changepoint tests and changes in spatial clustering suggest temporal differences in the fitted extremal temperature--DPI dependence structure.
+The evidence is clearest for summer and winter, while the autumn result warrants a more cautious interpretation.
+\item The differing cluster reorganisations suggest that these temporal differences are season-specific, rather than manifestations of one common spatial shift across Spain.
+They also show that changes in extremal dependence need not have the same geographical pattern as changes in marginal temperature or drought severity.
+\item These findings may motivate further investigation of compound extremes in regions concerned about increasing aridity or desertification.
+The present analysis does not measure land degradation, establish an increase in drought frequency or severity, or identify a physical cause for the dependence changes.
+\item \textcolor{red}{Discuss methodology for application} Using the same theoretical $0.8$ standard-Laplace quantile as the fitting threshold gives exceedances a common interpretation across sites, seasons and temporal blocks.
+However, a fixed threshold can leave some site--block combinations with too few exceedances for a reliable conditional extremes fit.
+Our requirement of at least 15 exceedances therefore limits the candidate comparisons and block lengths that can be analysed.
+A sensitivity analysis over nearby thresholds would help assess whether the application findings depend on this choice.
+\item As in the simulation study, combining the two conditioning directions into one dissimilarity matrix provides a single basis for testing and clustering.
+It can also conceal whether a particular change is driven primarily by extreme temperature conditional on drought, or by extreme drought conditional on temperature.
+Examining the two components separately could clarify the interpretation of the detected changes.
+\item A smaller dissimilarity between stations means that their fitted extremal dependence structures are more alike.
+It does not establish that temperature--DPI dependence has strengthened at either station.
+Station-level changes in fitted model parameters or tail-dependence summaries would be needed to assess that direction.
+\item The candidate changepoints identify divisions between adjacent fitting blocks.
+Because each block covers 25 season-years, a significant candidate year should not be interpreted as the precise date of an abrupt physical change.
+
+\item The reported permutation $p$-values are pointwise across candidate years.
+Testing multiple candidate years increases the chance of at least one small $p$-value under the null.
+A Bonferroni correction could control this family-wise error rate, although it would be conservative because neighbouring comparisons use strongly overlapping blocks.
+With 16 candidate years and 200 permutations, the smallest attainable permutation $p$-value under the usual plus-one calculation exceeds the Bonferroni threshold at the 5\% level.
+Assessing significance across the candidate grid would therefore require more permutations or a permutation test based on the maximum statistic over candidate years.
+\item The analysis removes estimated trends in monthly temperature means before transforming the margins.
+Changes in other features of the marginal distributions, or residual temporal dependence, could still affect the fitted dependence structures and the permutation analysis.
+\item The distinct winter, summer and autumn results suggest that changes in compound temperature--DPI extremes need not follow one national spatial pattern.
+The observed associations with geography and coastal distance may help generate physical explanations, but the clustering alone does not establish their causes.
+\end{itemize}
+
 %\backmatter
 
 \section*{Acknowledgments}
-We acknowledge the data providers in the ECA\&D project \citep{Klein2002}. Data and metadata available at \url{https://www.ecad.eu}.
+We acknowledge the data providers in the ECA\&D project \citep{Klein2002}. Data and metadata available at \url{https://www.ecad.eu}. This work has made use of the resources provided by the Edinburgh Compute and Data Facility (ECDF). 
 
 \subsection*{Author contributions}
 
@@ -1363,9 +1402,9 @@ The following supporting information is available as part of the online article:
 % {The SST anomalies for GC2C calculated against the observations (OIsst).}
 
 
-\appendix
+%\appendix
 
-\section{Section title of first appendix\label{app1}}
+%\section{Section title of first appendix\label{app1}}
 
 % \nocite{*}% Show all bib entries - both cited and uncited; comment this line to view only cited bib entries;
 \bibliography{wileyNJD-APA}%
