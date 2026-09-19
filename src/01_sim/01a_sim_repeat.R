@@ -100,6 +100,116 @@ add_wilson_interval <- \(data, rate, n) {
     )
 }
 
+
+#### Setup ####
+
+# create visual representation of setup
+scenarios <- c(
+  "No change",
+  "Global change",
+  "Local: medium regime",
+  "Local: low regime"
+)
+
+trajectories <- crossing(
+  scenario = factor(scenarios, levels = scenarios),
+  regime = factor(
+    c("Low", "Medium", "High"),
+    levels = c("Low", "Medium", "High")
+  ),
+  season_year = 1960:2024
+) |>
+  mutate(
+    rho_initial = case_when(
+      regime == "Low" ~ 0.15,
+      regime == "Medium" ~ 0.30,
+      regime == "High" ~ 0.45
+    ),
+    rho_target = case_when(
+      scenario == "Global change" & regime == "Low" ~ 0.20,
+      scenario == "Global change" & regime == "Medium" ~ 0.55,
+      scenario == "Global change" & regime == "High" ~ 0.60,
+      scenario == "Local: medium regime" &
+        regime == "Medium" ~ 0.45,
+      scenario == "Local: low regime" &
+        regime == "Low" ~ 0.45,
+      TRUE ~ rho_initial
+    ),
+    progress = pmin(1, pmax(0, (season_year - 1980) / 20)),
+    rho = rho_initial + progress * (rho_target - rho_initial),
+    trajectory = "Affected or unchanged regime"
+  )
+
+# Add the six medium-regime sites that remain at rho = 0.30.
+unchanged_medium <- trajectories |>
+  filter(
+    scenario == "Local: medium regime",
+    regime == "Medium"
+  ) |>
+  mutate(
+    rho = rho_initial,
+    trajectory = "Unaffected medium sites"
+  )
+
+trajectories <- bind_rows(trajectories, unchanged_medium)
+
+p_trajectories <- ggplot(
+  trajectories,
+  aes(
+    x = season_year,
+    y = rho,
+    colour = regime,
+    linetype = trajectory,
+    group = interaction(regime, trajectory)
+  )
+) +
+  annotate(
+    "rect",
+    xmin = 1980, xmax = 2000,
+    ymin = -Inf, ymax = Inf,
+    fill = "grey80", alpha = 0.25
+  ) +
+  geom_line(linewidth = 0.9) +
+  facet_wrap(~scenario, ncol = 2) +
+  scale_linetype_manual(
+    values = c(
+      "Affected or unchanged regime" = "solid",
+      "Unaffected medium sites" = "dotted"
+    ),
+    guide = "none"
+  ) +
+  scale_x_continuous(
+    # breaks = c(1960, 1980, 1990, 2000, 2024)
+    limits = c(1960, 2024),
+    # breaks = c(seq(1960, 2020, by = 10), 2024)
+    breaks = seq(1960, 2020, by = 10)
+  ) +
+  coord_cartesian(ylim = c(0.10, 0.65)) +
+  labs(
+    x = "Season-year",
+    # y = expression(paste("t copula correlation ", rho[s,t])),
+    y = expression(rho[s, t]),
+    colour = "Baseline regime"
+  ) +
+  cecl_theme(legend.position = "right") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  guides(
+    colour = guide_legend(
+      override.aes = list(linewidth = 2)
+    )
+  )
+
+p_trajectories
+
+ggsave(
+  "latex/plots/sim_correlation_trajectories.png",
+  p_trajectories,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+
 #### Screening ####
 
 # # load data
@@ -279,6 +389,7 @@ ggplot(
     y = "Screening rejection rate",
     colour = "Scenario"
   ) +
+  # cecl_theme(legend.position = "right")
   cecl_theme()
 
 null_reference <- screen_res_long |>
@@ -324,7 +435,22 @@ screen_profile <- screen_standardised |>
 
 p_screen <- screen_profile |>
   filter(norm != "Maximum") |>
-  mutate(ind = paste(norm, " - ", scenario)) |>
+  mutate(ind = paste0(norm, " - ", scenario)) |>
+  mutate(
+    ind = factor(
+      ind,
+      levels = tidyr::expand_grid(
+        norm = c("Frobenius", "Infinity"),
+        scenario = c(
+          "Global change",
+          "Local change: medium-regime",
+          "Local change: low-regime"
+        )
+      ) |>
+        mutate(ind = paste0(norm, " - ", scenario)) |>
+        pull(ind)
+    )
+) |>
   ggplot(
     aes(
       x = change_after_year,
@@ -361,15 +487,16 @@ p_screen <- screen_profile |>
   # ) +
   facet_wrap(
     # vars(norm, scenario),
-    ~ ind,
+    ~ind,
     ncol = 3,
     scales = "free_y"
   ) +
   labs(
     x    = "Candidate season-year",
     y    = "Null-standardised screening statistic",
-    fill = "years per block"
+    fill = "Years per block"
   ) +
+  # cecl_theme(legend.position = "right") +
   cecl_theme() +
   scale_x_continuous(limits = c(1970, 2010)) +
   guides(
@@ -386,7 +513,7 @@ ggsave(
   "latex/plots/sim_screening_plot.png",
   plot = p_screen,
   # width = 10,
-  width = 13,
+  width = 13.5,
   height = 8
 )
 
@@ -748,6 +875,10 @@ pointwise_error_1_plt <- pointwise_error_1_df |>
     n = n_valid
   )
 
+sink("type_1_error.txt")
+print(pointwise_error_1_plt, n = Inf)
+sink()
+
 p_cp1 <- pointwise_error_1_plt |>
   filter(norm != "Spectral") |>
   ggplot(
@@ -804,6 +935,7 @@ p_cp1 <- pointwise_error_1_plt |>
     y = "Pointwise Type I error",
     colour = "P-value threshold"
   ) +
+  # cecl_theme(legend.position = "right") +
   cecl_theme() +
   scale_x_date(date_labels = "%Y", date_breaks = "1 years") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -902,6 +1034,7 @@ p_cp2 <- global_error_1_plt |>
     y = "Null simulations with at least one rejection",
     fill = "Norm"
   ) +
+  # cecl_theme(legend.position = "right") +
   cecl_theme() +
   theme(
     legend.position = "none"
@@ -1048,6 +1181,11 @@ pointwise_power_plt |>
     rejection_rate
   )
 
+sink("type_2_error.txt")
+print(pointwise_power_plt, n = Inf)
+sink()
+
+
 p_global_power <- pointwise_power_plt |>
   filter(
     norm != "Spectral",
@@ -1111,7 +1249,7 @@ p_global_power <- pointwise_power_plt |>
   #   rows = vars(norm),
   #   cols = vars(scenario)
   # ) +
-  facet_wrap(~ ind, scales = "fixed") +
+  facet_wrap(~ind, scales = "fixed") +
   scale_x_date(
     limits = as.Date(c("1980-01-01", "2000-01-01")),
     date_labels = "%Y",
@@ -1131,9 +1269,9 @@ p_global_power <- pointwise_power_plt |>
     y = "Pointwise rejection rate",
     colour = "P-value threshold"
   ) +
-  cecl_theme() +
+  cecl_theme(legend.position = "right") +
+  # cecl_theme() +
   theme(
-    legend.position = "bottom",
     axis.text.x = element_text(
       angle = 45,
       hjust = 1
@@ -1357,6 +1495,10 @@ local_pointwise_power_df <- changepoint_df_local_all |>
     n = n_valid
   )
 
+sink("type_1_error.txt")
+print(local_pointwise_power_df, n = Inf)
+sink()
+
 p_local_power <- local_pointwise_power_df |>
   filter(
     # norm != "Sectral"
@@ -1438,7 +1580,7 @@ p_local_power <- local_pointwise_power_df |>
   # facet_wrap(
   #   norm ~ scenario, scales = "free"
   # ) +
-  facet_wrap(~ ind, scales = "fixed") +
+  facet_wrap(~ind, scales = "fixed") +
   scale_x_date(
     limits = as.Date(c("1980-01-01", "2000-01-01")),
     date_labels = "%Y",
@@ -1458,9 +1600,9 @@ p_local_power <- local_pointwise_power_df |>
     y = "Pointwise rejection rate",
     colour = "P-value threshold"
   ) +
+  # cecl_theme(legend.position = "right") +
   cecl_theme() +
   theme(
-    legend.position = "bottom",
     axis.text.x = element_text(
       angle = 45,
       hjust = 1
@@ -1479,5 +1621,136 @@ ggsave(
   plot = p_local_power,
   # width = 10,
   width = 13,
+  height = 8
+)
+
+#### Combine type I and type II ####
+
+combined_df <- bind_rows(
+  filter(pointwise_power_plt, scenario != "No change"),
+  local_pointwise_power_df
+)
+
+p_combined <- combined_df |>
+  filter(
+    # norm != "Sectral"
+    norm != "Maximum"
+  ) |>
+  # TODO Make ind a factor!
+  mutate(
+    ind = paste(norm, "-", scenario),
+    ind = factor(
+      ind,
+      levels = crossing(
+        "norm" = c("Frobenius", "Infinity"),
+        # "scenario" = c("No change", "Local change: medium-regime", "Local change: low-regime")
+        "scenario" = c("No change", "Local change: medium-regime", "Local change: low-regime", "Global change")
+      ) |>
+        arrange(norm, desc(scenario)) |>
+        mutate(ind = paste0(norm, " - ", scenario)) |>
+        pull(ind)
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = change_after_year,
+      y = rejection_rate,
+      colour = threshold,
+      group = threshold
+    )
+  ) +
+  geom_hline(
+    data = local_pointwise_power_df |>
+      distinct(
+        threshold,
+        nominal_alpha
+      ),
+    aes(
+      yintercept = nominal_alpha,
+      colour = threshold
+    ),
+    linetype = "dashed",
+    linewidth = 0.7,
+    inherit.aes = FALSE,
+    show.legend = FALSE
+  ) +
+  geom_vline(
+    xintercept = as.Date(
+      paste0(cp_year, "-01-01")
+    ),
+    linetype = "dotted",
+    colour = "grey30",
+    linewidth = 0.7
+  ) +
+  geom_errorbar(
+    aes(
+      ymin = ci_lower,
+      ymax = ci_upper
+    ),
+    # Width is measured in days because x is a Date
+    width = 60,
+    alpha = 0.45,
+    position = position_dodge(
+      width = 50
+    ),
+    show.legend = FALSE
+  ) +
+  geom_line(
+    linewidth = 0.65,
+    alpha = 0.8,
+    show.legend = FALSE
+  ) +
+  geom_point(
+    size = 2,
+    position = position_dodge(
+      width = 50
+    )
+  ) +
+  # facet_grid(
+  #   rows = vars(norm),
+  #   cols = vars(scenario)
+  # ) +
+  # facet_wrap(
+  #   norm ~ scenario, scales = "free"
+  # ) +
+  facet_wrap(~ind, scales = "fixed", nrow = 2) +
+  scale_x_date(
+    limits = as.Date(c("1980-01-01", "2000-01-01")),
+    date_labels = "%Y",
+    date_breaks = "2 years"
+  ) +
+  scale_y_continuous(
+    labels = scales::label_percent(
+      accuracy = 1
+    ),
+    limits = c(0, NA),
+    expand = expansion(
+      mult = c(0, 0.08)
+    )
+  ) +
+  labs(
+    x = "Season year",
+    y = "Pointwise rejection rate",
+    colour = "P-value threshold"
+  ) +
+  # cecl_theme(legend.position = "right") +
+  cecl_theme() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    ),
+    legend.text  = element_text(size = 16),
+    legend.title = element_text(size = 16)
+  ) +
+  guides(colour = guide_legend(
+    override.aes = list(size = 4.5)
+  ))
+
+ggsave(
+  "latex/plots/sim_changepoint_combined_change_pointwise_power.png",
+  # "test.png",
+  plot = p_combined,
+  width = 17,
   height = 8
 )

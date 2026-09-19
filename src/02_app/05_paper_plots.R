@@ -870,9 +870,56 @@ top_local_peaks_all <- candidate_peaks_all |>
 #     ) +
 #     guides(colour = guide_legend(override.aes = list(size = 6)))
 # }
+plot_all_norms <- function(df, spec_year = NULL) {
+  if (!is.null(spec_year)) {
+    df <- df |>
+      filter(n_years_per_block == spec_year)
+  }
 
+  df |>
+    filter(norm %in% c("Frobenius", "Infinity")) |>
+    ggplot(
+      aes(
+        x = change_after_year,
+        y = value,
+        colour = season
+      )
+    ) +
+    geom_line(
+      data = \(x) filter(x, success),
+      aes(
+        group = interaction(
+          season, n_years_per_block, norm, success_run
+        )
+      ),
+      show.legend = FALSE
+    ) +
+    geom_point(data = \(x) filter(x, success)) +
+    geom_point(
+      data = \(x) filter(x, local_peak),
+      colour = "black",
+      shape = 4,
+      size = 5
+    ) +
+    facet_wrap(~norm, scales = "free_y", nrow = 2) +
+    scale_x_continuous(breaks = year_breaks) +
+    scale_colour_brewer(palette = "Dark2") +
+    labs(
+      x = "Season year",
+      y = "Screening statistic",
+      colour = "Season"
+    ) +
+    cecl_theme() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "right"
+    ) +
+    guides(colour = guide_legend(override.aes = list(size = 6)))
+}
 
-(p_all_norms_25 <- plot_all_norms(screen_res_long, spec_year = 25))
+p_all_norms_25 <- plot_all_norms(screen_res_long, spec_year = 25)
+
+p_all_norms_25
 
 # ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
 # ggsave("latex/plots/screen.png", p_all_norms_25, width = 12, height = 8)
@@ -1233,7 +1280,7 @@ twgss_plot <- twgss_vals |>
   geom_point() +
   geom_line() +
   scale_x_continuous(breaks = unique(twgss_vals$k)) +
-  facet_wrap(~ind, scale = "free_y") +
+  facet_wrap(~ind, scale = "free_y", nrow = 2) +
   labs(y = "TWD") +
   cecl_theme()
 
@@ -1495,7 +1542,7 @@ twgss_plot_autumn <- twgss_vals_autumn |>
   geom_point() +
   geom_line() +
   scale_x_continuous(breaks = unique(twgss_vals$k)) +
-  facet_wrap(~ind, scale = "free_y") +
+  facet_wrap(~ind, scale = "free_y", nrow = 2) +
   labs(y = "TWD") +
   cecl_theme()
 
@@ -1527,7 +1574,8 @@ twgss_plot_all <- twgss_vals |>
   geom_point() +
   geom_line() +
   scale_x_continuous(breaks = unique(twgss_vals$k)) +
-  facet_wrap(~ind, scale = "free_y", ncol = 2) +
+  # facet_wrap(~ind, scale = "free_y", ncol = 2) +
+  facet_wrap(~ind, scale = "free_y", nrow = 2) +
   labs(y = "TWD") +
   cecl_theme()
 twgss_plot_all
