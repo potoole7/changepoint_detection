@@ -562,7 +562,7 @@ Figure~\ref{fig:sim_rho} displays the dependence trajectories for each scenario,
 \includegraphics[width=0.95\linewidth]{plots/sim_correlation_trajectories.png}
 \caption{
   True correlation trajectories for the null, global, and two local scenarios used in the simulation study.
-  The shaded interval demarcates the period 1980--2000, where the linear increase in correlation takes place. The red, blue, and yellow lines correspond to correlation trajectories for locations in the low-, medium-, and high-correlation regimes. The blue dotted line represents the six medium-correlation regime sites that remain unchanged in the two local scenarios. \textcolor{red}{Fix y-axis label, and remove 2024 label from x-axis}}
+  The shaded interval demarcates the period 1980--2000, where the linear increase in correlation takes place. The red, blue, and yellow lines correspond to correlation trajectories for locations in the low-, medium-, and high-correlation regimes. The blue dotted line represents the six medium-correlation regime sites that remain unchanged in the two local scenarios.}
 \label{fig:sim_rho}
 \end{figure}
 
@@ -607,21 +607,36 @@ Blocks of 20 or 25 years offer a practical compromise between stability and temp
 For each candidate year and nominal significance level ($0.05$ or $0.10$), we estimate the pointwise rejection probability as the proportion of the 200 simulation replicates whose permutation $p$-values fall below that level. Under the null scenario, this estimates pointwise Type~I error rate; under an alternative scenario, it estimates pointwise power. Figure~\ref{fig:sim_global} presents the pointwise rejection rate for all scenarios. The vertical intervals are 95\% Wilson confidence intervals quantifying Monte Carlo uncertainty in these estimated probabilities.
 Note that dotted reference lines mark 1990, which is the midpoint of the simulated 1980--2000 transition, rather than its onset or a uniquely defined true changepoint.
 
-\begin{figure}[htb]
+% \begin{figure}[htb]
+% \centering
+% \includegraphics[width=0.5\linewidth]{
+%   plots/sim_changepoint_global_change_pointwise_power.png
+% }
+% \includegraphics[width=0.5\linewidth]{
+%   plots/sim_changepoint_local_change_pointwise_power.png
+% }
+% \caption{
+%  \textcolor{red}{Combine with Figure 6. If too large, rotate.} Pointwise rejection rates under the null, local-change, and global-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
+%   Red and blue curves correspond to nominal significance levels of 5\% and 10\%, respectively, with matching horizontal dashed lines. Each point represents the estimated proportion of rejections across 200 simulation experiments, for a particular candidate split point; vertical bars are 95\% Wilson confidence intervals.
+%   The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the null panels. 
+% }
+% \label{fig:sim_global}
+% \end{figure}
+
+\begin{figure}[t!]
 \centering
-\includegraphics[width=0.5\linewidth]{
-  plots/sim_changepoint_global_change_pointwise_power.png
-}
-\includegraphics[width=0.5\linewidth]{
-  plots/sim_changepoint_local_change_pointwise_power.png
-}
+\includegraphics[width=\linewidth]{latex/plots/sim_changepoint_combined_change_pointwise_power.png}
 \caption{
- \textcolor{red}{Combine with Figure 6. If too large, rotate.} Pointwise rejection rates under the null, local-change, and global-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
+  Pointwise rejection rates under the null, local-change, and global-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
   Red and blue curves correspond to nominal significance levels of 5\% and 10\%, respectively, with matching horizontal dashed lines. Each point represents the estimated proportion of rejections across 200 simulation experiments, for a particular candidate split point; vertical bars are 95\% Wilson confidence intervals.
   The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the null panels. 
 }
 \label{fig:sim_global}
 \end{figure}
+
+
+Figure~\ref{fig:sim_screening} presents the screening statistics for the four block lengths under the three alternative dependence scenarios. For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its null reference distribution. These null-standardised values are descriptive summaries rather than permutation $p$-values: positive and negative values indicate statistics above and below the corresponding null mean, respectively, rather than the direction of change in extremal dependence.
+
 
 Figure~\ref{fig:sim_global} shows that  rejection rates under the null fluctuate around the nominal significance levels for both norms, with no clear evidence of systematic pointwise miscalibration. 
 Although some candidate years have rejection rates that exceed the nominal levels, these deviations should be interpreted in light of Monte Carlo uncertainty from the 200 experiments.
