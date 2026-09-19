@@ -604,7 +604,7 @@ Longer blocks produce less variable curves but restrict the range of feasible ca
 Blocks of 20 or 25 years offer a practical compromise between stability and temporal coverage. However, these descriptive patterns alone establish neither an optimal block length nor detection power, which we assess using the pointwise permutation tests below.
 %a distinct feature near the midpoint and enough candidate years to examine its timing, while the plot alone does not establish an optimal block length or how frequently individual replicates identify a peak.
 
-For each candidate year and nominal significance level ($0.05$ or $0.10$), we estimate the pointwise rejection probability as the proportion of the 200 simulation replicates whose permutation $p$-values fall below that level. Under the null scenario, this estimates pointwise Type~I error rate; under an alternative scenario, it estimates pointwise power. Figure~\ref{fig:sim_global} presents the pointwise rejection rate for all scenarios. The vertical intervals are 95\% Wilson confidence intervals quantifying Monte Carlo uncertainty in these estimated probabilities.
+For each candidate year and nominal significance level ($0.05$ or $0.10$), we estimate the pointwise rejection probability as the proportion of the 200 simulation replicates whose permutation $p$-values fall below that level. Under the null scenario, this estimates pointwise Type~I error rate; under an alternative scenario, it estimates pointwise power. Figure~\ref{fig:sim_global_local} presents the pointwise rejection rate for all scenarios. The vertical intervals are 95\% Wilson confidence intervals quantifying Monte Carlo uncertainty in these estimated probabilities.
 Note that dotted reference lines mark 1990, which is the midpoint of the simulated 1980--2000 transition, rather than its onset or a uniquely defined true changepoint.
 
 % \begin{figure}[htb]
@@ -620,7 +620,7 @@ Note that dotted reference lines mark 1990, which is the midpoint of the simulat
 %   Red and blue curves correspond to nominal significance levels of 5\% and 10\%, respectively, with matching horizontal dashed lines. Each point represents the estimated proportion of rejections across 200 simulation experiments, for a particular candidate split point; vertical bars are 95\% Wilson confidence intervals.
 %   The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the null panels. 
 % }
-% \label{fig:sim_global}
+% \label{fig:sim_global_local}
 % \end{figure}
 
 \begin{figure}[t!]
@@ -631,14 +631,14 @@ Note that dotted reference lines mark 1990, which is the midpoint of the simulat
   Red and blue curves correspond to nominal significance levels of 5\% and 10\%, respectively, with matching horizontal dashed lines. Each point represents the estimated proportion of rejections across 200 simulation experiments, for a particular candidate split point; vertical bars are 95\% Wilson confidence intervals.
   The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the null panels. 
 }
-\label{fig:sim_global}
+\label{fig:sim_global_local}
 \end{figure}
 
 
 Figure~\ref{fig:sim_screening} presents the screening statistics for the four block lengths under the three alternative dependence scenarios. For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its null reference distribution. These null-standardised values are descriptive summaries rather than permutation $p$-values: positive and negative values indicate statistics above and below the corresponding null mean, respectively, rather than the direction of change in extremal dependence.
 
 
-Figure~\ref{fig:sim_global} shows that  rejection rates under the null fluctuate around the nominal significance levels for both norms, with no clear evidence of systematic pointwise miscalibration. 
+Figure~\ref{fig:sim_global_local} shows that  rejection rates under the null fluctuate around the nominal significance levels for both norms, with no clear evidence of systematic pointwise miscalibration. 
 Although some candidate years have rejection rates that exceed the nominal levels, these deviations should be interpreted in light of Monte Carlo uncertainty from the 200 experiments.
 
 Under the global alternative, rejection rates exceed the nominal levels, with the Frobenius norm attaining substantially greater pointwise power than the infinity norm. Across candidate years 1988--1992, Frobenius rejection rates range from 52.0\% to 56.5\% at the 5\% significance level and from 66.5\% to 69.5\% at the 10\% level. The corresponding ranges for the infinity norm are 15.5--19.5\% and 27.5--32.5\%, respectively. This contrast is consistent with widespread changes contributing differences across many entries of the pairwise dissimilarity matrix, which the Frobenius norm aggregates.
@@ -658,7 +658,7 @@ Rejection rates remain elevated after the transition midpoint but decline toward
 %\label{fig:sim_local}
 %\end{figure}
 
-The local alternatives in Figure~\ref{fig:sim_global} demonstrate that detection power can differ substantially ever when the number of affected sites is fixed. 
+The local alternatives in Figure~\ref{fig:sim_global_local} demonstrate that detection power can differ substantially ever when the number of affected sites is fixed. 
 Under the medium-regime, where the correlations at the eight sites increase from $0.30$ to $0.45$, the maximum Frobenius rejection rates are 14.5\% at the 5\% significance level (1992) and 22.0\% at the 10\% level (1991 and 1994).
 The corresponding infinity norm maxima are 12.0\% (1994) and 19.0\% (1993). Both norms therefore have limited power to detect the changepoint in this alternative scenario, where the effective change is small.
 %This moderate change is therefore difficult to detect reliably with either norm.
@@ -785,12 +785,12 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 %   The vertical dotted line marks the onset of the gradual change in 1990; in the null panels, it is included only as a reference.
 %   Points show the proportion of the 200 simulation replicates rejected at each candidate split point, and vertical bars give 95\% Wilson confidence intervals.
 % }
-% \label{fig:sim_global}
+% \label{fig:sim_global_local}
 % \end{figure}
 %
 % % Describe null scenario
 % \begin{itemize}
-%   \item Figure~\ref{fig:sim_global} compares the pointwise Type~I error rates under the null scenario with the pointwise power under the global-change scenario.
+%   \item Figure~\ref{fig:sim_global_local} compares the pointwise Type~I error rates under the null scenario with the pointwise power under the global-change scenario.
 %   \item Under the null scenario, the rejection rates generally remain close to their nominal levels. 
 %   \item For the Frobenius norm, the rejection rates range approximately from 2\% to 8\% at the 5\% level and from 7\% to 13\% at the 10\% level. 
 %   \item For the infinity norm, the corresponding ranges are approximately 1\%--9\% and 8\%--14\%.
