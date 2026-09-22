@@ -605,9 +605,9 @@ Hence, the reported rejection rates describe pointwise performance, rather than 
 \label{fig:sim_screening}
 \end{figure}
 
-Figure~\ref{fig:sim_screening} presents the screening statistics for the four block lengths under the three alternative dependence scenarios. For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its null reference distribution. These null-standardised values are descriptive summaries rather than permutation $p$-values: positive and negative values indicate statistics above and below the corresponding null mean, respectively, rather than the direction of change in extremal dependence.
-
-The global scenario produces the most pronounced positive departures from the null mean under both norms, whereas the local alternatives yield weaker and qualitatively different patterns. For the global scenario, the mean curves based on 20--30-year blocks exhibit a local maximum near the transition midpoint in 1990. This feature is less distinct under the medium-regime local alternative, particularly with 15-year blocks. Under the low-regime local alternative, the curves instead decline through the transition, reaching a trough around 2000 where the candidate range extends sufficiently far. This downward departure does not directly support detection by the upper-tail permutation test, which rejects for large values of the discrepancy statistic.
+% Figure~\ref{fig:sim_screening} presents the screening statistics for the four block lengths under the three alternative dependence scenarios. For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its null reference distribution. These null-standardised values are descriptive summaries rather than permutation $p$-values: positive and negative values indicate statistics above and below the corresponding null mean, respectively, rather than the direction of change in extremal dependence.
+% 
+% The global scenario produces the most pronounced positive departures from the null mean under both norms, whereas the local alternatives yield weaker and qualitatively different patterns. For the global scenario, the mean curves based on 20--30-year blocks exhibit a local maximum near the transition midpoint in 1990. This feature is less distinct under the medium-regime local alternative, particularly with 15-year blocks. Under the low-regime local alternative, the curves instead decline through the transition, reaching a trough around 2000 where the candidate range extends sufficiently far. This downward departure does not directly support detection by the upper-tail permutation test, which rejects for large values of the discrepancy statistic.
 %In the global scenario, the mean curves for 20--30-year blocks have a visible local maximum around the 1990 transition midpoint; the corresponding feature is much weaker under the medium-regime local scenario.
 %The 15-year curves have flatter features near 1990, particularly for the medium-regime change.
 %The low-regime local curves instead decline through the transition and reach a trough around 2000 for block lengths whose candidate ranges extend that far.
@@ -616,6 +616,31 @@ The shaded bands are generally wider for shorter blocks.
 Longer blocks produce less variable curves but restrict the range of feasible candidate boundaries; in particular, the 30-year blocks exclude the later trough observed under the low-regime local alternative.
 Blocks of 20 or 25 years offer a practical compromise between stability and temporal coverage. However, these descriptive patterns alone establish neither an optimal block length nor detection power, which we assess using the pointwise permutation tests below.
 %a distinct feature near the midpoint and enough candidate years to examine its timing, while the plot alone does not establish an optimal block length or how frequently individual replicates identify a peak.
+
+% Figure~\ref{fig:sim_screening} presents the screening statistics for the four block lengths under the three alternative dependence scenarios.
+\textcolor{red}{Figure~\ref{fig:sim_screening} presents the test statistics for the four block lengths under the three alternative dependence scenarios.}
+% For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its null reference distribution.
+\textcolor{red}{The values shown are the mean test statistics across the 200 simulation experiments, without centring or scaling relative to a null reference distribution.}
+% These null-standardised values are descriptive summaries rather than permutation $p$-values: positive and negative values indicate statistics above and below the corresponding null mean, respectively, rather than the direction of change in extremal dependence.
+\textcolor{red}{These values are descriptive summaries rather than permutation $p$-values, and larger values indicate greater discrepancies between the estimated dissimilarity matrices in the two adjacent blocks.}
+
+The global scenario produces the most pronounced test statistics under both norms, whereas the local alternatives yield weaker and qualitatively different patterns.
+For the global scenario, the mean curves based on 20--30-year blocks exhibit a local maximum near the transition midpoint in 1990.
+% This feature is less distinct under the medium-regime local alternative, particularly with 15-year blocks.
+\textcolor{red}{Under the medium-regime local alternative, the Frobenius profiles are comparatively flat, whereas the Infinity-norm profiles exhibit more visible local peaks around the transition midpoint, particularly for the longer block lengths.}
+\textcolor{red}{This suggests that the Infinity norm may be more responsive to some localised changes, although the screening profiles alone do not establish a difference in detection power.}
+Under the low-regime local alternative, the curves instead decline through the transition, reaching a trough around 2000 where the candidate range extends sufficiently far.
+% This downward departure does not directly support detection by the upper-tail permutation test, which rejects for large values of the discrepancy statistic.
+\textcolor{red}{Because the permutation test rejects for large values of the discrepancy statistic, this decline does not directly support detection at the later candidate boundaries.}
+%In the global scenario, the mean curves for 20--30-year blocks have a visible local maximum around the 1990 transition midpoint; the corresponding feature is much weaker under the medium-regime local scenario.
+%The 15-year curves have flatter features near 1990, particularly for the medium-regime change.
+%The low-regime local curves instead decline through the transition and reach a trough around 2000 for block lengths whose candidate ranges extend that far.
+The shaded bands are generally wider for shorter blocks.
+%consistent with less precise model fitting from fewer observations, although their definition should be confirmed from the plotting code before assigning them a formal confidence level.
+Longer blocks produce less variable curves but restrict the range of feasible candidate boundaries; in particular, the 30-year blocks exclude the later trough observed under the low-regime local alternative.
+Blocks of 20 or 25 years offer a practical compromise between stability and temporal coverage.
+However, these descriptive patterns alone establish neither an optimal block length nor detection power, which we assess using the pointwise permutation tests below.
+% a distinct feature near the midpoint and enough candidate years to examine its timing, while the plot alone does not establish an optimal block length or how frequently individual replicates identify a peak.
 
 For each candidate year and nominal significance level ($0.05$ or $0.10$), we estimate the pointwise rejection probability as the proportion of the 200 simulation replicates whose permutation $p$-values fall below that level. Under the null scenario, this estimates pointwise Type~I error rate; under an alternative scenario, it estimates pointwise power. Figure~\ref{fig:sim_global_local} presents the pointwise rejection rate for all scenarios. The vertical intervals are 95\% Wilson confidence intervals quantifying Monte Carlo uncertainty in these estimated probabilities.
 Note that dotted reference lines mark 1990, which is the midpoint of the simulated 1980--2000 transition, rather than its onset or a uniquely defined true change point.
@@ -1464,7 +1489,7 @@ Colours distinguish panel-wise cluster membership, for $k=2$ (left), $k=3$ (cent
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k2_trim.png}
+\includegraphics[width=1\linewidth]{plots/clust_map_dqu_0.8_k2_trim.png}
 \caption{
 Estimated season-wise spatial clustering of the 40 Spanish stations, highlighting differences in the spatial patterns across the estimated change points. Panel titles give the season and corresponding time period.  
 % Spring and autumn are fitted using their complete time series. 
