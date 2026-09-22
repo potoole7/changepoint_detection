@@ -587,21 +587,24 @@ For the subsequent pointwise permutation tests, we fix the block length at 25 se
 At each candidate boundary, we assess the observed difference between the estimated dissimilarity matrices using 200 permutations and both the Frobenius and infinity norms.
 Each permutation reallocates paired observations between the two blocks within each site, preserving the pairs and original block sizes. We then refit the conditional extremes models and recompute the dissimilarity matrices.
 The resulting $p$-values are calculated separately for each candidate boundary and each norm. 
-Hence, the reported rejection rates  describe pointwise performance, rather than the probability of at least one rejection across the full candidate grid. Note that we do not perform any multiple testing corrections.
+Hence, the reported rejection rates describe pointwise performance, rather than the probability of at least one rejection across the full candidate grid. Note that we do not perform any multiple testing corrections.
 
 \subsection{Simulation results}
 \label{subsec:sim_results}
 
 \begin{figure}[t!]
 \centering
-\includegraphics[width=\linewidth]{plots/sim_screening_plot.png}
+% \includegraphics[width=\linewidth]{plots/sim_screening_plot.png}
+\includegraphics[width=\linewidth]{latex/plots/sim_test_statistic_plot.png}
 \caption{
-  Null-standardised screening statistics, stratified by candidate season-year, block length, scenario, and matrix norm.
+  % Null-standardised screening statistics, stratified by candidate season-year, block length, scenario, and matrix norm.
+  Test statistics, stratified by candidate season-year, block length, scenario, and matrix norm.
   Solid curves are the mean across 200 experiments, and shaded bands show approximate 95\% normal confidence intervals.
   Colours indicate the number of season-years in each adjacent block, and the vertical dotted line marks 1990, which is the midpoint of the period of transition for the correlation.
 }
 \label{fig:sim_screening}
 \end{figure}
+
 Figure~\ref{fig:sim_screening} presents the screening statistics for the four block lengths under the three alternative dependence scenarios. For each block length, norm, and candidate boundary, the screening statistic is centred and scaled using its null reference distribution. These null-standardised values are descriptive summaries rather than permutation $p$-values: positive and negative values indicate statistics above and below the corresponding null mean, respectively, rather than the direction of change in extremal dependence.
 
 The global scenario produces the most pronounced positive departures from the null mean under both norms, whereas the local alternatives yield weaker and qualitatively different patterns. For the global scenario, the mean curves based on 20--30-year blocks exhibit a local maximum near the transition midpoint in 1990. This feature is less distinct under the medium-regime local alternative, particularly with 15-year blocks. Under the low-regime local alternative, the curves instead decline through the transition, reaching a trough around 2000 where the candidate range extends sufficiently far. This downward departure does not directly support detection by the upper-tail permutation test, which rejects for large values of the discrepancy statistic.
@@ -1447,8 +1450,9 @@ Elbow plots of the total within-group dissimilarity (TWD) against the number of 
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=0.4\linewidth]{plots/clust_map_dqu_0.8_spring_trim.png}
-\includegraphics[width=0.4\linewidth]{latex/plots/clust_map_dqu_0.8_k_2_4_spring.png}
+% \includegraphics[width=0.4\linewidth]{plots/clust_map_dqu_0.8_spring_trim.png}
+% \includegraphics[width=0.4\linewidth]{latex/plots/clust_map_dqu_0.8_k_2_4_spring.png}
+\includegraphics[width=0.9\linewidth]{latex/plots/clust_map_dqu_0.8_k_2_3_4_spring_trim.png}
 \caption{
 Estimated spatial clustering of the 40 Spanish stations, for spring, where no significant change point was found.
 % Spring and autumn are fitted using their complete time series. 
