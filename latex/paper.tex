@@ -87,45 +87,57 @@ y^{\boldsymbol{\beta}_{\mid i,#1}}
 \corres{*{Patrick O'Toole} (\email{pot23@batch.ac.uk})}
 
 
-\abstract[Summary]{Changes in extremal dependence can alter the spatial patterns of compound environmental extremes. To identify these changes, we develop a statistical framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. Leveraging conditional extremal models for site-wise tail dependence and a divergence measure that quantifies dissimilarity in estimated extremal dependence, we propose a permutation test for changes in regional extremal clusters. A simulation study investigates detection power under changes of varying magnitude and spatial extent. When applied to seasonal observations of temperature and a drought index across 40 sampling locations in Spain, our method provides evidence for changepoints in the spatial patterns of summer and winter extremal dependence during 1960--2024. Cluster estimates suggest that regional differences in extremal dependence generally diminish in magnitude for later time periods. Our findings highlight season-specific changes in the geographical organisation of compound heat-drought extremes, which may be attributed to desertification as a result of climate change.}
+\abstract[Summary]{Changes in extremal dependence can alter the spatial patterns of compound environmental extremes. To identify these changes, we develop a statistical framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. Leveraging conditional extremal models for site-wise tail dependence and a divergence measure that quantifies dissimilarity in estimated extremal dependence, we propose a permutation test for changes in regional extremal clusters. A simulation study investigates detection power under changes of varying magnitude and spatial extent. When applied to seasonal observations of temperature and a drought index across 40 sampling locations in Spain, our method provides evidence for change points in the spatial patterns of summer and winter extremal dependence during 1960--2024. Cluster estimates suggest that regional differences in extremal dependence generally diminish in magnitude for later time periods. Our findings highlight season-specific changes in the geographical organisation of compound heat-drought extremes, which may be attributed to desertification as a result of climate change.}
 
-\keywords{changepoint detection, conditional extremes, extremal dependence, structural breaks, temperature extremes}
-
-
+\keywords{change point detection, conditional extremes, extremal dependence, structural breaks, temperature extremes}
 
 \maketitle
 
+\section{Introduction}
+\label{sec:intro}
+
+In many environmental applications, one or more variables are monitored across a network of spatial sites. The application of extreme value theory (EVT) for analysing the occurrence and severity of high-impact events in such scenarios is well established. For instance, \cite{Koh2023} employs EVT to model wildfire risk, while \cite{osei2021estimation} and \cite{Rohrbeck2021} use EVT-based methods to analyse rainfall extremes. When multiple variables are recorded simultaneously, multivariate extreme value theory provides a principled framework for modelling the joint tail behaviour of these variables at an individual site. Comparing the resulting site-specific extremal characteristics can reveal spatial patterns in the distribution of extremes across the monitoring network. Since there is growing evidence that the characteristics of environmental extremes are changing \citep{IPCC2021}, understanding whether such relationships remain stable over time is important for characterising large-scale changes in environmental risk. 
+
+As a motivating example, we consider temperature and drought conditions across Peninsular Spain. Prolonged periods of drought experienced in parts of the Iberian Peninsula in recent years may reflect a change in the joint distribution of temperature and precipitation historically observed at individual locations \citep{jimenez2020impact, sanchez2025one}. Consequently, sites that previously exhibited similar extremal behaviour may have become increasingly dissimilar over time. Assessing whether such changes have occurred motivates the methodology developed in this paper.
+
+We propose a permutation-based statistical test for detecting relative changes in the dissimilarity structure of fitted site-specific multivariate extreme value models. At each site, we model extremal behaviour using the conditional extremes framework by \citet{Heffernan2004}, which characterises the behaviour of multiple variables conditional on one of them exceeding a sufficiently high threshold. Dissimilarities between fitted models are quantified using the pairwise measure proposed by \cite{OToole2026clustering}, yielding a dissimilarity matrix that summarises relative differences in extremal behaviour across sites. Throughout this paper, temporal change refers to a change in this dissimilarity matrix between non-overlapping time periods. We quantify these changes using one of two matrix norms and employ a permutation procedure to assess their statistical significance. 
+
+The proposed methodology contributes to a growing literature on detecting non-stationarity in extreme-value settings. For example, \cite{Dierckx2010}, \cite{dupuis2015detecting}, and \cite{girard2026changepoint} introduce change point approaches targeting the marginal tail behaviour. For multivariate extremes settings, formal statistical tests for detecting non-stationarity in tail behaviour have been proposed by \cite{Buecher2015}, \cite{Hoga2018}, \cite{Drees2023}, \cite{Hazra2025}, and \cite{Pawley2026}. Moreover, \citet{McGonigle2025} proposed a moving-sum procedure for detecting changes in tail dependence. In contrast, our objective is to detect changes in the relative similarities among fitted multivariate extremal models across a network of sites. To the best of our knowledge, this is the first EVT-based framework that addresses this problem.
+
+To visualise the resulting changes in the spatial patterns of the multivariate extremal models, we rely on clustering methods. In the context of clustering observations with similar multivariate extremal dependence, approaches have been proposed by, for example, \cite{jansen2020}, \cite{meyer2024multivariate}, \cite{talento2025canonical}, and \cite{alouini2026bayesian}. In contrast, existing approaches for grouping locations with similar extremal dependence include \cite{Bernard2013}, who use the $F$-madogram to cluster sites; \cite{Vignotto2021}, who combine non-parametric estimates of divergences between bivariate tails with $k$-medoids clustering; and \cite{OToole2026clustering}, who develop a flexible divergence-based framework for comparing multivariate conditional extremes models, accommodating both asymptotic dependence and asymptotic independence. These existing approaches identify clusters over a given observation period or spatial locations, but do not directly assess when the dependence structures underlying those clusters change. Our methodology addresses this question by testing for temporal changes in the pairwise dissimilarities underlying the clustering approach of \cite{OToole2026clustering}; as an implication, it provides, to our knowledge, the first framework for detecting changpoints in extremal clusters, allowing their spatial organisation to be compared across resulting temporal windows.
+
+The remainder of this paper is organised as follows: Section~\ref{sec:data} summarises the Spanish drought and temperature data motivating our framework; Section~\ref{sec:method} reviews the conditional extremes framework and describes our testing procedure; Section~\ref{sec:sim} illustrates performance of our framework for simulated data; Section~\ref{sec:appResults} details the results obtained when applying our framework to the Spanish drought data, and we conclude with a discussion in Section~\ref{sec:Discussion}.
 
 
-\section{Introduction}\label{sec:intro}
+%\textcolor{red}{From confirmation report}
+%We now consider settings in which the extremal dependence structure is non-stationary, and may change over time.
+%For example, meteorological variables observed across spatial locations may exhibit changes in extremal dependence due to shifts in climate regimes, while biomarker measurements collected longitudinally for individuals may display structural changes associated with disease progression, treatment effects, or lifestyle changes \citep{katz2010statistics, Gilles2018, panagoulias2025extreme, Talento2025}.
+%In such settings, it is of interest to detect change points or structural breaks in the extremal dependence structure.
 
-\textcolor{red}{From confirmation report}
-We now consider settings in which the extremal dependence structure is non-stationary, and may change over time.
-For example, meteorological variables observed across spatial locations may exhibit changes in extremal dependence due to shifts in climate regimes, while biomarker measurements collected longitudinally for individuals may display structural changes associated with disease progression, treatment effects, or lifestyle changes \citep{katz2010statistics, Gilles2018, panagoulias2025extreme, Talento2025}.
-In such settings, it is of interest to detect changepoints or structural breaks in the extremal dependence structure.
+%In the existing framework, the multivariate ``groups'' could, in principle, represent different time periods.
+%However, this method was not developed to accommodate temporally evolving dependence structures within an already multivariate setting (e.g., spatial), and we assumed that the data within each group was stationary.
+%This is limiting in applications where tail dependence is expected to vary over time.
+%In environmental contexts, for example, climate change may strengthen or weaken extremal dependence across an entire spatial domain, as suggested by \citet{Zhong2022}, who found that recent Southern European heatwaves have been more widespread than in the past.
+%More generally, several types of structural change may occur. 
+%In some situations the extremal dependence structure may shift globally across all sites, corresponding to a regime change affecting the entire system. 
+%In other settings, only a subset of sites may change their extremal dependence behaviour, for example by switching between clusters of locations with similar tail dependence characteristics.
+%Discarding the stationarity assumption and allowing for such temporal changes in extremal dependence is therefore a natural and important extension of our current work.
+%It would enable us to identify time periods with distinct spatial patterns of tail dependence, as well as the specific change points at which these transitions occur.
+%Therefore, a key focus of this work will be the development of methods for change point detection in multivariate extremal dependence structures, building on the divergence-based framework introduced in our first paper. 
 
-In the existing framework, the multivariate ``groups'' could, in principle, represent different time periods.
-However, this method was not developed to accommodate temporally evolving dependence structures within an already multivariate setting (e.g., spatial), and we assumed that the data within each group was stationary.
-This is limiting in applications where tail dependence is expected to vary over time.
-In environmental contexts, for example, climate change may strengthen or weaken extremal dependence across an entire spatial domain, as suggested by \citet{Zhong2022}, who found that recent Southern European heatwaves have been more widespread than in the past.
-More generally, several types of structural change may occur. 
-In some situations the extremal dependence structure may shift globally across all sites, corresponding to a regime change affecting the entire system. 
-In other settings, only a subset of sites may change their extremal dependence behaviour, for example by switching between clusters of locations with similar tail dependence characteristics.
-Discarding the stationarity assumption and allowing for such temporal changes in extremal dependence is therefore a natural and important extension of our current work.
-It would enable us to identify time periods with distinct spatial patterns of tail dependence, as well as the specific changepoints at which these transitions occur.
-Therefore, a key focus of this work will be the development of methods for changepoint detection in multivariate extremal dependence structures, building on the divergence-based framework introduced in our first paper. 
-
-There has been some previous work on changepoint detection in multivariate dependence structures, whether in the context of extremes or more generally.
-For example, \citet{McGonigle2025} developed a non-parametric sliding window approach for detecting changepoints in pairwise extremal dependence. 
-Also, \citet{Alouni2026} developed a Bayesian clustering algorithm for multivariate extremes which utilises a mixture of Dirichlet distributions, and they show how it can be used to temporally cluster negative returns for several S\&P 500 stock sectors, thereby identifying periods of time with similar extremal dependence structures across the sectors.
-In \citet{Agarwal2025}, a likelihood-based method for detecting temporal changepoints in spatio-temporal data is developed, and applied to daily wind speed data in Ireland, similar to the data we used in our first paper. 
-We hope to build on these existing approaches and also the divergence-based clustering framework developed in our paper to develop a method for detecting changepoints in multivariate extremal dependence structures, which can be applied to a wide range of datasets and applications.
+%There has been some previous work on change point detection in multivariate dependence structures, whether in the context of extremes or more generally.
+%For example, \citet{McGonigle2025} developed a non-parametric sliding window approach for detecting change points in pairwise extremal dependence. 
+%Also, \citet{Alouni2026} developed a Bayesian clustering algorithm for multivariate extremes which utilises a mixture of Dirichlet distributions, and they show how it can be used to temporally cluster negative returns for several S\&P 500 stock sectors, thereby identifying periods of time with similar extremal dependence structures across the sectors.
+%In \citet{Agarwal2025}, a likelihood-based method for detecting temporal change points in spatio-temporal data is developed, and applied to daily wind speed data in Ireland, similar to the data we used in our first paper. 
+%We hope to build on these existing approaches and also the divergence-based clustering framework developed in our paper to develop a method for detecting change points in multivariate extremal dependence structures, which can be applied to a wide range of datasets and applications.
 
 
 \section{Spanish temperature and drought data}
 \label{sec:data}
 
 Desertification is one of Spain's most pressing environmental challenges. \citet{SpainDegradation} found that 20\% of Spanish territory was degraded and an additional 1\% was undergoing an active process of environmental deterioration during 2000--2010. While part of this degradation may be attributable to agricultural practices and other land-use pressures, climate change may also have altered the climatic conditions conducive to desertification and land degradation. We focus on this climatic dimension in our analysis. Specifically, interest lies in whether there has been a shift in the tail dependence structure of temperature and drought-related indicators across Spain. The IPCC Special Report on Climate Change and Land \citep{IPCC2019Land} highlights that the combination of drought and very high temperatures is generally more damaging then either stressor alone, for instance, when considering crop yields. Consequently, understanding whether such compound drought-heat events are becoming more frequent is crucial for policy planning. 
+
+Daily maximum temperature and precipitation data for 40 locations across Spain for 1960--2024 were obtained from the European Climate Assessment Dataset (ECAD) \citep{Klein2002}. Figure~\ref{fig:app_intro}~left panel shows that the sites considered cover all areas of Spain. We aggregate to a weekly resolution to reduce temporal dependence, taking the maximum recorded temperature and total accumulated precipitation within each week. Since land degradation is typically associated with prolonged drought rather than short-term precipitation deficits, we derive the Standardised Precipitation Index (SPI) \cite{McKee1993} from the time series of weekly precipitation totals using the SPEI R package \citep{SPEI}. 
 
 \begin{figure}
 \centering
@@ -135,8 +147,6 @@ Left: elevation profile of mainland Spain and locations of the 40 meteorological
 }
 \label{fig:app_intro}
 \end{figure}
-
-Daily maximum temperature and precipitation data for 40 locations across Spain for 1960--2024 were obtained from the European Climate Assessment Dataset (ECAD) \citep{Klein2002}. Figure~\ref{fig:app_intro}~left panel shows that the sites considered cover all areas of Spain. We aggregate to a weekly resolution to reduce temporal dependence, taking the maximum recorded temperature and total accumulated precipitation within each week. Since land degradation is typically associated with prolonged drought rather than short-term precipitation deficits, we derive the Standardised Precipitation Index (SPI) \cite{McKee1993} from the time series of weekly precipitation totals using the SPEI R package \citep{SPEI}. 
 
 The SPI measures deviations in accumulated precipitation from its long-term climatological distribution and therefore provides a more informative summary of drought conditions. Moreover, temperature dynamics may respond more strongly to drought conditions than the precipitation recorded during the current week. Formally, for a given accumulation period, the SPI is computed by first aggregating precipitation over a rolling window and then fitting a gamma distribution to the historical series of accumulated precipitation totals. The cumulative probability associated with an observed accumulation is then transformed using the inverse cumulative distribution function of the standard normal distribution. In our application, the accumulation period was set to 13 weeks, including the current week. Since, under the usual SPI convention, negative values represent drier-than-normal conditions, we define the drought index $D=-\mathrm{SPI}$. Larger values of $D$ therefore correspond to more sever drought conditions. In what follows, we analyse the dependence between extremely high values for $D$ and the weekly maximum temperature. 
 
@@ -394,13 +404,13 @@ A permutation test can then be constructed using the corresponding maximum stati
 %In performing the permutation test, a suitable block size $n$ must be chosen to ensure reliable estimation of the CE model parameters within each time block, while also providing sufficient power to detect changes in extremal dependence.
 %Using the same $n$ across all permutations ensures that the sampling variability in the fitted parameters is appropriately reflected in the reference distribution of the test statistic.
 
-%\subsubsection{Sliding-window permutation approach for changepoint localisation}
+%\subsubsection{Sliding-window permutation approach for change point localisation}
 
 % The permutation test above assesses whether a \emph{given} time split corresponds to a change in extremal dependence. 
-% % We now extend this idea to estimate the location of an unknown changepoint.
+% % We now extend this idea to estimate the location of an unknown change point.
 % We now extend this idea across a sequence of candidate split points to identify periods at which the extremal dependence structure changes.
 % 
-% Given $N$ total observations and a block size $n < N$, for each candidate changepoint $\tau \in \{n,\dots,N-n\}$, define the corresponding time blocks
+% Given $N$ total observations and a block size $n < N$, for each candidate change point $\tau \in \{n,\dots,N-n\}$, define the corresponding time blocks
 % \[
 % T_1(\tau) = \{\tau-n+1,\dots,\tau\}, 
 % \qquad 
@@ -408,7 +418,7 @@ A permutation test can then be constructed using the corresponding maximum stati
 % \]
 % For each $\tau$, we perform the permutation test described above to compute a $p$-value $\hat{p}(\tau)$ as in equation~\eqref{eq:perm_pval}, for the null hypothesis of no change in extremal dependence at $\tau$.
 % 
-% To avoid running computationally intensive permutation tests at every possible ``split'' point $\tau$, we first identify promising candidate changepoint locations.
+% To avoid running computationally intensive permutation tests at every possible ``split'' point $\tau$, we first identify promising candidate change point locations.
 % Define 
 % \[
 % D_r(\tau) =
@@ -420,12 +430,12 @@ A permutation test can then be constructed using the corresponding maximum stati
 % \]
 % for $r \in \{\mathrm{F},\infty\}$, as the observed discrepancy between the estimated extremal dependence structures in the two blocks around $\tau$.
 % To ``screen'' for these time points, we evaluate $D_r(\tau)$ over a grid of admissible split points from time points $n$ to $N-n$.
-% The coarseness of this grid can be adjusted to balance computational cost with the resolution of candidate changepoint detection.
+% The coarseness of this grid can be adjusted to balance computational cost with the resolution of candidate change point detection.
 % Local maxima of the function $D(\tau)$ indicate times at which the extremal dependence structure differs most strongly between the two sides of the split. 
-% Let $\{\hat{\tau}_1,\dots,\hat{\tau}_K\}$ denote the $K$ largest local maxima, which we treat as candidate changepoint regions.
-% The function $D(\tau)$ therefore acts as a screening statistic highlighting candidate changepoint locations.
+% Let $\{\hat{\tau}_1,\dots,\hat{\tau}_K\}$ denote the $K$ largest local maxima, which we treat as candidate change point regions.
+% The function $D(\tau)$ therefore acts as a screening statistic highlighting candidate change point locations.
 % 
-% Now that we have identified candidate changepoint locations $\{\hat{\tau}_1,\dots,\hat{\tau}_K\}$, we refine our inference by applying the permutation test described above within a local window around each candidate point.
+% Now that we have identified candidate change point locations $\{\hat{\tau}_1,\dots,\hat{\tau}_K\}$, we refine our inference by applying the permutation test described above within a local window around each candidate point.
 % \[
 % \mathcal{W}_k = \{\tau: \hat{\tau}_k - w \le \tau \le \hat{\tau}_k + w\},
 % \]
@@ -440,14 +450,14 @@ A permutation test can then be constructed using the corresponding maximum stati
 % 
 % This produces a local significance profile within each window $\mathcal{W}_k$, mapping $\tau$ to $\hat{p}(\tau)$.
 % 
-% Within each window $\mathcal{W}_k$, we define the most likely changepoint as
+% Within each window $\mathcal{W}_k$, we define the most likely change point as
 % \[
 % \tilde{\tau}_k = \argmin_{\tau \in \mathcal{W}_k} \hat{p}(\tau),
 % \]
 % i.e.\ the split point showing the strongest evidence against temporal homogeneity of extremal dependence. 
 % % Equivalently, $\tilde{\tau}_k$ corresponds to the most statistically significant peak in $D(\tau)$ after accounting for sampling variability.
 % This identifies the split point with the strongest permutation-based evidence against temporal homogeneity, after accounting for sampling variability.
-% Furthermore, if $\hat{p}(\tilde{\tau}_k) < \alpha$ for some significance level $\alpha$, we reject the null hypothesis of no change at $\tilde{\tau}_k$, and conclude that there is evidence of a changepoint in extremal dependence at this time point.
+% Furthermore, if $\hat{p}(\tilde{\tau}_k) < \alpha$ for some significance level $\alpha$, we reject the null hypothesis of no change at $\tilde{\tau}_k$, and conclude that there is evidence of a change point in extremal dependence at this time point.
 % This two-stage procedure separates effect size from statistical significance: the screening step identifies times at which the estimated extremal dependence structure changes most strongly, while the permutation step determines whether these changes are larger than would be expected under temporal homogeneity.
 % 
 % \textcolor{red}{Move some of this to discussion}
@@ -461,7 +471,7 @@ A permutation test can then be constructed using the corresponding maximum stati
 %The permutation test above assesses whether a \emph{given} time split corresponds to a change in extremal dependence. 
 %We now extend this procedure across a sequence of candidate split points to identify periods at which the extremal dependence structure changes.
 
-%Given $N$ ordered temporal units and a block size $n$, consider candidate changepoints $\tau \in \{n,\ldots,N-n\}$.
+%Given $N$ ordered temporal units and a block size $n$, consider candidate change points $\tau \in \{n,\ldots,N-n\}$.
 %For each candidate $\tau$, define the adjacent temporal blocks
 %\begin{equation}\label{eq:sliding_blocks}
 %T_1(\tau)
@@ -508,17 +518,17 @@ A permutation test can then be constructed using the corresponding maximum stati
 
 \subsection{Screening for changes in extremal dependence}
 \label{subsec:screen}
-Choosing an optimal block length for extremal changepoint detection is a difficult problem \citep{McGonigle2025}, as it requires consideration for both the total sample size and the number of exceedances. The task suffers from the classic bias-variance trade-off; longer blocks provide more observations for fitting the conditional extremes models, but restrict the range of candidate boundaries and may obscure the timing of changes. 
+Choosing an optimal block length for extremal change point detection is a difficult problem \citep{McGonigle2025}, as it requires consideration for both the total sample size and the number of exceedances. The task suffers from the classic bias-variance trade-off; longer blocks provide more observations for fitting the conditional extremes models, but restrict the range of candidate boundaries and may obscure the timing of changes. 
 
-Ideally, we would test for non-stationarity in extremal dependence using all feasible block lengths and candidate boundaries. However, this is computationally prohibitive, particularly if many permutations are required to assess significance of a change. We instead propose a heuristic initial ``screening'' step for reducing the number of block lengths to be considered. Before performing the permutation tests, we examine how the discrepancy between estimated dissimilarity matrices varies across candidate boundaries and block lengths. For a range of candidate block lengths $n$, we evaluate the statistics in Equations~\eqref{eq:frob} and~\eqref{eq:infinity} at every admissible boundary $\tau\in{n,\ldots,T-n}$. Plotting these statistics against $\tau$ gives a \textit{screening} profile, with larger values indicating greater differences between the estimated dissimilarity structures in the two adjacent blocks. 
+Ideally, we would test for non-stationarity in extremal dependence using all feasible block lengths and candidate boundaries. However, this is computationally prohibitive, particularly if many permutations are required to assess significance of a change. We instead propose a heuristic initial ``screening'' step for reducing the number of block lengths to be considered. Before performing the permutation tests, we examine how the discrepancy between estimated dissimilarity matrices varies across candidate boundaries and block lengths. For a range of candidate block lengths $n$, we evaluate the statistics in Equations~\eqref{eq:frob} and~\eqref{eq:infinity} at every admissible boundary $\tau\in\{n,\ldots,T-n\}$. Plotting these statistics against $\tau$ gives a \textit{screening} profile, with larger values indicating greater differences between the estimated dissimilarity structures in the two adjacent blocks. 
 
 The screening profiles are descriptive summaries and do not establish statistical significance. Comparing profiles across block lengths helps to assess the sensitivity of these patterns to the temporal scale of analysis, and local maxima in the screening profiles highlight boundaries for further investigation. Following interpretation of the screening profiles, we choose a single block length in our analysis. We subsequently apply the permutation tests in Section~\ref{subsec:cp} at all admissible boundaries for this selected block length, rather than restricting testing to screening peaks.
 \section{Simulation Study}
 \label{sec:sim}
 
-We now assess the ability of the proposed changepoint detection procedure to detect gradual changes in extremal dependence using simulated datasets with known extremal dependence trajectories.
+We now assess the ability of the proposed change point detection procedure to detect gradual changes in extremal dependence using simulated datasets with known extremal dependence trajectories.
 The simulations are designed to resemble the Spanish drought data introduced in Section~\ref{sec:data}, with the same number of spatial locations and weekly observations within each season-year. Unlike the real data application, the underlying extremal dependence structure is known, allowing us to control both the  magnitude and spatial extent of temporal changes.
-As these changes occur gradually over a relatively short 20-year interval, there is no unique true changepoint. We thus focus on detecting departures from stationarity rather than on accuracy of changepoint estimation.
+As these changes occur gradually over a relatively short 20-year interval, there is no unique true change point. We thus focus on detecting departures from stationarity rather than on accuracy of change point estimation.
 In Section~\ref{subsec:sim_setup}, we describe the simulation design, comprising a stationary null scenario, two \textit{local change} scenarios in which dependence changes at a subset of sites, and a \textit{global change} scenario in which dependence changes at all sites.
 Section~\ref{subsec:sim_results} compares the performance of the Frobenius and infinity norms across all scenarios.
 
@@ -553,13 +563,13 @@ Under the null scenario, $A_s=0$ at every site, so all correlations remain at th
 
 Under the first local alternative scenario, the correlations at eight of the 14 medium-correlation regime sites change from $0.30$ to $0.45$, while the remaining 32 sites retain their baseline correlations. 
 Under the second local alternative scenario, all eight sites in the low-correlation regime experience increasing correlation, from $0.15$ to $0.45$, with the remaining 32 sites again unaffected.
-These local alternative scenarios affect the same number of sites but differ in both the magnitude of the change and the initial dependence strength. They therefore allow us to assess changepoint detection performance under two forms of spatially restricted change, without isolating the effects of magnitude and baseline dependence. In both cases, the affected sites attain the baseline correlation of the high-correlation regime, changing the initial cluster structure.
+These local alternative scenarios affect the same number of sites but differ in both the magnitude of the change and the initial dependence strength. They therefore allow us to assess change point detection performance under two forms of spatially restricted change, without isolating the effects of magnitude and baseline dependence. In both cases, the affected sites attain the baseline correlation of the high-correlation regime, changing the initial cluster structure.
 %\textcolor{red}{Need to explain these choices? E.g. global scenario choosen to replicate instance where global warming affects some clusters more than others?}
 Figure~\ref{fig:sim_rho} displays the dependence trajectories for each scenario, distinguishing the affected medium-correlation regime sites from those that remain unchanged.
 
 \begin{figure}[htb]
 \centering
-\includegraphics[width=0.95\linewidth]{plots/sim_correlation_trajectories.png}
+\includegraphics[width=0.75\linewidth]{plots/sim_correlation_trajectories.png}
 \caption{
   True correlation trajectories for the null, global, and two local scenarios used in the simulation study.
   The shaded interval demarcates the period 1980--2000, where the linear increase in correlation takes place. The red, blue, and yellow lines correspond to correlation trajectories for locations in the low-, medium-, and high-correlation regimes. The blue dotted line represents the six medium-correlation regime sites that remain unchanged in the two local scenarios.}
@@ -605,15 +615,15 @@ Blocks of 20 or 25 years offer a practical compromise between stability and temp
 %a distinct feature near the midpoint and enough candidate years to examine its timing, while the plot alone does not establish an optimal block length or how frequently individual replicates identify a peak.
 
 For each candidate year and nominal significance level ($0.05$ or $0.10$), we estimate the pointwise rejection probability as the proportion of the 200 simulation replicates whose permutation $p$-values fall below that level. Under the null scenario, this estimates pointwise Type~I error rate; under an alternative scenario, it estimates pointwise power. Figure~\ref{fig:sim_global_local} presents the pointwise rejection rate for all scenarios. The vertical intervals are 95\% Wilson confidence intervals quantifying Monte Carlo uncertainty in these estimated probabilities.
-Note that dotted reference lines mark 1990, which is the midpoint of the simulated 1980--2000 transition, rather than its onset or a uniquely defined true changepoint.
+Note that dotted reference lines mark 1990, which is the midpoint of the simulated 1980--2000 transition, rather than its onset or a uniquely defined true change point.
 
 % \begin{figure}[htb]
 % \centering
 % \includegraphics[width=0.5\linewidth]{
-%   plots/sim_changepoint_global_change_pointwise_power.png
+%   plots/sim_change point_global_change_pointwise_power.png
 % }
 % \includegraphics[width=0.5\linewidth]{
-%   plots/sim_changepoint_local_change_pointwise_power.png
+%   plots/sim_change point_local_change_pointwise_power.png
 % }
 % \caption{
 %  \textcolor{red}{Combine with Figure 6. If too large, rotate.} Pointwise rejection rates under the null, local-change, and global-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
@@ -627,9 +637,9 @@ Note that dotted reference lines mark 1990, which is the midpoint of the simulat
 \centering
 \includegraphics[width=\linewidth]{latex/plots/sim_changepoint_combined_change_pointwise_power.png}
 \caption{
-  Pointwise rejection rates under the null, local-change, and global-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
+  Pointwise rejection rates under the null, two local-change, and global-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
   Red and blue curves correspond to nominal significance levels of 5\% and 10\%, respectively, with matching horizontal dashed lines. Each point represents the estimated proportion of rejections across 200 simulation experiments, for a particular candidate split point; vertical bars are 95\% Wilson confidence intervals.
-  The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the null panels. 
+  The vertical dotted line marks 1990, which is the midpoint of the gradual 1980--2000 transition, and serves only as a reference in the panels with no change. 
 }
 \label{fig:sim_global_local}
 \end{figure}
@@ -648,7 +658,7 @@ Rejection rates remain elevated after the transition midpoint but decline toward
 %\begin{figure}[htb]
 %\centering
 %\includegraphics[width=\linewidth]{
-%  plots/sim_changepoint_local_change_pointwise_power.png
+%  plots/sim_change point_local_change_pointwise_power.png
 %}
 %\caption{
 %  Pointwise rejection rates under the null and two local-change scenarios for the Frobenius (top row) and infinity (bottom row) norms.
@@ -660,7 +670,7 @@ Rejection rates remain elevated after the transition midpoint but decline toward
 
 The local alternatives in Figure~\ref{fig:sim_global_local} demonstrate that detection power can differ substantially ever when the number of affected sites is fixed. 
 Under the medium-regime, where the correlations at the eight sites increase from $0.30$ to $0.45$, the maximum Frobenius rejection rates are 14.5\% at the 5\% significance level (1992) and 22.0\% at the 10\% level (1991 and 1994).
-The corresponding infinity norm maxima are 12.0\% (1994) and 19.0\% (1993). Both norms therefore have limited power to detect the changepoint in this alternative scenario, where the effective change is small.
+The corresponding infinity norm maxima are 12.0\% (1994) and 19.0\% (1993). Both norms therefore have limited power to detect the change point in this alternative scenario, where the effective change is small.
 %This moderate change is therefore difficult to detect reliably with either norm.
 On the contrary, under the low-regime, where the correlations increased increase from $0.15$ to $0.45$, the Frobenius rejection rates reach 56.5\% and 71.0\% at the 5\% and 10\% levels, respectively, both in 1989.
 The corresponding infinity norm maxima are 27.0\% (1987) and 41.0\% (1988). Both norms thus attain substantially greater power under this alternative scenario, with the Frobenius norm again outperforming the infinity norm.
@@ -669,18 +679,18 @@ This improvement cannot be attributed solely to the larger correlation change, b
 
 Overall, these results indicate approximate pointwise null calibration and good detection power under realistic global and local alternative scenarios.
 The weaker local alternative remains a challenging scenario despite affecting the same number of sites as the stronger alternative.
-The Frobenius norm attains higher pointwise power than the infinity norm in the considered scenarios, indicating that restricting changes in dependence to only eight sites does not itself confer an advantage for the infinity norm. These pointwise results establish neither family-wise error control across candidate years nor the accuracy of changepoint localisation.
-%Because the plots report pointwise rejection rates at multiple candidate years, they do not establish family-wise error control or a probability of correctly identifying one changepoint year.
+The Frobenius norm attains higher pointwise power than the infinity norm in the considered scenarios, indicating that restricting changes in dependence to only eight sites does not itself confer an advantage for the infinity norm. These pointwise results establish neither family-wise error control across candidate years nor the accuracy of change point localisation.
+%Because the plots report pointwise rejection rates at multiple candidate years, they do not establish family-wise error control or a probability of correctly identifying one change point year.
 
 %%% Prevous Draft %%%
 % \section{Simulation Study}
 % \label{sec:sim}
 %
-% % We demonstrate the performance of our proposed changepoint detection procedure through a simulation study.
-% % To assess the ability of our method to detect changes in extremal dependence, we generate synthetic datasets with known changepoints designed to mimic the application to Spanish temperature and precipitation data in Section~\ref{sec:app}. \textcolor{red}{More emphasis on ``gradual'' change?}
+% % We demonstrate the performance of our proposed change point detection procedure through a simulation study.
+% % To assess the ability of our method to detect changes in extremal dependence, we generate synthetic datasets with known change points designed to mimic the application to Spanish temperature and precipitation data in Section~\ref{sec:app}. \textcolor{red}{More emphasis on ``gradual'' change?}
 % We demonstrate the ability of the proposed procedure to detect temporal changes in multivariate extremal dependence through a simulation study. 
 % The simulation design follows the observational structure of the Spanish drought data introduced in Section~\ref{sec:data}, with two variables observed weekly at multiple sites and grouped into season-years of 12 observations.
-% Rather than imposing an instantaneous changepoint, we allow the extremal dependence structure to evolve gradually over a specified transition period, to better reflect the types of changes that may occur in environmental systems.
+% Rather than imposing an instantaneous change point, we allow the extremal dependence structure to evolve gradually over a specified transition period, to better reflect the types of changes that may occur in environmental systems.
 % The objective is therefore not to recover a single exact change time, but to assess whether the procedure identifies evidence of a transition and whether the Frobenius and infinity norms respond differently to widespread and localised changes.
 %
 % In Section~\ref{subsec:sim_setup}, we describe the simulation setup and the scenarios considered, which include a null scenario with no change, a local change affecting a subset of sites, and a global change affecting all sites.
@@ -739,7 +749,7 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 %
 % \textcolor{red}{Say about value of B (number of iterations)}
 %
-% For each scenario, we generate $200$ independent datasets and apply the changepoint procedure described in Section~\ref{subsec:cp}. 
+% For each scenario, we generate $200$ independent datasets and apply the change point procedure described in Section~\ref{subsec:cp}. 
 % The CE models are fitted using adjacent blocks of 25 season-years on either
 % side of each candidate, and candidate split points are evaluated over the
 % complete feasible range. This block length retains a useful range of candidate
@@ -777,7 +787,7 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 % \begin{figure}[htb]
 % \centering
 % \includegraphics[width=0.95\linewidth]{
-%   plots/sim_changepoint_global_change_pointwise_power.png
+%   plots/sim_change point_global_change_pointwise_power.png
 % }
 % \caption{
 %   Pointwise rejection rates under the null and global-change scenarios for the Frobenius and infinity norms. 
@@ -826,7 +836,7 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 % % Conclusions
 % \begin{itemize}
 % \item The power profiles are neither sharply peaked nor strictly monotone.
-% \item This is consistent with the gradual nature of the simulated transition: there is no unique instantaneous changepoint, and nearby candidate splits compare temporal blocks containing different mixtures of pre-transition and transitional observations.
+% \item This is consistent with the gradual nature of the simulated transition: there is no unique instantaneous change point, and nearby candidate splits compare temporal blocks containing different mixtures of pre-transition and transitional observations.
 %
 % \item Even under the global alternative, the largest observed pointwise power is approximately 40\%. 
 % \item The procedure therefore has moderate rather than high power under this simulation design. 
@@ -835,7 +845,7 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 % \begin{figure}[htb]
 % \centering
 % \includegraphics[width=0.95\linewidth]{
-%   plots/sim_changepoint_local_change_pointwise_power.png
+%   plots/sim_change point_local_change_pointwise_power.png
 % }
 % \caption{
 %   Pointwise rejection rates under the null scenario and the two local-change scenarios for the Frobenius and infinity norms. 
@@ -882,7 +892,7 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 
 %\textcolor{Added back in, but will have to be changed again!}
 %\begin{itemize}
-%\item We now apply the proposed changepoint procedure to the Spanish temperature and drought data introduced in Section~\ref{sec:data}. 
+%\item We now apply the proposed change point procedure to the Spanish temperature and drought data introduced in Section~\ref{sec:data}. 
 %\item Section~\ref{subsec:app_setup} describes the application-specific preprocessing and tuning choices,
 %\item Section~\ref{subsec:app_screen} presents the screening results, and Section~\ref{subsec:app_cp} reports the permutation test. 
 %\item Finally, Section~\ref{subsec:app_clust} examines how the spatial clustering of fitted extremal dependence changes across the identified temporal divisions.
@@ -893,52 +903,53 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 
 We organise the observations into \emph{season-years}, with 12 weekly observations per season. For spring, summer and autumn, the season-year is the calendar year in which the observations occur, while December is assigned to the same season-year as the following January and February for the winter season. The observations per season are then grouped into separate datasets, resulting in four datasets, one per season. In what follows, the framework in Section~\ref{sec:method}, including the marginal standardisation, is applied to each dataset individually. When performing the permutation test later, observations in the same season-year form a single unit that is not split across permutations, and the candidate time $\tau$ refers to a year instead of a specific date. By permuting complete season-years, we preserve both the dependence between observations within a season-year and the spatial correspondence between stations.
 
-The time series of maximum weekly temperature and drought index exhibit seasonality and possibly a long-term trend due to climate change. Since we assume that the marginal distribution function in \eqref{eq:Laplace} is stationary across the time block, changes in the marginal distributions over time may confound changes in the tail dependence if not modelled directly. Therefore, for each of the four datasets, we fit a linear trend for the average maximum weekly temperature for each month and station separately, which allows for a varying magnitude of temporal trend across space and time. After removing the trend, observations are transformed to Laplace margins using \eqref{eq:Laplace}, with $F_{i,s}^{(j)}$ being set to the empirical cumulative distribution function of all observations in the same season. \textcolor{orange}{CR: Is there an issue that variance may be different across months too and we have not account for it?}
+The time series of maximum weekly temperature and drought index exhibit seasonality and possibly a long-term trend due to climate change. Since we assume that the marginal distribution function in \eqref{eq:Laplace} is stationary across the time block, changes in the marginal distributions over time may confound changes in the tail dependence if not modelled directly. Therefore, for each of the four datasets, we fit a linear trend for the average maximum weekly temperature for each month and station separately, which allows for a varying magnitude of temporal trend across space and time. After removing the trend, observations are transformed to Laplace margins using \eqref{eq:Laplace}, with $F_{i,s}^{(j)}$ being set to the empirical cumulative distribution function of all observations in the same season. 
 
 \begin{figure}
 \centering
 % \includegraphics[width=0.75\linewidth]{plots/screen_dqu_0.8.png}
-\includegraphics[width=0.9\linewidth]{plots/screen_dqu_0.8.png}
+\includegraphics[width=0.8\linewidth]{plots/screen_dqu_0.8.png}
 \caption{
-Test statistics based on the Frobenius (left) and infinity (right) norm for each candidate season-year based on 25-year time blocks. 
-Local maximum are highlighted by the crosses. %, and test statistics have been transformed to a common scale. \textcolor{red}{Check that standardising to common scale is correct}
+Screening statistics based on the Frobenius (top) and infinity (bottom) norm for each candidate season-year based on 25-year time blocks. Local maximum are highlighted by the crosses.
 }
 \label{fig:app_screen}
 \end{figure}
 
-Figure~\ref{fig:app_screen} shows different patterns in the test statistics for the four seasons. For the winter months, the highest value is obtained for 1998 for both test statistics, while for the other seasons the highest test statistic is observed between 1988 and 1992. We also note a difference in scale, with the test statistic being smaller in spring than in the other seasons. Consequently, there appears to be a stronger signal for a shift in tail dependence for summer, autumn and winter than for spring. We then compute empirical p-values for the observed test statistics using the permutation procedure described in Section~\ref{subsec:cp}, with the number of permutations in \eqref{eq:perm_pval} set to $B=200$, and all conclusions being made at the 5\% significance level. Figure~\ref{fig:app_cp} suggests that there is evidence of a significant difference for winter when $\tau$ is around 1998, and for summer for $\tau\in\{1987,\ldots,1993\}$. Conversely, there is insufficient evidence for a change for spring and autumn, which is in line with the highest test statistic for the seasons illustrated in Figure~\ref{fig:app_screen}. Moreover, the conclusions are similar for the two test statistics used, with the infinity norm producing smaller p-values when the null hypothesis of no change is rejected at the 5\% significance level.
+Figure~\ref{fig:app_screen} shows different patterns in the screening statistics for the four seasons. For the winter months, the highest value is obtained for 1998 for both test statistics, while for the other seasons the highest screening statistic is observed between 1988 and 1992. We also note a difference in scale, with the test statistic being smaller in spring than in the other seasons. Consequently, there appears to be a stronger signal for a shift in tail dependence for summer, autumn and winter than for spring. 
 
-{\color{red}
-For each season in Figure~5, the minimum pointwise $p$-values across
-candidate changepoint years are:
-\begin{itemize}
-    \item Winter: $0.0299$ for the Frobenius norm (for 1998) and
-          $0.0149$ for the infinity norm (for 1997).
-    \item Spring: $0.144$ for the Frobenius norm and $0.134$ for the
-          infinity norm (both for 1992).
-    \item Summer: $0.0348$ for the Frobenius norm (for 1992) and
-          $0.0149$ for the infinity norm (for 1989).
-    \item Autumn: $0.194$ for the Frobenius norm and $0.0896$ for the
-          infinity norm (both for 1986).
-\end{itemize}
+Empirical p-values for the observed test statistics are computed using the permutation procedure described in Section~\ref{subsec:cp}, with the number of permutations in \eqref{eq:perm_pval} being set to $B=200$. Figure~\ref{fig:app_cp} suggests that there is evidence of a significant change for the winter and summer seasons at the 5\% significance level, with the infinity norm producing smaller p-values when the null hypothesis of no change is rejected. When $\tau=1998$, the p-value for the test based on the Frobenius norm yields a p-value of $0.0299$, while the p-value for infinity norm is $0.0149$ for 1997. Similarly, we reject the null hypothesis for the summer season when $\tau\in\{1987,\ldots,1993\}$; the lowest p-value of $0.0149$ for the infinity norm is observed for $\tau=1989$, while the p-value for the Frobenius norm takes it mimum of $0.0348$ in $\tau=1992$. Conversely, there is insufficient evidence for a change in tail dependence for spring and autumn, with all p-values exceeding 0.05 for all candidate years, which is in line with the highest screening statistic for the seasons illustrated in Figure~\ref{fig:app_screen}. When considering a 10\% significance level, the conclusions remain the same, except for autumn, where the p-value for infinity norm in 1986 is $0.0896$, and we thus reject the null hypothesis of no change.
+
+%{\color{red}
+%For each season in Figure~5, the minimum pointwise $p$-values across
+%candidate change point years are:
+%\begin{itemize}
+%    \item Winter: $0.0299$ for the Frobenius norm (for 1998) and
+%          $0.0149$ for the infinity norm (for 1997).
+%    \item Spring: $0.144$ for the Frobenius norm and $0.134$ for the
+%          infinity norm (both for 1992).
+%    \item Summer: $0.0348$ for the Frobenius norm (for 1992) and
+%          $0.0149$ for the infinity norm (for 1989).
+%    \item Autumn: $0.194$ for the Frobenius norm and $0.0896$ for the
+%          infinity norm (both for 1986).
+%\end{itemize}}
 These minimum pointwise $p$-values are not adjusted for the search across candidate years.
-}
 
 \begin{figure}
 \centering
-% \includegraphics[width=0.9\linewidth]{plots/change.png}
-\includegraphics[width=\linewidth]{plots/change_dqu_0.8.png}
+\includegraphics[width=0.8\linewidth]{plots/change_dqu_0.8.png}
 \caption{
 Empirical p-values for the different candidate years $\tau$ for the test statistics based on the Frobenius (red) and infinity (blue) norm. Estimates are based on 25 season-years per temporal block and $B=200$ permutations. The horizontal dashed lines corresponds to the pointwise 5\% (grey) and 10\% (green) significance levels, respectively.}
 \label{fig:app_cp}
 \end{figure}
 
-%The conditional extremes framework is applied after transforming each variable to a common marginal distribution. 
+\subsection{Exploring the differences across time blocks}
+
+Given the evidence for a change in dependence for three seasons, we explore the differences in the CE models more closely. Since our framework targets the pairwise similarity of the fitted CE models, we focus on whether the spatial structure in the CE models differs when comparing the time blocks before and after the break points identified in Subsection~\ref{subsec:app_setup} at the 10\% significance level: $\tau=1990$, $\tau=1986$ and $\tau=1998$ for winter, summer and autumn, respectively, with $\tau=1990$ providing a balance between the time points identified by the Frobenius and infinity norms. 
+
+For each of the three seasons and $\tau$ identfied, we derive the dissimilarity matrices $M^{(1)}$ and $M^{(2)}$in Equation~\eqref{eq:distance_matrix} based on the same 25-year time blocks used for the testing procedure. We then partition the 40 sites into three clusters using the Partitioning Around Medoids algorithm \citep{Rousseeuw1987, OToole2026clustering}; the clusterings obtained when setting their numbers to two and four are provided in the Supplementary Material (Figures~\ref{fig:app_clust_k2}--~\ref{fig:app_clust_k2_4_spring}).
 
 
 
-
-%A candidate season-year $t$ represents a possible change between season-years $t$ and $t+1$.
 
 
 
@@ -960,13 +971,13 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 %   \item All subsequent calculations are also done on the aggregated dissimilarity matrix. \todo{Need to look into others as well}
 % \end{itemize}
 % 
-% % Screening/changepoint setup
+% % Screening/change point setup
 % \begin{itemize}
-%   \item For our screening step and changepoint detection algorithm, we must perform our permutation test slightly differently to in our simulation study. 
+%   \item For our screening step and change point detection algorithm, we must perform our permutation test slightly differently to in our simulation study. 
 %   \item \todo{Describe how we permutate by `season year', define season year, etc}
 %   \item There is an implicit bias-variance tradeoff in the block length used.
 %   \item Empirically, we saw good performance with a block length of 25 years, since for a lesser number of years we saw some very large dissimilarities, while 
-%     a greater number of years left us with little perspective changepoint timepoints/season years to test at. 
+%     a greater number of years left us with little perspective change point timepoints/season years to test at. 
 % \end{itemize}
 
 % Marginal preprocessing
@@ -982,22 +993,22 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
   %\item In particular, some short-range dependence may remain between successive weekly observations, and consecutive values of the 13-week drought index are constructed from overlapping precipitation windows.
   %\item Following detrending, the observations are grouped by meteorological season. 
   %\item For each station and variable, the resulting seasonal observations are transformed to standard Laplace margins using the empirical rank transform.
-  %\item The conditional extremes and changepoint analyses are then performed separately for winter, spring, summer and autumn.
+  %\item The conditional extremes and change point analyses are then performed separately for winter, spring, summer and autumn.
 %\end{itemize}
 
 % Conditional extremes specification
 \begin{itemize}
 %\item We fit the conditional extremes model of \citet{Heffernan2004} using a common dependence threshold equal to the theoretical 80th percentile of the standard Laplace distribution. 
-%\item The same threshold is used for both variables, at every station, in both temporal blocks and at every candidate changepoint. 
+%\item The same threshold is used for both variables, at every station, in both temporal blocks and at every candidate change point. 
 %\item This ensures that exceedances have a common interpretation throughout the analysis.
 %\item The 80th-percentile threshold provided a satisfactory empirical compromise between restricting attention to the joint tail and retaining enough exceedances for stable model estimation. 
 \item In particular, the resulting clustering solutions exhibited clear spatial contiguity. \textcolor{red}{Add a sensitivity analysis for the dependence threshold.}
-\item The Monte Carlo approximation used to construct the pairwise dissimilarities employs the same sample from the standard Laplace distribution in every temporal comparison. Holding this sample fixed avoids introducing additional Monte Carlo variation between candidate changepoints. \textcolor{orange}{CR: This may be too niche a comment to make here.}
+\item The Monte Carlo approximation used to construct the pairwise dissimilarities employs the same sample from the standard Laplace distribution in every temporal comparison. Holding this sample fixed avoids introducing additional Monte Carlo variation between candidate change points. \textcolor{orange}{CR: This may be too niche a comment to make here.}
 \item The conditional fits from the two conditioning directions are combined into the aggregated dissimilarity matrix defined in Section~\ref{sec:method}. \textcolor{red}{Test for others}
 \item All screening, testing and clustering calculations reported below use this matrix. \textcolor{red}{Confirm terminology and add sensitivity results for the alternative dissimilarity matrices, if required.}
 \end{itemize}
 
-% Screening and changepoint-test specification
+% Screening and change point-test specification
 %\begin{itemize}
   %\item We use the season-year organisation defined in Section~\ref{sec:data} and apply the permutation procedure in Section~\ref{subsec:cp} separately within each season.
   %\item At candidate season-year $t$, the two temporal blocks contain the 25 season-years ending at $t$ and the 25 season-years beginning at $t+1$, respectively.
@@ -1011,14 +1022,14 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 \begin{itemize}
 %\item The choice of block length involves a bias-variance trade-off. 
 %\item Shorter blocks provide better temporal localisation but contain fewer threshold exceedances, resulting in unstable or failed conditional extremes fits. 
-%\item Longer blocks provide more stable estimates but leave fewer feasible candidate changepoints and smooth changes over a wider temporal interval.
+%\item Longer blocks provide more stable estimates but leave fewer feasible candidate change points and smooth changes over a wider temporal interval.
 %\item We investigated block lengths of 15, 20, 25 and 30 season-years. 
 %\item With 15-year blocks, many candidate comparisons failed because at least one conditional fit contained too few exceedances. 
 \item Twenty-year blocks were reliable for winter but produced substantial failure rates for several other seasons. 
 %\item All candidate comparisons fitted successfully with 25-year blocks. 
-%\item Increasing the length to 30 years also produced stable fits, but left only two to five candidate changepoints per season.
+%\item Increasing the length to 30 years also produced stable fits, but left only two to five candidate change points per season.
 %\item We therefore use 25 season-years on either side of each candidate throughout the primary analysis. 
-%\item This was the shortest common block length that produced stable fits across all seasons while retaining a useful range of candidate changepoints. \textcolor{red}{Present the alternative block lengths as a sensitivity analysis or in the supplementary material(?).}
+%\item This was the shortest common block length that produced stable fits across all seasons while retaining a useful range of candidate change points. \textcolor{red}{Present the alternative block lengths as a sensitivity analysis or in the supplementary material(?).}
 \end{itemize}
 
 % \todo{Say something about uses of spectral norm, even just for notes}
@@ -1027,7 +1038,7 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 %   \item Figure~\ref{fig:app_screen} shows the results of the screening step for each season for the Frobenius, Infinity and Spectral norms, respectively. \todo{Need for spectral?}
 %   \item Several ``peaks'', defined as $\ldots$, are observed across all seasons and choices of norm. \todo{Define how we determine peaks}
 %   \item \todo{Describe screening results each season separately (say where peaks are, comment on scale on y-axis and max values)}       
-%   \item While this screening step identifies several years of particular interest, there are a sufficiently small number of candidate changepoint years to perform our changepoint algorithm at every timestep.
+%   \item While this screening step identifies several years of particular interest, there are a sufficiently small number of candidate change point years to perform our change point algorithm at every timestep.
 % \end{itemize}
 
 %\begin{itemize}
@@ -1066,14 +1077,14 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 % \end{itemize}
 
 % \begin{itemize}
-%   \item Figure~\ref{fig:app_cp} shows, for each season, the p-values of the changepoint detection algorithm with 200 permutations at each season year, for each choice of norm. 
-%   \item No changepoints are observed for Spring and Autumn at the 5\% significance level, for any season year or norm choice \todo{May have to revise, changepoint is found for Autumn! For now act as if not}
-%   \item For Winter, the infinity norm finds changepoints at the season years from 1996 to 1999, while the other norms find changepoints at 1997 and 1998 only. 
+%   \item Figure~\ref{fig:app_cp} shows, for each season, the p-values of the change point detection algorithm with 200 permutations at each season year, for each choice of norm. 
+%   \item No change points are observed for Spring and Autumn at the 5\% significance level, for any season year or norm choice \todo{May have to revise, change point is found for Autumn! For now act as if not}
+%   \item For Winter, the infinity norm finds change points at the season years from 1996 to 1999, while the other norms find change points at 1997 and 1998 only. 
 %   \item For Summer, the infinity norm
-%   \item It is interesting that the infinity norm is most sensitive to the identified changepoints. 
+%   \item It is interesting that the infinity norm is most sensitive to the identified change points. 
 %   \item This may suggest that the changes are sometimes more localised than globally found. 
 %   \item Furthermore, for Summer post 1994, the infinity norm produces the largest p-values, giving extra surety to the conclusion that local changes do not occur around the season years 1994-1998. \todo{Tidy up this conclusion, if even needed/desired!}
-%   \item For many of the season years determined to be changepoints for Summer and Winter, the other norm choices also produce significant p-values, and so are in agreement with the infinity norm. 
+%   \item For many of the season years determined to be change points for Summer and Winter, the other norm choices also produce significant p-values, and so are in agreement with the infinity norm. 
 % \end{itemize}
 % 
 % \begin{figure}[htb]
@@ -1091,17 +1102,17 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 %\item Figure~\ref{fig:app_cp} shows the resulting pointwise Monte Carlo p-values for the Frobenius, infinity and spectral norms. 
 %\item A candidate season-year $(t)$ represents a possible change between season-years $(t)$ and $(t+1)$, and the horizontal dashed line denotes the pointwise 5\% significance level.
 %\item The p-values in Figure~\ref{fig:app_cp} are pointwise: each tests a change at one specified candidate season-year. 
-% \item Because the procedure examines multiple candidate years and three norms, values below 0.05 should initially be interpreted as pointwise evidence rather than as multiplicity-adjusted confirmation of a changepoint. \todo{Replace or supplement these results with Holm-adjusted p-values or a permutation maximum-statistic test for the final analysis.}
+% \item Because the procedure examines multiple candidate years and three norms, values below 0.05 should initially be interpreted as pointwise evidence rather than as multiplicity-adjusted confirmation of a change point. \todo{Replace or supplement these results with Holm-adjusted p-values or a permutation maximum-statistic test for the final analysis.}
 %\end{itemize}
 
 \begin{itemize}
 %\item For spring, none of the three norms produces a pointwise p-value below 0.05. 
 %\item The smallest values occur around 1992, in agreement with the dominant feature identified during screening, but remain above the pointwise significance threshold.
 
-% \item For autumn, the infinity norm produces an isolated pointwise-significant result at the beginning of the candidate range, around 1986. \todo{Add changepoint to re-clustering plot!}
+% \item For autumn, the infinity norm produces an isolated pointwise-significant result at the beginning of the candidate range, around 1986. \todo{Add change point to re-clustering plot!}
 % \item The Frobenius and spectral norms provide no corresponding evidence at this candidate, and no later autumn candidate is significant. 
 % \item This isolated result should therefore be interpreted cautiously, particularly because it occurs at the boundary of the candidate range and is not supported by the other norms.
-\item Also for Autumn, none of the three norms produces a pointwise p-value below 0.05, although the infinity norm came very close for 1986, the year with the highest test statistic in our screening step. \textcolor{red}{May have to rewrite slightly, as Autumn now has a 5\% changepoint (even here, it's significant at the 10\% level)} \textcolor{orange}{CR: I would say we stick with the 5\% level, because it is consistent with our cluster analysis.}
+%\item Also for Autumn, none of the three norms produces a pointwise p-value below 0.05, although the infinity norm came very close for 1986, the year with the highest test statistic in our screening step. \textcolor{red}{May have to rewrite slightly, as Autumn now has a 5\% change point (even here, it's significant at the 10\% level)} \textcolor{orange}{CR: I would say we stick with the 5\% level, because it is consistent with our cluster analysis.}
 %\item For winter, the infinity norm provides pointwise evidence of a change over the period 1996--1999. 
 %\item The spectral norm supports a narrower region around 1997--1998, while the Frobenius norm is significant in 1998. 
 %\item Thus, all three norms identify 1998, and the overall pattern provides consistent evidence for a change in the winter extremal dependence structure during the late 1990s.
@@ -1131,7 +1142,7 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 % \begin{itemize}
 % \item We finally examine how the detected changes affect the spatial clustering of the fitted extremal dependence structure. 
 % \item For each fitted conditional extremes model, the aggregated dissimilarity matrix is used to partition the 40 stations into three clusters using the clustering procedure described in Section~\ref{sec:method}.
-% \item As the changepoint analysis provides no consistent evidence of a change in spring or autumn, we refit the conditional extremes model to the complete time series for these seasons. 
+% \item As the change point analysis provides no consistent evidence of a change in spring or autumn, we refit the conditional extremes model to the complete time series for these seasons. 
 % 
 % \item For summer, the pointwise tests identify a broader candidate change region during the late 1980s and early 1990s. 
 % \item We use 1990 as a representative division within this region and fit separate models to season-years 1960--1990 and 1991--2024.
@@ -1139,7 +1150,7 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 % \item For winter, the three norms provide their clearest common evidence at season-year 1998. 
 % \item We therefore fit separate models to winter season-years 1960--1998 and 1999--2024.
 % 
-% \item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$. \textcolor{red}{Confirm or update the selected divisions after completing the multiplicity-adjusted changepoint analysis.}
+% \item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$. \textcolor{red}{Confirm or update the selected divisions after completing the multiplicity-adjusted change point analysis.}
 % \end{itemize}
 % 
 % \begin{itemize}
@@ -1156,58 +1167,54 @@ Empirical p-values for the different candidate years $\tau$ for the test statist
 % 
 % \item For summer, the two fitted periods retain some common large-scale structure.
 % \item However, a number of stations change their clustering relationships after 1990, most visibly in northwestern Spain, along the southern coast and across parts of the western interior. 
-% \item The summer changepoint therefore corresponds to a reorganization of particular regional relationships rather than a complete replacement of the earlier clustering structure.
+% \item The summer change point therefore corresponds to a reorganization of particular regional relationships rather than a complete replacement of the earlier clustering structure.
 % 
 % \item The winter clustering, in contrast, changes more extensively across the 1998 division. 
 % \item In particular, the post-1998 fit produces a different grouping of many stations along the northern coast, in the western and central interior, and along the Mediterranean coast. 
-% \item This broader spatial reorganisation, as opposed to the more localised changes seen in summer, is consistent with the late-1990s signal being identified by all three norms in the changepoint analysis.
+% \item This broader spatial reorganisation, as opposed to the more localised changes seen in summer, is consistent with the late-1990s signal being identified by all three norms in the change point analysis.
 % \end{itemize}
 
-\begin{figure}[htb]
-\centering
-\includegraphics[width=0.9\linewidth]{plots/twgss_dqu_0.8_all_trim.png}
+%\begin{figure}[htb]
+%\centering
+%\includegraphics[width=0.9\linewidth]{plots/twgss_dqu_0.8_all_trim.png}
 % \caption{
 % }
-\caption{
-``Elbow'' plots of the total within-group dissimilarity (TWD) against the number of clusters $k$ for the estimated clusters, obtained using the aggregated dissimilarity matrix for each season and their respective changepoint divisions.
-\textcolor{red}{Are elbow plots briefly alluded to in methods?}
-}
-\label{fig:elbow}
-\end{figure}
+%\caption{
+%``Elbow'' plots of the total within-group dissimilarity (TWD) against the number of clusters $k$ for the estimated clusters, obtained using the aggregated dissimilarity matrix for each season and their respective change point divisions.
+%\textcolor{red}{Are elbow plots briefly alluded to in methods?}
+%}
+%\label{fig:elbow}
+%\end{figure}
 
 % Setup and elbow plots
-\begin{itemize}
-    \item We finally investigate how the detected temporal changes are reflected in the spatial clustering of the fitted extremal dependence structures.
-    \item For each fitted conditional extremes model, the aggregated dissimilarity matrix is used to partition the 40 stations into three clusters using the procedure described in Section~\ref{sec:method}.
-    \item For summer, the pointwise tests identify a broader region of evidence during the late 1980s and early 1990s. We use 1990 as a representative division and fit separate models to season-years 1960--1990 and 1991--2024.
-    \item For winter, the clearest common evidence across the three matrix norms occurs at season-year 1998. Separate models are therefore fitted to season-years 1960--1998 and 1999--2024.
-    \item For autumn, the infinity norm identifies possible evidence of a change at 1986 at the 10\% pointwise significance level. We consequently examine the periods 1960--1986 and 1987--2024 as an exploratory sensitivity analysis.
-    \item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$.
-    \item The changepoint analysis provides no consistent evidence of temporal change in spring. We therefore fit a single conditional extremes model to the complete spring record.
-
-    \item The total within-cluster dissimilarity curves for each season and their respective divisions are shown in Figure~\ref{fig:elbow}.
-    \item Together, they generally support $k=3$ as an interpretable compromise between parsimony and within-cluster homogeneity.
-    \item However, as $k=2$ and $k=4$ also appear to be plausible for some elbow plots, we provide the corresponding clustering solutions in the Supplementary Material (Figures~\ref{fig:app_clust_k2}--~\ref{fig:app_clust_k2_4_spring}).
-\end{itemize}
+%\begin{itemize}
+    %\item We finally investigate how the detected temporal changes are reflected in the spatial clustering of the fitted extremal dependence structures.
+    %\item For each fitted conditional extremes model, the aggregated dissimilarity matrix is used to partition the 40 stations into three clusters using the procedure described in Section~\ref{sec:method}.
+    %\item For summer, the pointwise tests identify a broader region of evidence during the late 1980s and early 1990s. We use 1990 as a representative division and fit separate models to season-years 1960--1990 and 1991--2024.
+    %\item For winter, the clearest common evidence across the three matrix norms occurs at season-year 1998. Separate models are therefore fitted to season-years 1960--1998 and 1999--2024.
+    %\item For autumn, the infinity norm identifies possible evidence of a change at 1986 at the 10\% pointwise significance level. We consequently examine the periods 1960--1986 and 1987--2024 as an exploratory sensitivity analysis.
+    %\item These divisions treat a candidate (t) as a change between season-years $(t)$ and $(t+1)$.
+    %\item The change point analysis provides no consistent evidence of temporal change in spring. We therefore fit a single conditional extremes model to the complete spring record.
+    %\item The total within-cluster dissimilarity curves for each season and their respective divisions are shown in Figure~\ref{fig:elbow}.
+    %\item Together, they generally support $k=3$ as an interpretable compromise between parsimony and within-cluster homogeneity.
+    %\item However, as $k=2$ and $k=4$ also appear to be plausible for some elbow plots, we provide the corresponding clustering solutions in the Supplementary Material (Figures~\ref{fig:app_clust_k2}--~\ref{fig:app_clust_k2_4_spring}).
+%\end{itemize}
 
 \begin{figure}[htb]
 \centering
 % NOTE: Making this plot any bigger pushes it to the bottom of the document
 \includegraphics[width=0.7\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
 \caption{
-Spatial clustering of the 40 Spanish stations obtained from the fitted conditional extremes dissimilarity matrices. 
+Estimated season-wise spatial clustering of the 40 Spanish stations, highlighting differences in the spatial patterns across the estimated change points. Panel titles give the season and corresponding time period.  
 % Spring and autumn are fitted using their complete time series. 
-Winter is fitted separately for season-years 1960--1998 and 1999--2024, summer is fitted separately for season-years 1960--1990 and 1991--2024, and autumn is fitted separately for season-years 1960--1986 and 1987--2024.
-Three clusters are used in each fit. 
-Colours distinguish cluster membership within each panel.
-Background shading represents elevation.
+Colours distinguish panel-wise cluster membership, for $k=3$ clusters.
 }
 \label{fig:app_clust}
 \end{figure}
 
 % Initial broad summary of results
 \begin{itemize}
-  \item Figure~\ref{fig:app_clust} presents the resulting spatial clustering solutions for each season with a detected changepoint.
+  \item Figure~\ref{fig:app_clust} presents the resulting spatial clustering solutions for each season with a detected change point.
   \item The clusters exhibit substantial spatial coherence, despite station coordinates, elevation and other geographical covariates not entering the clustering procedure directly.
   \item No individual geographical covariate completely determines cluster membership. Nevertheless, longitude, latitude and distance to the coast exhibit clearer associations with membership than elevation, suggesting that the estimated extremal dependence structures contain a broad geographical component.
   \item Several geographically separated stations are assigned to the same cluster. The clustering therefore does not merely recover contiguous geographical regions, but identifies locations with similar fitted conditional extremal dependence structures.
@@ -1239,7 +1246,7 @@ Background shading represents elevation.
   \item Prominent positive bands are associated with Murcia and Ponferrada, indicating that their fitted dependence structures became more similar to those at several other stations after 1998.
   \item Both stations also change cluster membership: Murcia moves from cluster 2 to cluster 3, while Ponferrada moves from cluster 3 to cluster 2. These transitions illustrate that a reduction in pairwise dissimilarity does not necessarily preserve the original cluster boundaries.
 
-  \item The broad spatial reorganisation in winter is consistent with the changepoint signal being visible under both the Frobenius and infinity norms: the difference matrix contains several prominent station-specific changes together with more widely distributed moderate changes.
+  \item The broad spatial reorganisation in winter is consistent with the change point signal being visible under both the Frobenius and infinity norms: the difference matrix contains several prominent station-specific changes together with more widely distributed moderate changes.
   \item Overall, the winter results provide evidence that the geographical separation of the fitted extremal dependence regimes weakened after 1998. This should be interpreted as convergence among fitted dependence structures, rather than as evidence that the absolute strength of extremal dependence increased.
 \end{itemize}
 
@@ -1249,7 +1256,7 @@ Background shading represents elevation.
   \item Cluster 2 extends along much of the northern and northwestern coast, whereas clusters 1 and 3 occupy broader and partially overlapping interior, eastern and southern regions.
   \item Geography therefore provides a useful broad interpretation of the spring clusters, although several spatial outliers confirm that the clustering is determined by fitted extremal dependence rather than spatial proximity alone.
   \item The dissimilarity matrix for Spring (Supplementary Figure~\ref{fig:diss_spring}) is fairly well block-structured, with intra-cluster dissimilarities generally smaller than inter-cluster dissimilarities.
-  \item As no consistent changepoint is identified for spring, this solution provides a useful stationary seasonal comparison with the temporally divided solutions for winter, summer and autumn.
+  \item As no consistent change point is identified for spring, this solution provides a useful stationary seasonal comparison with the temporally divided solutions for winter, summer and autumn.
 \end{itemize}
 
 % Summer
@@ -1273,7 +1280,7 @@ Background shading represents elevation.
   \item Summer contains the largest individual absolute matrix changes among the three divided seasons, with maximum differences of approximately \(0.10\). These changes are concentrated in several prominent rows and columns rather than being distributed uniformly.
   \item Donostia/San Sebastián-Igeldo and Granada Base Aérea display particularly pronounced positive bands, indicating that their fitted dependence structures became more similar to those at many other stations after 1990.
   \item Granada Base Aérea also moves from cluster 2 to cluster 1. This transition is consistent with a weakening of the earlier distinction between its original cluster and the remaining dependence regimes.
-  \item The concentration of the summer changes in a limited number of rows and columns is consistent with the comparatively strong changepoint evidence under the infinity norm.
+  \item The concentration of the summer changes in a limited number of rows and columns is consistent with the comparatively strong change point evidence under the infinity norm.
   \item Collectively, the summer results suggest partial convergence of the fitted dependence structures while retaining a broad north/east versus south/west spatial organisation.
 \end{itemize}
 
@@ -1297,7 +1304,7 @@ Background shading represents elevation.
     \item The three seasons with candidate temporal changes exhibit appreciable reorganisation of their estimated spatial clusters, but the form of this reorganisation differs between seasons.
     \item Winter exhibits the broadest redistribution of cluster membership and a mixture of increasing and decreasing pairwise dissimilarities.
     \item Summer retains its principal large-scale spatial structure, but contains several large station-specific changes that weaken the separation between some clusters.
-    \item Autumn exhibits a more widespread reduction in pairwise dissimilarity, although its changepoint evidence is weaker and should be regarded as exploratory.
+    \item Autumn exhibits a more widespread reduction in pairwise dissimilarity, although its change point evidence is weaker and should be regarded as exploratory.
 
     \item Across the divided seasons, the later-period dissimilarity matrices generally exhibit weaker block structure and smaller pairwise dissimilarities. This indicates that the fitted conditional extremal dependence structures became less strongly differentiated across Spain.
 
@@ -1316,7 +1323,7 @@ Background shading represents elevation.
 % 
 % \begin{itemize}
 % \item Signed differences are calculated as $D_{\mathrm{before}}-D_{\mathrm{after}}$.
-% \item Positive differences therefore indicate that a pair of locations became more similar after the changepoint, whereas negative differences indicate that it became more dissimilar.
+% \item Positive differences therefore indicate that a pair of locations became more similar after the change point, whereas negative differences indicate that it became more dissimilar.
 % \item Winter contains a mixture of positive and negative differences, suggesting heterogeneous restructuring rather than a uniform change.
 % \item The Winter changes are concentrated in particular rows and columns, indicating that a limited number of locations contribute disproportionately to the change.
 % \item Summer differences are predominantly positive, suggesting a general reduction in pairwise dissimilarity after 1990.
@@ -1325,65 +1332,72 @@ Background shading represents elevation.
 % \item Colour intensity should not be compared directly between seasons because the panels use different colour-scale limits.
 % \end{itemize}
 
-\section{Discussion}\label{sec5}
+\section{Discussion}
+\label{sec:Discussion}
 
 We have developed a framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. By combining conditional extremes models with divergence-based comparisons of joint tails, the approach provides a basis for testing for changes in the spatial patterns of extremal dependence exhibited by data observed at multiple sampling locations. Our simulation study indicated approximate pointwise null calibration and appreciable detection power under three realistic data generation scenarios, with the Frobenius norm outperforming the infinity norm in the considered scenarios. The weaker local alternative scenario remains difficult to detect, highlighting the importance of change magnitude and baseline dependence across the number of affected locations.
 
-Our application to temperature and drought indices observed at Spanish measuring stations suggests season-specific changes, with the strongest pointwise evidence in summer and winter. Subsequent extremal clustering of the sites, before and after the estimated changepoints, reveals regional reorganisation and generally weaker differentiation between the estimated dependence structures in the later periods. This increased similarity across stations does not itself imply stronger extremal dependence between Spanish temperatures and drought, but instead suggests a homogenisation of the climate over recent years. As our pointwise tests do not correct for multiple testing across candidate years, the estimated boundaries should be interpreted as divisions between periods with differing extremal dependence structures rather than precise dates of abrupt change.
+Our application to temperature and drought indices observed at Spanish measuring stations suggests season-specific changes, with the strongest pointwise evidence in summer and winter. Subsequent extremal clustering of the sites, before and after the estimated change points, reveals regional reorganisation and generally weaker differentiation between the estimated dependence structures in the later periods. This increased similarity across stations does not itself imply stronger extremal dependence between Spanish temperatures and drought, but instead suggests a homogenisation of the climate over recent years. As our pointwise tests do not correct for multiple testing across candidate years, the estimated boundaries should be interpreted as divisions between periods with differing extremal dependence structures rather than precise dates of abrupt change.
 
-\textcolor{red}{Possible discussion points} \\
-Simulations:
-\begin{itemize}
-\item Aggregating the fitted CE models into one dissimilarity matrix provides a common basis for comparing sites, but can obscure which conditioning direction or part of the dependence structure drives a detected change.
-Examining these components separately could help interpret the results.
-\item In the simulation study, dependence changes gradually from 1980 to 2000.
-A selected changepoint year is therefore best understood as a useful division between two fitting periods, rather than the precise date of a physical change.
-\item The stronger change at eight sites is much easier to detect than the weaker change at eight sites.
-Detection depends on the magnitude and baseline level of dependence as well as the number of affected sites.
-\item The Frobenius norm has greater pointwise power than the infinity norm even under the stronger local alternative considered here.
-Further simulations with different spatial patterns of change would help identify settings in which the infinity norm may perform better.
-\item Longer comparison blocks provide more observations for fitting but leave fewer candidate years and may combine observations from different stages of a gradual transition.
-The choice of 25 years per block reflects this trade-off and should not be regarded as universally optimal.
-\item The reported permutation $p$-values assess individual candidate boundaries.
-Selecting the smallest $p$-value across years raises a separate question about uncertainty and multiple testing.
-\item Simulated observations are independent across sites conditional on their dependence parameters, whereas observations at real stations may exhibit spatial dependence.
-Further simulations could assess how cross-site dependence affects calibration and power.
-\item The principle assumption of the CE model is that the residuals are initially assumed to be multivariate Gaussian when fitting. 
-\item It may be worth performing a sensitivity analysis on whether departures from that assumption significant affect our dissimilarity and changepoint detection scheme.
-\item The current simulations do not establish the size or direction of any resulting effect on the dissimilarities.
-\end{itemize}
+Several methodological limitations warrant further investigation. First, we perform a purely empirical change point detection analysis. A theoretical treatment of our methodological framework, e.g., establishing asymptotic consistency and convergence rates for the considered estimators, is beyond the scope of this article. Moreover, we focus here on detecting a single change in the spatial patterns of multivariate extremal dependence. Although the simulation study examines pointwise calibration and power, it does not quantify the accuracy or uncertainty of an estimated change point, and we do not consider settings with multiple change points; additional Monte Carlo studies may be required to assess the accuracy of our change point estimator.
 
-Application:
-\begin{itemize}
-\item \textcolor{red}{discuss results} Taken together, the screening, elbow plots, changepoint tests and changes in spatial clustering suggest temporal differences in the fitted extremal temperature--DPI dependence structure.
-The evidence is clearest for summer and winter, while the autumn result warrants a more cautious interpretation.
-\item The differing cluster reorganisations suggest that these temporal differences are season-specific, rather than manifestations of one common spatial shift across Spain.
-They also show that changes in extremal dependence need not have the same geographical pattern as changes in marginal temperature or drought severity.
-\item These findings may motivate further investigation of compound extremes in regions concerned about increasing aridity or desertification.
-The present analysis does not measure land degradation, establish an increase in drought frequency or severity, or identify a physical cause for the dependence changes.
-\item \textcolor{red}{Discuss methodology for application} Using the same theoretical $0.8$ standard-Laplace quantile as the fitting threshold gives exceedances a common interpretation across sites, seasons and temporal blocks.
-However, a fixed threshold can leave some site--block combinations with too few exceedances for a reliable conditional extremes fit.
-Our requirement of at least 15 exceedances therefore limits the candidate comparisons and block lengths that can be analysed.
-A sensitivity analysis over nearby thresholds would help assess whether the application findings depend on this choice.
-\item As in the simulation study, combining the two conditioning directions into one dissimilarity matrix provides a single basis for testing and clustering.
-It can also conceal whether a particular change is driven primarily by extreme temperature conditional on drought, or by extreme drought conditional on temperature.
-Examining the two components separately could clarify the interpretation of the detected changes.
-\item A smaller dissimilarity between stations means that their fitted extremal dependence structures are more alike.
-It does not establish that temperature--DPI dependence has strengthened at either station.
-Station-level changes in fitted model parameters or tail-dependence summaries would be needed to assess that direction.
-\item The candidate changepoints identify divisions between adjacent fitting blocks.
-Because each block covers 25 season-years, a significant candidate year should not be interpreted as the precise date of an abrupt physical change.
+Second, we assume independence of observations to simplify inference, but this assumption is unlikely to be satisfied in many environmental contexts. Temporal dependence is particularly relevant for the Spanish drought index, which is constructed from overlapping precipitation windows. Although we account for spatial dependence in our testing procedure, by permuting complete season-years jointly across all stations, this procedure does not fully preserve temporal dependence between success season-years. The validity of the permutation test therefore relies on exchangeability of annual season-years under the null hypothesis, which is not necessarily guaranteed in our application. Further work could investigate resampling schemes that preserve dependence over longer temporal blocks and assess their effects on calibration and power; see, e.g., \cite{politis1994stationary}. While we do preserve spatial dependence, it is not explicitly modelled: we fit the conditional extremes model separately at each site, without borrowing information across locations. A spatial or hierarchical extension could improve estimation, although it would need sufficient flexibility to retain local differences and changes in dependence. Spatial structure could be imposed via, for example, generalised additive models \citep{youngman2022evgam} or spatial extensions of the conditional extremes model \citep{wadsworth2022higher,richards2022modelling}.
 
-\item The reported permutation $p$-values are pointwise across candidate years.
-Testing multiple candidate years increases the chance of at least one small $p$-value under the null.
-A Bonferroni correction could control this family-wise error rate, although it would be conservative because neighbouring comparisons use strongly overlapping blocks.
-With 16 candidate years and 200 permutations, the smallest attainable permutation $p$-value under the usual plus-one calculation exceeds the Bonferroni threshold at the 5\% level.
-Assessing significance across the candidate grid would therefore require more permutations or a permutation test based on the maximum statistic over candidate years.
-\item The analysis removes estimated trends in monthly temperature means before transforming the margins.
-Changes in other features of the marginal distributions, or residual temporal dependence, could still affect the fitted dependence structures and the permutation analysis.
-\item The distinct winter, summer and autumn results suggest that changes in compound temperature--DPI extremes need not follow one national spatial pattern.
-The observed associations with geography and coastal distance may help generate physical explanations, but the clustering alone does not establish their causes.
-\end{itemize}
+Finally, the change point estimation procedure requires several tuning parameters, including the threshold for fitting the conditional extremes models, the temporal block length, and the matrix norm. These choices influence the numerical stability of the estimation procedure and the sensitivity to the underlying change. Higher thresholds reduce the number of exceedances available for fitting the conditional extremes model, while longer temporal blocks increase the sample size at the expense of the temporal resolution of the change point estimator. Our chosen settings provide a practical implementation, but their performance in the scenarios considered does not establish general optimality. A systemic sensitivity analysis would strengthen the methodology, but is omitted for brevity.
+
+% \textcolor{red}{Possible discussion points} \\
+% Simulations:
+% \begin{itemize}
+% \item Aggregating the fitted CE models into one dissimilarity matrix provides a common basis for comparing sites, but can obscure which conditioning direction or part of the dependence structure drives a detected change.
+% Examining these components separately could help interpret the results.
+% \item In the simulation study, dependence changes gradually from 1980 to 2000.
+% A selected change point year is therefore best understood as a useful division between two fitting periods, rather than the precise date of a physical change.
+% \item The stronger change at eight sites is much easier to detect than the weaker change at eight sites.
+% Detection depends on the magnitude and baseline level of dependence as well as the number of affected sites.
+% \item The Frobenius norm has greater pointwise power than the infinity norm even under the stronger local alternative considered here.
+% Further simulations with different spatial patterns of change would help identify settings in which the infinity norm may perform better.
+% \item Longer comparison blocks provide more observations for fitting but leave fewer candidate years and may combine observations from different stages of a gradual transition.
+% The choice of 25 years per block reflects this trade-off and should not be regarded as universally optimal.
+% \item The reported permutation $p$-values assess individual candidate boundaries.
+% Selecting the smallest $p$-value across years raises a separate question about uncertainty and multiple testing.
+% \item Simulated observations are independent across sites conditional on their dependence parameters, whereas observations at real stations may exhibit spatial dependence.
+% Further simulations could assess how cross-site dependence affects calibration and power.
+% \item The principle assumption of the CE model is that the residuals are initially assumed to be multivariate Gaussian when fitting. 
+% \item It may be worth performing a sensitivity analysis on whether departures from that assumption significant affect our dissimilarity and change point detection scheme.
+% \item The current simulations do not establish the size or direction of any resulting effect on the dissimilarities.
+% \end{itemize}
+
+% Application:
+% \begin{itemize}
+% \item \textcolor{red}{discuss results} Taken together, the screening, elbow plots, change point tests and changes in spatial clustering suggest temporal differences in the fitted extremal temperature--DPI dependence structure.
+% The evidence is clearest for summer and winter, while the autumn result warrants a more cautious interpretation.
+% \item The differing cluster reorganisations suggest that these temporal differences are season-specific, rather than manifestations of one common spatial shift across Spain.
+% They also show that changes in extremal dependence need not have the same geographical pattern as changes in marginal temperature or drought severity.
+% \item These findings may motivate further investigation of compound extremes in regions concerned about increasing aridity or desertification.
+% The present analysis does not measure land degradation, establish an increase in drought frequency or severity, or identify a physical cause for the dependence changes.
+% \item \textcolor{red}{Discuss methodology for application} Using the same theoretical $0.8$ standard-Laplace quantile as the fitting threshold gives exceedances a common interpretation across sites, seasons and temporal blocks.
+% However, a fixed threshold can leave some site--block combinations with too few exceedances for a reliable conditional extremes fit.
+% Our requirement of at least 15 exceedances therefore limits the candidate comparisons and block lengths that can be analysed.
+% A sensitivity analysis over nearby thresholds would help assess whether the application findings depend on this choice.
+% \item As in the simulation study, combining the two conditioning directions into one dissimilarity matrix provides a single basis for testing and clustering.
+% It can also conceal whether a particular change is driven primarily by extreme temperature conditional on drought, or by extreme drought conditional on temperature.
+% Examining the two components separately could clarify the interpretation of the detected changes.
+% \item A smaller dissimilarity between stations means that their fitted extremal dependence structures are more alike.
+% It does not establish that temperature--DPI dependence has strengthened at either station.
+% Station-level changes in fitted model parameters or tail-dependence summaries would be needed to assess that direction.
+% \item The candidate change points identify divisions between adjacent fitting blocks.
+% Because each block covers 25 season-years, a significant candidate year should not be interpreted as the precise date of an abrupt physical change.
+
+% \item The reported permutation $p$-values are pointwise across candidate years.
+% Testing multiple candidate years increases the chance of at least one small $p$-value under the null.
+% A Bonferroni correction could control this family-wise error rate, although it would be conservative because neighbouring comparisons use strongly overlapping blocks.
+% With 16 candidate years and 200 permutations, the smallest attainable permutation $p$-value under the usual plus-one calculation exceeds the Bonferroni threshold at the 5\% level.
+% Assessing significance across the candidate grid would therefore require more permutations or a permutation test based on the maximum statistic over candidate years.
+% \item The analysis removes estimated trends in monthly temperature means before transforming the margins.
+% Changes in other features of the marginal distributions, or residual temporal dependence, could still affect the fitted dependence structures and the permutation analysis.
+% \item The distinct winter, summer and autumn results suggest that changes in compound temperature--DPI extremes need not follow one national spatial pattern.
+% The observed associations with geography and coastal distance may help generate physical explanations, but the clustering alone does not establish their causes.
+% \end{itemize}
 
 %\backmatter
 
@@ -1392,7 +1406,7 @@ We acknowledge the data providers in the ECA\&D project \citep{Klein2002}. Data 
 
 \subsection*{Author contributions}
 
-This is an author contribution text. This is an author contribution text. This is an author contribution text. This is an author contribution text. This is an author contribution text. 
+\textbf{Patrick O'Toole}: writing – original draft, conceptualisation, formal analysis, methodology, software, visualisation, validation, writing – review and editing. \textbf{Christian Rohrbeck}: writing – original draft, conceptualisation, methodology, supervision, writing – review and editing. \textbf{Jordan Richards}: writing – original draft, conceptualisation, methodology, supervision, writing – review and editing.
 
 \subsection*{Financial disclosure}
 
@@ -1403,9 +1417,9 @@ None reported.
 The authors declare no potential conflict of interests.
 
 
-\section*{Supporting information}
+%\section*{Supporting information}
 
-The following supporting information is available as part of the online article:
+%The following supporting information is available as part of the online article:
 
 % \noindent
 % \textbf{Figure S1.}
@@ -1416,11 +1430,57 @@ The following supporting information is available as part of the online article:
 % {The SST anomalies for GC2C calculated against the observations (OIsst).}
 
 
-%\appendix
+\appendix
 
-%\section{Section title of first appendix\label{app1}}
+\section{Additional figures\label{app1}}
 
-% \nocite{*}% Show all bib entries - both cited and uncited; comment this line to view only cited bib entries;
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/twgss_dqu_0.8_all_trim.png}
+\caption{
+Elbow plots of the total within-group dissimilarity (TWD) against the number of clusters $k$ for the estimated spatial clusters. Panel titles give the season and corresponding time period.  
+\textcolor{red}{Are elbow plots briefly alluded to in methods?}
+}
+\label{fig:elbow}
+\end{figure}
+
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.4\linewidth]{plots/clust_map_dqu_0.8_spring_trim.png}
+\includegraphics[width=0.4\linewidth]{latex/plots/clust_map_dqu_0.8_k_2_4_spring.png}
+\caption{
+Estimated spatial clustering of the 40 Spanish stations, for spring, where no significant change point was found.
+% Spring and autumn are fitted using their complete time series. 
+Colours distinguish panel-wise cluster membership, for $k=2$ (left), $k=3$ (centre), and $k=4$ (right) clusters.
+}
+\label{fig:app_clust_spring}
+\end{figure}
+
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k2_trim.png}
+\caption{
+Estimated season-wise spatial clustering of the 40 Spanish stations, highlighting differences in the spatial patterns across the estimated change points. Panel titles give the season and corresponding time period.  
+% Spring and autumn are fitted using their complete time series. 
+Colours distinguish panel-wise cluster membership, for $k=2$ clusters.
+}
+\label{fig:app_clust_k2}
+\end{figure}
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.9\linewidth]{plots/clust_map_dqu_0.8_k4_trim.png}
+\caption{
+Estimated season-wise spatial clustering of the 40 Spanish stations, highlighting differences in the spatial patterns across the estimated change points. Panel titles give the season and corresponding time period.  
+% Spring and autumn are fitted using their complete time series. 
+Colours distinguish panel-wise cluster membership, for $k=4$ clusters.
+}
+\label{fig:app_clust_k4}
+\end{figure}
+
+
 \bibliography{wileyNJD-APA}%
 
 
