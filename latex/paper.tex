@@ -113,10 +113,24 @@ The remainder of this paper is organised as follows: Section~\ref{sec:data} summ
 
 Desertification is one of Spain's most pressing environmental challenges, and the country is a hotspot for severe desertification throughout Europe \citep{onate2005policy}. Moreover, \citet{SpainDegradation} found that 20\% of Spanish territory was degraded, and an additional 1\% was undergoing an active process of environmental deterioration, during 2000--2010. While part of this degradation may be attributable to agricultural practices and other land-use pressures, climate change may also have altered the climatic conditions conducive to desertification and land degradation. We focus on this climatic dimension in our analysis. Specifically, interest lies in whether there has been a shift in the tail dependence structure of temperature and drought-related indicators across Spain. The IPCC Special Report on Climate Change and Land \citep{IPCC2019Land} highlights that the combination of drought and very high temperatures is generally more damaging than either stressor alone, for instance, when considering crop yields. This motivates investigating whether the extremal association between temperature and drought has changed, and whether these changes have altered the geographical pattern of dependence across Spain.
 
-Daily maximum temperature and precipitation data for 40 locations across Peninsular Spain for 1960--2024 are obtained from the European Climate Assessment Dataset (ECAD) \citep{Klein2002}. Figure~\ref{fig:app_intro}~left panel shows that the sites considered cover all regions across Peninsular Spain. Stations are restricted to those that have observed daily maximum-temperature on more than 80\% of the days during 1960--2024, as well as at least one observation in every week of the study period. To reduce information redundancy and spatial dependence, we use only stations at least 25~km apart; airport stations are removed to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records. % and, hence, the findings of our analysis. 
-Observations flagged by ECAD as missing or suspect are excluded, and weekly summaries are calculated from the remaining daily observations. 
+Daily maximum temperature and precipitation data for 40 locations across Peninsular Spain for 1960--2024 are obtained from the European Climate Assessment Dataset (ECAD) \citep{Klein2002}.
+Figure~\ref{fig:app_intro}~left panel shows that the sites considered cover all regions across Peninsular Spain.
+Stations are restricted to those that have observed daily maximum-temperature on more than 80\% of the days during 1960--2024, as well as at least one observation in every week of the study period. 
+To reduce information redundancy and spatial dependence, we use only stations at least 25~km apart; airport stations are removed to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records. % and, hence, the findings of our analysis. 
+% To reduce information redundancy and spatial dependence, we use only stations at least 25~km apart; airport stations are removed to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records.
+\textcolor{red}{
+  To reduce information redundancy and spatial dependence, we identify sets of stations located within 25~km of one another and retain one station from each set. 
+  Where possible, non-airport stations are preferred to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records.
+}
+Observations flagged by ECAD as missing or suspect are excluded, and weekly summaries are calculated from the remaining daily observations.
 %Any undefined weekly summaries are recorded as missing. 
-We aggregate to a weekly resolution to reduce temporal dependence, taking the maximum of the observed temperature and total accumulated precipitation within each week. Since land degradation is typically associated with prolonged drought rather than short-term precipitation deficits, we derive the Standardised Precipitation Index (SPI) \citep{McKee1993} from the time series of weekly precipitation totals using the SPEI R package \citep{SPEI}. 
+\textcolor{red}{
+  Across the 40 selected stations, an average of 99.7\% of the expected daily maximum-temperature observations and 97.1\% of the expected daily precipitation observations are available after quality control. 
+  Station-wise availability ranges from 98.1\% to 100\% for temperature and from 94.0\% to 99.8\% for precipitation.
+}
+We aggregate to a weekly resolution to reduce temporal dependence, taking the maximum of the observed temperature and total accumulated precipitation within each week. 
+\textcolor{red}{After aggregation, 277 of the 135,720 station--week combinations (0.204\%) contain no valid temperature observations, while 12 station--week combinations (0.009\%) contain no valid precipitation observations.}
+Since land degradation is typically associated with prolonged drought rather than short-term precipitation deficits, we derive the Standardised Precipitation Index (SPI) \citep{McKee1993} from the time series of weekly precipitation totals using the SPEI R package \citep{SPEI}. 
 
 \begin{figure}
 \centering
@@ -127,22 +141,50 @@ Left: elevation profile of mainland Spain and locations of the 40 meteorological
 \label{fig:app_intro}
 \end{figure}
 
-The SPI measures deviations in accumulated precipitation from its long-term climatological distribution and therefore provides a more informative summary of drought conditions than raw precipitation totals. Moreover, temperature dynamics may respond more strongly to drought conditions than the precipitation recorded during the current week. Formally, for a given accumulation period and station, the SPI is computed by first collecting site-wise precipitation over a rolling window and then fitting a gamma distribution to the historical series of accumulated precipitation totals to produce a reference distribution. 
+The SPI measures deviations in accumulated precipitation from its long-term climatological distribution and therefore provides a more informative summary of drought conditions than raw precipitation totals. 
+Moreover, temperature dynamics may respond more strongly to drought conditions than the precipitation recorded during the current week.
+Formally, for a given accumulation period and station, the SPI is computed by first collecting site-wise precipitation over a rolling window and then fitting a gamma distribution to the historical series of accumulated precipitation totals to produce a reference distribution.
 % The gamma distribution is estimated using unbiased probability-weighted moments, with equal weight assigned to each observation; missing observations were omitted during estimation, and any resulting infinite SPI values were treated as missing in the subsequent analysis. 
 % The observed accumulation is then transformed to a Z-score, relative to the historical distribution. 
 The gamma distribution is estimated using unbiased probability-weighted moments, with equal weight assigned to each observation.
+% \textcolor{red}{The reference distribution is fitted separately at each station using its precipitation record over 1960--2024.}
 The observed accumulation is then transformed to a Z-score, relative to the historical distribution. 
-In our application, the accumulation period is set to 13 weeks, including the current week. The 13-week accumulation period represents precipitation deficits over approximately three months, allowing us to examine extreme weekly temperatures alongside sustained dry conditions. Since, under the usual SPI convention, negative values represent drier-than-normal conditions, we define the drought index $D=-\mathrm{SPI}$. Larger values of $D$ therefore correspond to more severe drought conditions. In what follows, we analyse the dependence between extremely high values for $D$ and the weekly maximum temperature. Note that we perform a complete-case analysis; in cases where one of the temperature or SPI values are missing, the observation pair is removed from the analysis.
+In our application, the accumulation period is set to 13 weeks, including the current week. 
+The 13-week accumulation period represents precipitation deficits over approximately three months, allowing us to examine extreme weekly temperatures alongside sustained dry conditions. 
+% \textcolor{red}{Undefined or non-finite SPI estimates are treated as missing. In total, 470 of the 135,720 station--week SPI values (0.346\%) are missing.}
+% \textcolor{red}{Combining the temperature and SPI records, 742 station--week pairs (0.547\%) are incomplete and are excluded from the subsequent analysis.}
+\textcolor{red}{
+Undefined or non-finite SPI estimates are treated as missing. 
+In total, 470 of the 135,720 station--week SPI values (0.346\%) are missing.
+We perform a complete-case analysis, under which the 742 station--week pairs (0.547\%) with a missing temperature or SPI value are excluded.
+}
+Since, under the usual SPI convention, negative values represent drier-than-normal conditions, we define the drought index $D=-\mathrm{SPI}$.
+Larger values of $D$ therefore correspond to more severe drought conditions. 
+In what follows, we analyse the dependence between extremely high values of $D$ and the weekly maximum temperature. 
+% Note that we perform a complete-case analysis; in cases where one of the temperature or SPI values are missing, the observation pair is removed from the analysis.
 
-In what follows, we propose a methodology to determine whether there is a shift in the dependence of maximum weekly temperature and the drought index $D$ for the most extreme events. To account for seasonal differences in the dependence structure, exemplified in Figure~\ref{fig:app_intro}, we analyse the seasons separately. Figure~\ref{fig:app_intro} suggests that the relationship between weekly maximum temperature and the drought index $D$ is weaker for Daroca, Aragon, than for Jerez de la Frontera in Andalusia. These differences are broadly consistent with regional climatological patterns. 
-Andalusia is predominantly characterised by a Mediterranean climate according to the K{\"o}ppen climate classification \citep{Peel2007}, with a pronounced summer dry season. In contrast, the data for Daroca suggest a less pronounced summer dry season and a different seasonal precipitation regime. Consequently, drought conditions in Jerez de la Frontera may be more closely linked to episodes of extreme heat than those in Daroca. Automatically identifying clusters of sites with similar extremal dependence properties, and testing for temporal changes in the resulting spatial patterns, can be achieved using the following methodology. 
+We therefore propose a methodology to determine whether there is a shift in the dependence of maximum weekly temperature and the drought index $D$ for the most extreme events. 
+To account for seasonal differences in the dependence structure, exemplified in Figure~\ref{fig:app_intro}, we analyse the seasons separately. 
+Figure~\ref{fig:app_intro} suggests that the relationship between weekly maximum temperature and the drought index $D$ is weaker for Daroca, Aragon, than for Jerez de la Frontera in Andalusia. 
+These differences are broadly consistent with regional climatological patterns.
+Andalusia is predominantly characterised by a Mediterranean climate according to the K{\"o}ppen climate classification \citep{Peel2007}, with a pronounced summer dry season. 
+In contrast, the data for Daroca suggest a less pronounced summer dry season and a different seasonal precipitation regime. 
+Consequently, drought conditions in Jerez de la Frontera may be more closely linked to episodes of extreme heat than those in Daroca.
+Automatically identifying clusters of sites with similar extremal dependence properties, and testing for temporal changes in the resulting spatial patterns, can be achieved using the following methodology. 
 
 
 \section{Methodology}\label{sec:method}
 
 Suppose we have $n$ spatial sites and observe $d$ variables across $T$ time points at each site; we have $n=40$ and $d=2$ in Section~\ref{sec:data}. Let $\tilde{\boldsymbol{X}}_{s}^{(t)}=(\tilde{X}_{1,s}^{(t)}, \ldots,\tilde{X}_{d,s}^{(t)})^\top$ denote the vector of variables observed at site $s\in\{1,\ldots,n\}$ and time $t\in\{1,\ldots,T\}$, and we assume that $\tilde{\boldsymbol{X}}_{s}^{(t)}$ is independent of $\tilde{\boldsymbol{X}}_{s'}^{(t')}$ unless $(s,t)=(s',t')$. Our objective is to analyse the tail behaviour of $\tilde{\boldsymbol{X}}_s^{(t)}$, in particular the extremal dependence of the $d$ variables at the individual sites across time. We further want to assess whether there is evidence of a change in the relative difference of tail behaviour across sites.
 
-To perform inference, we assume that the tail dependence structure is stationary across subsets of the observation window. Let $\tau\in\{1,\ldots,T\}$ be a time point and define the time blocks $\mathcal{T}_1(\tau) = \{\tau-\Delta+1,\ldots,\tau\}$ and $\mathcal{T}_2(\tau) = \{\tau+1,\ldots,\tau+\Delta\}$, where $\Delta$ is a user-specified block length. We assume that the distribution of $\tilde{\boldsymbol{X}}_{s}^{(t)}$ remains constant across all time points within the same block. In the rest of the paper, we write $\boldsymbol{X}_{s,\tau}^{(j)}$ when referring to a random vector which has the same distribution as the random vectors for site $s$ across block $\mathcal{T}_j(\tau)$. Note that we drop the index $\tau$ in Subsections~\ref{subsec:ce} and~\ref{subsec:div} for notational brevity.
+% To perform inference, we assume that the tail dependence structure is stationary across subsets of the observation window. 
+% Let $\tau\in\{1,\ldots,T\}$ be a time point and define the time blocks $\mathcal{T}_1(\tau) = \{\tau-\Delta+1,\ldots,\tau\}$ and $\mathcal{T}_2(\tau) = \{\tau+1,\ldots,\tau+\Delta\}$, where $\Delta$ is a user-specified block length. 
+% We assume that the distribution of $\tilde{\boldsymbol{X}}_{s}^{(t)}$ remains constant across all time points within the same block. 
+\textcolor{red}{
+To perform inference, let $\tau\in\{\Delta,\ldots,T-\Delta\}$ be a candidate boundary and define the adjacent time blocks $\mathcal{T}_1(\tau)=\{\tau-\Delta+1,\ldots,\tau\}$ and $\mathcal{T}_2(\tau)=\{\tau+1,\ldots,\tau+\Delta\}$, where $\Delta$ is a user-specified block length. 
+We assume that the distribution of $\tilde{\boldsymbol{X}}_{s}^{(t)}$, and hence its tail dependence structure, remains constant across all time points within each block.
+}
+In the rest of the paper, we write $\boldsymbol{X}_{s,\tau}^{(j)}$ when referring to a random vector which has the same distribution as the random vectors for site $s$ across block $\mathcal{T}_j(\tau)$. Note that we drop the index $\tau$ in Subsections~\ref{subsec:ce} and~\ref{subsec:div} for notational brevity.
 
 Subsection~\ref{subsec:ce} summarises the conditional extremes (CE) framework by \cite{Heffernan2004} and \cite{Keef2013} which is used throughout to characterise the tail behaviour of $\boldsymbol{X}_s^{(j)}$ conditional on one of its components exceeding a sufficiently high threshold. Section~\ref{subsec:div} outlines the divergence measure proposed by \cite{OToole2026clustering}, which we employ to quantify pairwise dissimilarity between the fitted CE models for $\boldsymbol{X}_{s}^{(j)}$ and $\boldsymbol{X}_{s'}^{(j)}$, where $s,s'\in\{1,\ldots,n\}$ and $j=1,2$. Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting a shift in pairwise dissimilarity of the site-wise CE models. Finally, Subsection~\ref{subsec:screen} considers the application of the permutation test in practice.
 
@@ -327,7 +369,7 @@ We now assess the ability of the proposed testing procedure to detect changes in
 % We focus on a realistic setting where the change in the spatial patterns of the extremal dependence is smooth and gradual over the time period.
 \textcolor{red}{
   The simulations are designed to resemble the Spanish drought data introduced in Section~\ref{sec:data}, with the same number of spatial locations and observations within a single season of each year. 
-  We focus on a realistic setting in which the spatial pattern of extremal dependence changes smoothly and gradually over time.
+  We focus on a setting in which the spatial pattern of extremal dependence changes smoothly and gradually over time.
 }
 % Unlike the real data application, the underlying extremal dependence structure is known, allowing us to control both the magnitude and spatial extent of temporal changes. 
 % TODO: Move to section 4.1, or is it said there already?
@@ -454,7 +496,7 @@ For the global scenario, the mean curves based on 20--30-year blocks exhibit a l
 % \textcolor{red}{Although the infinity-norm profiles exhibit more visible local peaks, this feature does not translate into greater pointwise power in the permutation results below.}
 Under the low-regime local alternative, the curves instead decline through the transition, reaching a trough around 2000 where the candidate range extends sufficiently far.
 % This downward departure does not directly support detection by the upper-tail permutation test, which rejects for large values of the discrepancy statistic.
-\textcolor{red}{Because the permutation test rejects for large values of the discrepancy statistic, this decline does not directly support detection at the later candidate change points.}
+% \textcolor{red}{Because the permutation test rejects for large values of the test statistic, this decline does not directly support detection at the later candidate change points.}
 %In the global scenario, the mean curves for 20--30-year blocks have a visible local maximum around the 1990 transition midpoint; the corresponding feature is much weaker under the medium-regime local scenario.
 %The 15-year curves have flatter features near 1990, particularly for the medium-regime change.
 %The low-regime local curves instead decline through the transition and reach a trough around 2000 for block lengths whose candidate ranges extend that far.
