@@ -87,7 +87,15 @@ y^{\boldsymbol{\beta}_{\mid i,#1}}
 \corres{*{Patrick O'Toole} (\email{pot23@bath.ac.uk})}
 
 
-\abstract[Summary]{Changes in extremal dependence can alter the spatial patterns of compound environmental extremes. To identify these changes, we develop a statistical framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. Leveraging conditional extremal models for site-wise tail dependence and a divergence measure that quantifies dissimilarity in estimated extremal dependence, we propose a permutation test for changes in the pairwise dissimilarity structure underlying regional extremal clusters. A simulation study investigates detection power under changes of varying magnitude and spatial extent. Applied to seasonal temperature and drought observations at 40 Spanish stations during 1960--2024, the method provides pointwise evidence of changes in the pairwise dissimilarity structure in summer and winter, with weaker evidence in autumn. Subsequent clustering suggests that regional differences in extremal dependence generally diminish in later time periods, highlighting season-specific changes in the geographical organisation of compound heat--drought extremes. Our findings highlight season-specific changes in the geographical organisation of compound heat-drought extremes, which may be attributed to desertification due to climate change.}
+\abstract[Summary]{
+Changes in extremal dependence can alter the spatial patterns of compound environmental extremes. 
+To identify these changes, we develop a statistical framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. 
+Leveraging conditional extremal models for site-wise tail dependence and a divergence measure that quantifies dissimilarity in estimated extremal dependence, we propose a permutation test for changes in the pairwise dissimilarity structure underlying regional extremal clusters. 
+A simulation study investigates detection power under changes of varying magnitude and spatial extent. 
+Applied to seasonal temperature and drought observations at 40 Spanish stations during 1960--2024, the method provides pointwise evidence of changes in the pairwise dissimilarity structure in summer and winter, with weaker evidence in autumn. 
+Subsequent clustering suggests that regional differences in extremal dependence generally diminish in later time periods, highlighting season-specific changes in the geographical organisation of compound heat--drought extremes. 
+Our findings highlight season-specific changes in the geographical organisation of compound heat-drought extremes, which may be attributed to desertification due to climate change.
+}
 
 \keywords{Change point detection; Conditional extremes; Extremal dependence; Structural breaks; Temperature extremes}
 
@@ -102,7 +110,7 @@ As a motivating example, we consider temperature and drought conditions across P
 
 We propose a permutation-based statistical test for detecting relative changes in the dissimilarity structure of fitted site-specific multivariate extreme value models. At each site, we model extremal behaviour using the conditional extremes framework by \citet{Heffernan2004}, which characterises the behaviour of multiple variables conditional on one of them exceeding a sufficiently high threshold. Dissimilarities between fitted models are quantified using the pairwise measure proposed by \cite{OToole2026clustering}, yielding a dissimilarity matrix that summarises relative differences in extremal behaviour across sites. Throughout this paper, temporal change refers to a change in this dissimilarity matrix between non-overlapping time periods, which may correspond to a shift in the spatial patterns of multivariate extremal dependence. We quantify these changes using one of two matrix norms and employ a permutation procedure to assess their statistical significance. 
 
-The proposed methodology contributes to a growing literature on detecting non-stationarity in extreme-value settings. For example, \cite{Dierckx2010}, \cite{dupuis2015detecting}, and \cite{girard2026changepoint} introduce change point detection approaches targeting the marginal tail behaviour. For multivariate extremes settings, formal statistical tests for detecting non-stationarity in tail behaviour have been proposed by \cite{Buecher2015}, \cite{Hoga2018}, \cite{Drees2023}, \cite{Hazra2025}, and \cite{Pawley2026}. Moreover, \citet{McGonigle2025} proposed a moving-sum procedure for detecting changes in tail dependence. In contrast, our objective is to detect changes in the relative similarities among fitted multivariate extremal models across a network of sites. To the best of our knowledge, this is the first EVT-based framework that addresses this problem.
+The proposed methodology contributes to a growing literature on detecting non-stationarity in extreme-value settings. For example, \cite{Dierckx2010}, \cite{dupuis2015detecting}, and \cite{girard2026changepoint} introduce change point detection approaches targeting the marginal tail behaviour. In multivariate extremes settings, formal statistical tests for detecting non-stationarity in tail behaviour have been proposed by \cite{Buecher2015}, \cite{Hoga2018}, \cite{Drees2023}, \cite{Hazra2025}, and \cite{Pawley2026}. Moreover, \citet{McGonigle2025} proposed a moving-sum procedure for detecting changes in tail dependence. In contrast, our objective is to detect changes in the relative similarities among fitted multivariate extremal models across a network of sites. To the best of our knowledge, this is the first EVT-based framework that addresses this problem.
 
 To visualise the detected changes in the spatial patterns of the multivariate extreme models, we rely on clustering methods. In the context of clustering observations with similar multivariate extremal dependence, approaches have been proposed by, for example, \cite{jansen2020}, \cite{meyer2024multivariate}, \cite{talento2025canonical}, and \cite{alouini2026bayesian}. In contrast, existing approaches for grouping locations with similar extremal dependence include \cite{Bernard2013}, who use the $F$-madogram to cluster sites; \cite{Vignotto2021}, who combine non-parametric estimates of divergences between bivariate tails with $k$-medoids clustering; and \cite{OToole2026clustering}, who develop a flexible divergence-based framework for comparing multivariate conditional extremes models, accommodating both asymptotic dependence and asymptotic independence. These existing approaches identify clusters over a given observation period or spatial locations, but do not directly assess whether the dependence structures underlying those clusters change. Our methodology addresses this question by testing for temporal changes in the pairwise dissimilarities underlying the clustering approach of \cite{OToole2026clustering}; as an implication, it provides, to our knowledge, the first framework for detecting change points in extremal cluster structures, allowing their spatial organisation to be compared across resulting temporal windows.
 
@@ -115,21 +123,21 @@ Desertification is one of Spain's most pressing environmental challenges, and th
 
 Daily maximum temperature and precipitation data for 40 locations across Peninsular Spain for 1960--2024 are obtained from the European Climate Assessment Dataset (ECAD) \citep{Klein2002}.
 Figure~\ref{fig:app_intro}~left panel shows that the sites considered cover all regions across Peninsular Spain.
-Stations are restricted to those that have observed daily maximum-temperature on more than 80\% of the days during 1960--2024, as well as at least one observation in every week of the study period. 
-To reduce information redundancy and spatial dependence, we use only stations at least 25~km apart; airport stations are removed to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records. % and, hence, the findings of our analysis. 
-% To reduce information redundancy and spatial dependence, we use only stations at least 25~km apart; airport stations are removed to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records.
-\textcolor{red}{
-  To reduce information redundancy and spatial dependence, we identify sets of stations located within 25~km of one another and retain one station from each set. 
-  Where possible, non-airport stations are preferred to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records.
-}
+% Stations are restricted to those that have observed daily maximum-temperature on more than 80\% of the days during 1960--2024, as well as at least one observation in every week of the study period. 
+Stations are restricted to those that have daily maximum-temperature observations available on more than 80\% of the days during 1960--2024, as well as at least one observation in every week of the study period. 
+% To reduce information redundancy and spatial dependence, we use only stations at least 25~km apart; airport stations are removed to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records. % and, hence, the findings of our analysis. 
+% To reduce information redundancy and spatial dependence, we use only stations at least 25~km apart; airport stations are removed to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records.\
+To reduce information redundancy and spatial dependence, we identify sets of stations located within 25~km of one another and retain one station from each set. 
+Where possible, non-airport stations are preferred to reduce any potential influence of temporal changes in airport infrastructure and surrounding land use on the local temperature records.
 Observations flagged by ECAD as missing or suspect are excluded, and weekly summaries are calculated from the remaining daily observations.
 %Any undefined weekly summaries are recorded as missing. 
-\textcolor{red}{
-  Across the 40 selected stations, an average of 99.7\% of the expected daily maximum-temperature observations and 97.1\% of the expected daily precipitation observations are available after quality control. 
-  Station-wise availability ranges from 98.1\% to 100\% for temperature and from 94.0\% to 99.8\% for precipitation.
-}
+% \textcolor{red}{
+%   Across the 40 selected stations, an average of 99.7\% of the daily maximum-temperature observations and 97.1\% of the daily precipitation observations are available after quality control. 
+%   Station-wise availability ranges from 98.1\% to 100\% for temperature and from 94.0\% to 99.8\% for precipitation.
+% }
 We aggregate to a weekly resolution to reduce temporal dependence, taking the maximum of the observed temperature and total accumulated precipitation within each week. 
-\textcolor{red}{After aggregation, 277 of the 135,720 station--week combinations (0.204\%) contain no valid temperature observations, while 12 station--week combinations (0.009\%) contain no valid precipitation observations.}
+Weeks missing one daily observation are removed. 
+% \textcolor{red}{After aggregation, 277 of the 135,720 station--week combinations (0.204\%) contain no valid temperature observations, while 12 station--week combinations (0.009\%) contain no valid precipitation observations.}
 Since land degradation is typically associated with prolonged drought rather than short-term precipitation deficits, we derive the Standardised Precipitation Index (SPI) \citep{McKee1993} from the time series of weekly precipitation totals using the SPEI R package \citep{SPEI}. 
 
 \begin{figure}
@@ -153,11 +161,9 @@ In our application, the accumulation period is set to 13 weeks, including the cu
 The 13-week accumulation period represents precipitation deficits over approximately three months, allowing us to examine extreme weekly temperatures alongside sustained dry conditions. 
 % \textcolor{red}{Undefined or non-finite SPI estimates are treated as missing. In total, 470 of the 135,720 station--week SPI values (0.346\%) are missing.}
 % \textcolor{red}{Combining the temperature and SPI records, 742 station--week pairs (0.547\%) are incomplete and are excluded from the subsequent analysis.}
-\textcolor{red}{
 Undefined or non-finite SPI estimates are treated as missing. 
 In total, 470 of the 135,720 station--week SPI values (0.346\%) are missing.
 We perform a complete-case analysis, under which the 742 station--week pairs (0.547\%) with a missing temperature or SPI value are excluded.
-}
 Since, under the usual SPI convention, negative values represent drier-than-normal conditions, we define the drought index $D=-\mathrm{SPI}$.
 Larger values of $D$ therefore correspond to more severe drought conditions. 
 In what follows, we analyse the dependence between extremely high values of $D$ and the weekly maximum temperature. 
@@ -180,10 +186,8 @@ Suppose we have $n$ spatial sites and observe $d$ variables across $T$ time poin
 % To perform inference, we assume that the tail dependence structure is stationary across subsets of the observation window. 
 % Let $\tau\in\{1,\ldots,T\}$ be a time point and define the time blocks $\mathcal{T}_1(\tau) = \{\tau-\Delta+1,\ldots,\tau\}$ and $\mathcal{T}_2(\tau) = \{\tau+1,\ldots,\tau+\Delta\}$, where $\Delta$ is a user-specified block length. 
 % We assume that the distribution of $\tilde{\boldsymbol{X}}_{s}^{(t)}$ remains constant across all time points within the same block. 
-\textcolor{red}{
-To perform inference, let $\tau\in\{\Delta,\ldots,T-\Delta\}$ be a candidate boundary and define the adjacent time blocks $\mathcal{T}_1(\tau)=\{\tau-\Delta+1,\ldots,\tau\}$ and $\mathcal{T}_2(\tau)=\{\tau+1,\ldots,\tau+\Delta\}$, where $\Delta$ is a user-specified block length. 
+To perform inference, let $\tau\in\{\Delta,\ldots,T-\Delta\}$ be a candidate change point and define the adjacent time blocks $\mathcal{T}_1(\tau)=\{\tau-\Delta+1,\ldots,\tau\}$ and $\mathcal{T}_2(\tau)=\{\tau+1,\ldots,\tau+\Delta\}$, where $\Delta$ is a user-specified block length. 
 We assume that the distribution of $\tilde{\boldsymbol{X}}_{s}^{(t)}$, and hence its tail dependence structure, remains constant across all time points within each block.
-}
 In the rest of the paper, we write $\boldsymbol{X}_{s,\tau}^{(j)}$ when referring to a random vector which has the same distribution as the random vectors for site $s$ across block $\mathcal{T}_j(\tau)$. Note that we drop the index $\tau$ in Subsections~\ref{subsec:ce} and~\ref{subsec:div} for notational brevity.
 
 Subsection~\ref{subsec:ce} summarises the conditional extremes (CE) framework by \cite{Heffernan2004} and \cite{Keef2013} which is used throughout to characterise the tail behaviour of $\boldsymbol{X}_s^{(j)}$ conditional on one of its components exceeding a sufficiently high threshold. Section~\ref{subsec:div} outlines the divergence measure proposed by \cite{OToole2026clustering}, which we employ to quantify pairwise dissimilarity between the fitted CE models for $\boldsymbol{X}_{s}^{(j)}$ and $\boldsymbol{X}_{s'}^{(j)}$, where $s,s'\in\{1,\ldots,n\}$ and $j=1,2$. Section~\ref{subsec:cp} introduces our permutation-based procedure for detecting a shift in pairwise dissimilarity of the site-wise CE models. Finally, Subsection~\ref{subsec:screen} considers the application of the permutation test in practice.
@@ -312,7 +316,9 @@ H_0: M^{(1)}(\tau) = M^{(2)}(\tau),
 \end{equation}
 with the alternative hypothesis $H_1: M^{(1)}(\tau) \neq M^{(2)}(\tau)$. Given the data for the time blocks $\mathcal{T}_1(\tau)$ and $\mathcal{T}_2(\tau)$, we derive estimates $\widehat{M}^{(1)}(\tau)$ and $\widehat{M}^{(2)}(\tau)$ of $M^{(1)}(\tau)$ and $M^{(2)}(\tau)$, respectively, by first estimating the site-wise CE models via maximum likelihood inference, followed by Monte Carlo integration for evaluating \eqref{eq:jsga_integral}. A substantial difference in at least one entry of $\widehat{M}^{(1)}(\tau) - \widehat{M}^{(2)}(\tau)$ should provide evidence against $H_0$.
 
-We consider two popular statistics to test $H_0$ against $H_1$. The first is the Frobenius norm of$M^{(1)}(\tau) - M^{(2)}(\tau)$: 
+We consider two popular statistics to test $H_0$ against $H_1$. 
+% The first is the Frobenius norm of$M^{(1)}(\tau) - M^{(2)}(\tau)$: 
+The first is the Frobenius norm of $\widehat{M}^{(1)}(\tau) - \widehat{M}^{(2)}(\tau)$:
 \begin{equation} 
 \label{eq:frob}
 N_{\mathrm{obs}}^{(F)}(\tau) \coloneq \left\| \widehat{M}^{(1)}(\tau) - \widehat{M}^{(2)}(\tau) \right\|_{\mathrm{F}} = \sqrt{\sum_{s=1}^n \sum_{s'=1}^n \left[\widehat{M}^{(1)}_{s,s'}(\tau) - \widehat{M}^{(2)}_{s,s'}(\tau)\right]^2}.
@@ -367,10 +373,8 @@ The screening profiles are descriptive summaries and do not establish statistica
 We now assess the ability of the proposed testing procedure to detect changes in the pairwise dissimilarity structure of the fitted site-wise extremal-dependence models using simulated data with known extremal dependence trajectories. 
 % The simulations are designed to resemble the Spanish drought data introduced in Section~\ref{sec:data}, with the same number of spatial locations and weekly observations within each season-year.
 % We focus on a realistic setting where the change in the spatial patterns of the extremal dependence is smooth and gradual over the time period.
-\textcolor{red}{
   The simulations are designed to resemble the Spanish drought data introduced in Section~\ref{sec:data}, with the same number of spatial locations and observations within a single season of each year. 
   We focus on a setting in which the spatial pattern of extremal dependence changes smoothly and gradually over time.
-}
 % Unlike the real data application, the underlying extremal dependence structure is known, allowing us to control both the magnitude and spatial extent of temporal changes. 
 % TODO: Move to section 4.1, or is it said there already?
 % As these changes occur gradually over a relatively short 20-year interval, there is no unique true change point. 
@@ -461,10 +465,10 @@ At each candidate change point $\tau$, we apply our testing framework, for both 
 \includegraphics[width=\linewidth]{latex/plots/sim_test_statistic_plot.png}
 \caption{
   % Test statistics, stratified by candidate season-year, block length, scenario, and matrix norm.
-  \textcolor{red}{Screening profile for the simulation study. Test statistics, stratified by block length, scenario, and matrix norm, are plotted against candidate year.}
+  Screening profile for the simulation study. Test statistics, stratified by block length, scenario, and matrix norm, are plotted against candidate year.
   Solid curves are the mean across 200 experiments, and shaded bands show approximate 95\% normal confidence intervals.
   % Colours indicate the number of season-years in each adjacent block, and the vertical dotted line marks 1990, which is the midpoint of the period of transition for the correlation.
-  \textcolor{red}{Colours indicate the number of years in each adjacent block, and the vertical dotted line marks 1990, which is the midpoint of the period of transition in the correlation.}
+  Colours indicate the number of years in each adjacent block, and the vertical dotted line marks 1990, which is the midpoint of the period of transition in the correlation.
 }
 \label{fig:sim_screening}
 \end{figure}
@@ -489,10 +493,10 @@ Figure~\ref{fig:sim_screening} presents the test statistics for the four block l
 These values are descriptive summaries rather than  $p$-values, and larger values indicate greater discrepancies between the estimated dissimilarity matrices in the two adjacent blocks.
 
 The global scenario produces the most pronounced test statistics under both norms, whereas the local alternatives yield weaker and qualitatively different patterns.
-For the global scenario, the mean curves based on 20--30-year blocks exhibit a local maxima near the transition midpoint in 1990.
+For the global scenario, the mean curves based on 20--30-year blocks exhibit a local maximum near the transition midpoint in 1990.
 % This feature is less distinct under the medium-regime local alternative, particularly with 15-year blocks.
-\textcolor{red}{Under the medium-regime local alternative, the Frobenius profiles are comparatively flat, whereas the infinity-norm profiles exhibit more visible local peaks around the transition midpoint, particularly for the longer block lengths.}
-\textcolor{red}{This suggests that the infinity norm may be more responsive to some localised changes, although the screening profiles alone do not establish a difference in detection power.}
+Under the medium-regime local alternative, the Frobenius profiles are comparatively flat, whereas the infinity-norm profiles exhibit more visible local peaks around the transition midpoint, particularly for the longer block lengths.
+This suggests that the infinity norm may be more responsive to some localised changes, although the screening profiles alone do not establish a difference in detection power.
 % \textcolor{red}{Although the infinity-norm profiles exhibit more visible local peaks, this feature does not translate into greater pointwise power in the permutation results below.}
 Under the low-regime local alternative, the curves instead decline through the transition, reaching a trough around 2000 where the candidate range extends sufficiently far.
 % This downward departure does not directly support detection by the upper-tail permutation test, which rejects for large values of the discrepancy statistic.
@@ -801,7 +805,7 @@ The Frobenius norm attains higher pointwise power than the infinity norm in the 
 \centering
 \includegraphics[width=0.7\linewidth]{plots/screen_dqu_0.8.png}
 \caption{
-Season-wise screening profiles for the real data application, with block length $\Delta=25$ years. Estimated test statistics, using the Frobenius (left) and infinity (right) norm, are plotted against candidate change point season-years. Local maxima are highlighted by crosses.
+Season-wise screening profiles for the real data application, with block length $\Delta=25$ years. Estimated test statistics, using the Frobenius (left) and infinity (right) norms, are plotted against candidate change point season-years. Local maxima are highlighted by crosses.
 }
 \label{fig:app_screen}
 \end{figure}
@@ -841,7 +845,7 @@ At the 10\% significance level, the conclusions remain unchanged except for autu
 \centering
 \includegraphics[width=0.8\linewidth]{plots/change_dqu_0.8.png}
 \caption{
-Empirical p-values for the candidate change point season-years, $\tau$, using the test statistics based on the Frobenius (red) and infinity (blue) norm.  The horizontal dashed lines correspond to the pointwise 5\% (grey) and 10\% (green) significance levels, respectively.}
+Empirical p-values for the candidate change point season-years, $\tau$, using the test statistics based on the Frobenius (red) and infinity (blue) norms. The horizontal dashed lines correspond to the pointwise 5\% (grey) and 10\% (green) significance levels, respectively.}
 \label{fig:app_cp}
 \end{figure}
 
@@ -851,14 +855,14 @@ Empirical p-values for the candidate change point season-years, $\tau$, using th
 \centering
 \includegraphics[width=0.75\linewidth]{plots/clust_map_dqu_0.8_inc_autumn_trim.png}
 \caption{
-Estimated spatial clusters of the 40 Spanish stations for the periods before and after the estimated change points with the minimum p-value for winter (top), summer (middle), and autumn (bottom). The colours indicate panel-wise cluster membership derived when setting the number of clusters equal to three.
+Estimated spatial clusters of the 40 Spanish stations for the periods before and after the estimated candidate change points for winter (top), summer (middle), and autumn (bottom). The colours indicate panel-wise cluster membership derived when setting the number of clusters equal to three.
 }
 \label{fig:app_clust}
 \end{figure}
 
 % Having found significant evidence for non-stationarity in the pairwise dissimilarity of fitted CE models for three of the four seasons, we compare the spatial patterns in the CE models fitted using the data before and after the time points with lowest p-value. 
-Having found pointwise evidence of changes in the pairwise dissimilarity structure for winter and summer at the 5\% level, and weaker evidence for autumn at the 10\% level, we compare the spatial patterns in the CE models fitted before and after the candidate change point season-years that minimise the test p-values. 
-Specifically, we consider estimates on the period 1960--$\tau$ and ($\tau+1$)--2024, where $\tau=1998$, $\tau=1990$, and $\tau=1986$ for winter, summer, and autumn, respectively. The choice of $\tau=1990$ for summer provides a balance between the time points yielding the minimum p-value for the Frobenius and infinity norms. 
+Having found pointwise evidence of changes in the pairwise dissimilarity structure for winter and summer at the 5\% level, and weaker evidence for autumn at the 10\% level, we compare the spatial patterns in the CE models fitted before and after the selected candidate change point season-years. % that minimise the test p-values. 
+Specifically, we consider estimates for the periods 1960--$\tau$ and ($\tau+1$)--2024, where $\tau=1998$, $\tau=1990$, and $\tau=1986$ for winter, summer, and autumn, respectively. The choice of $\tau=1990$ for summer provides a balance between the time points yielding the minimum p-value for the Frobenius and infinity norms. 
 
 For each season and time period, we apply the clustering approach by \cite{OToole2026clustering}. This involves estimating the dissimilarity matrix in Equation~\eqref{eq:distance_matrix} and subsequently clustering via the Partitioning Around Medoids (PAM) algorithm \citep{Rousseeuw1987}. The number of clusters is selected using the elbow criterion by \cite{Thorndike1953-ie} applied to a within-cluster dissimilarity measure; see \cite{OToole2026clustering} for details. The elbow plots obtained are provided in Appendix~\ref{app1}, and suggest setting the number of clusters equal to three for all seasons and time windows; the estimated clusterings obtained for settings with two and four clusters, and the spring season, are provided in Appendix~\ref{app2}.
 
@@ -873,7 +877,7 @@ Summer also exhibited the largest individual change in pairwise dissimilarity, w
 Collectively, the summer results suggest partial convergence of the fitted dependence structures while retaining a broad north/east versus south/west spatial pattern.
 
 Finally, for autumn and the period 1960--1986, one of the estimated clusters mainly consists of sites close to the coast, while the remaining clusters mainly include sites across central and southern Spain. 
-When comparing the results with those for the period 1987--2024, notable shifts emerge for Catalonia, with sites in this region no longer being considered similar to that in the Valencia region, and two of the clusters indicating a west-east split. Overall, the clusters are less geographically separated for the later time period, an observation we also made for the winter season, with the dissimilarity measure \eqref{eq:distance_matrix} suggesting that the fitted CE models have become more similar across Spain. 
+When comparing the results with those for the period 1987--2024, notable shifts emerge for Catalonia, with sites in this region no longer being considered similar to those in the Valencia region, and two of the clusters indicating a west-east split. Overall, the clusters are less geographically separated for the later time period, an observation we also made for the winter season, with the dissimilarity measure \eqref{eq:distance_matrix} suggesting that the fitted CE models have become more similar across Spain. 
 The spatial pattern for the estimated spring clusters (see Figure~\ref{fig:app_clust_spring})  is similar to the autumn pattern for 1960--1986.
 
 
@@ -883,7 +887,7 @@ The spatial pattern for the estimated spring clusters (see Figure~\ref{fig:app_c
 
 We have developed a framework for detecting temporal changes in the spatial patterns of multivariate extremal dependence. By combining conditional extremes models with divergence-based comparisons of joint tails and a non-parametric permutation-based testing approach, our framework provides a basis for testing for changes in the spatial patterns of extremal dependence exhibited by data observed at multiple sampling locations. Our simulation study indicated approximate pointwise null calibration and appreciable detection power under three realistic data generation scenarios, with the Frobenius norm outperforming the infinity norm in the considered scenarios. The weaker local alternative scenario remains difficult to detect, highlighting the importance of change magnitude and baseline dependence, alongside the number of affected locations.
 
-The proposed procedure tests for changes in the matrix of pairwise dissimilarities among fitted site-wise conditional extremes models. It may therefore fail to detect a change in extremal dependence that affects all sites similarly and leaves their relative pairwise dissimilarities approximately unchanged. The detected change points should consequently be interpreted as divisions between periods with differing pairwise dissimilarity structures, rather than as evidence of every possible form of non-stationarity in extremal dependence.
+The proposed procedure tests for changes in the matrix of pairwise dissimilarities among fitted site-wise conditional extremes models. It may therefore fail to detect a change in extremal dependence that affects all sites similarly and leaves their relative pairwise dissimilarities approximately unchanged. The detected change points should consequently be interpreted as divisions between periods with differing pairwise dependence structures, rather than as evidence of every possible form of non-stationarity in extremal dependence.
 
 The permutation-based $p$-values reported in this study are pointwise across candidate change points and do not account for the examination of multiple values of $\tau$. A natural extension of our approach is to define the global statistic $N_{\max}\coloneq\max_{\tau=\Delta,\ldots,T-\Delta}N_{\mathrm{obs}}(\tau)$ and compare it with the corresponding maximum obtained under each permutation. Provided that the permutation scheme preserves the joint null distribution of the statistics across candidate change points, this would account for the search over $\tau$ when testing whether the pairwise dissimilarity structure changes somewhere within the observation period. Rejection of such a global test would not by itself identify the location of the change, so further methodological developments would be required to quantify uncertainty in its location.
 
