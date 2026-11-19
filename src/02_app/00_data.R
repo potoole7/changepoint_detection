@@ -247,7 +247,7 @@ ecad_weekly <- ecad_filtered[
     temp_max   = as.numeric(max(temp, na.rm = TRUE)),
     # use high quantile rather than max to better reflect how hot a week is
     temp       = quantile(temp, probs = 0.9, na.rm = TRUE),
-    rain       = sum(rain, na.rm = TRUE),
+    rain       = sum(rain, na.rm = TRUE), # TODO Ignores missing rain !!!!
     wind_speed = mean(wind_speed, na.rm = TRUE)
   ),
   by = .(
@@ -258,6 +258,57 @@ ecad_weekly <- ecad_filtered[
     lat
   )
 ]
+
+# # take weekly summaries of environmental variables
+# ecad_weekly <- ecad_filtered[
+#   ,
+#   {
+#     n_temp_days <- sum(!is.na(temp))
+#     n_rain_days <- sum(!is.na(rain))
+#
+#     .(
+#       n_temp_days = n_temp_days,
+#       n_rain_days = n_rain_days,
+#
+#       # Calculate temperature summaries from available daily values
+#       temp_max = if (n_temp_days > 0L) {
+#         as.numeric(max(temp, na.rm = TRUE))
+#       } else {
+#         NA_real_
+#       },
+#       temp = if (n_temp_days > 0L) {
+#         quantile(temp, probs = 0.9, na.rm = TRUE)
+#       } else {
+#         NA_real_
+#       },
+#
+#       # Require a complete week for the precipitation total
+#       # rain = if (n_rain_days == 7L) {
+#       #   sum(rain)
+#       # } else {
+#       #   NA_real_
+#       # },
+#
+#       rain = if (n_rain_days == 7L) {
+#         as.numeric(sum(rain))
+#       } else {
+#         NA_real_
+#       },
+#       wind_speed = if (any(!is.na(wind_speed))) {
+#         mean(wind_speed, na.rm = TRUE)
+#       } else {
+#         NA_real_
+#       }
+#     )
+#   },
+#   by = .(
+#     date = floor_date(date, "week"),
+#     station_id,
+#     station_name,
+#     lon,
+#     lat
+#   )
+# ]
 
 # replace NaN with NA in weekly data
 ecad_weekly[is.nan(wind_speed), wind_speed := NA_real_]
@@ -644,9 +695,11 @@ ecad_sf |>
 
 # Plot each variable with patchwork
 # vars <- c("temp", "rain", "wind_speed", "drought_global", "drought_local")
-vars <- c("rain", "drought_global", "drought_local", "temp", "wind_speed")
+# vars <- c("rain", "drought_global", "drought_local", "temp", "wind_speed")
+vars <- c("rain", "drought_local", "temp", "wind_speed")
 # var_labs <- c("°C", "mm", "m/s", "Global drought index", "Local drought index")
-var_labs <- c("mm", "Global drought index", "Local drought index", "°C", "m/s")
+# var_labs <- c("mm", "Global drought index", "Local drought index", "°C", "m/s")
+var_labs <- c("mm", "Local drought index", "°C", "m/s")
 
 
 p_lst <- lapply(seq_along(vars), \(i) {
@@ -668,3 +721,156 @@ p_lst <- lapply(seq_along(vars), \(i) {
 
 wrap_plots(p_lst, nrow = 2)
 # Interesting patterns here, particularly South/West for temp and rain
+
+#### Missing-data summary for manuscript ####
+
+analysis_dates <- seq.Date(
+  start_date,
+  end_date,
+  by = "day"
+)
+
+selected_station_ids <- unique(
+  ecad_selected$station_id
+)
+
+# Daily records for the final 40 stations and analysis period
+daily_selected <- ecad_daily |>
+  filter(
+    station_id %in% selected_station_ids,
+    date >= start_date,
+    date <= end_date
+  )
+
+n_expected_daily <- length(analysis_dates)
+
+# Daily coverage at each station
+daily_coverage_by_station <- daily_selected |>
+  group_by(
+    station_id,
+    station_name
+  ) |>
+  summarise(
+    prop_temp_available =
+      sum(!is.na(temp)) / n_expected_daily,
+    prop_rain_available =
+      sum(!is.na(rain)) / n_expected_daily,
+    .groups = "drop"
+  )
+
+daily_coverage_summary <- daily_coverage_by_station |>
+  summarise(
+    n_stations = n(),
+    temp_available_overall =
+      mean(prop_temp_available),
+    temp_available_min =
+      min(prop_temp_available),
+    temp_available_max =
+      max(prop_temp_available),
+    rain_available_overall =
+      mean(prop_rain_available),
+    rain_available_min =
+      min(prop_rain_available),
+    rain_available_max =
+      max(prop_rain_available)
+  ) |>
+  mutate(
+    across(
+      where(is.numeric) & !matches("^n_"),
+      ~ 100 * .x
+    )
+  )
+
+daily_coverage_summary
+
+#### Weekly summaries ####
+
+# Use the weekly dates present in the final analysis dataset
+analysis_weeks <- sort(
+  unique(
+    ecad_selected$date[
+      ecad_selected$date >= floor_date(start_date, "week") &
+        ecad_selected$date <= floor_date(end_date, "week")
+    ]
+  )
+)
+
+weekly_availability <- daily_selected |>
+  mutate(
+    week = floor_date(date, "week")
+  ) |>
+  group_by(
+    station_id,
+    station_name,
+    week
+  ) |>
+  summarise(
+    n_valid_temp_days = sum(!is.na(temp)),
+    n_valid_rain_days = sum(!is.na(rain)),
+    .groups = "drop"
+  ) |>
+  tidyr::complete(
+    station_id = selected_station_ids,
+    week = analysis_weeks,
+    fill = list(
+      n_valid_temp_days = 0L,
+      n_valid_rain_days = 0L
+    )
+  )
+
+weekly_availability_summary <- weekly_availability |>
+  summarise(
+    n_station_weeks = n(),
+    n_missing_temp_weeks =
+      sum(n_valid_temp_days == 0),
+    prop_missing_temp_weeks =
+      mean(n_valid_temp_days == 0),
+    n_missing_rain_weeks =
+      sum(n_valid_rain_days == 0),
+    prop_missing_rain_weeks =
+      mean(n_valid_rain_days == 0)
+  ) |>
+  mutate(
+    prop_missing_temp_weeks =
+      100 * prop_missing_temp_weeks,
+    prop_missing_rain_weeks =
+      100 * prop_missing_rain_weeks
+  )
+
+weekly_availability_summary
+
+#### Summarise missing SPI values ####
+
+analysis_missingness <- ecad_selected |>
+  filter(
+    date >= floor_date(start_date, "week"),
+    date <= floor_date(end_date, "week")
+  ) |>
+  summarise(
+    n_station_weeks = n(),
+    n_missing_temperature = sum(is.na(temp)),
+    prop_missing_temperature =
+      mean(is.na(temp)),
+    n_missing_spi =
+      sum(is.na(drought_local)),
+    prop_missing_spi =
+      mean(is.na(drought_local)),
+    n_incomplete_pairs =
+      sum(is.na(temp) | is.na(drought_local)),
+    prop_incomplete_pairs =
+      mean(is.na(temp) | is.na(drought_local))
+  ) |>
+  mutate(
+    across(
+      starts_with("prop_"),
+      ~ 100 * .x
+    )
+  )
+
+analysis_missingness
+
+sink("missingness_summary.txt")
+daily_coverage_summary
+weekly_availability_summary
+analysis_missingness
+sink()
