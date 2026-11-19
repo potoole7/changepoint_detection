@@ -1006,10 +1006,8 @@ wrap_plots(heatmap_plots[[3]])
 # k = 2 and k = 4 (good separation in heatmap)
 
 # save for k = 3
-# ggsave("plots/02_app/evgam/04_clust_map.png", wrap_plots(map_plots[[2]]), width = 12, height = 8)
 ggsave(paste0(save_dir, "04_clust_map.png"), wrap_plots(map_plots[[2]]), width = 12, height = 8)
 
-# ggsave("plots/02_app/evgam/04_clust_heatmap.png", wrap_plots(heatmap_plots[[2]]), width = 16, height = 7)
 ggsave(paste0(save_dir, "04_clust_heatmap.png"), wrap_plots(heatmap_plots[[2]]), width = 16, height = 7)
 
 
@@ -1074,7 +1072,6 @@ clust_sets <- list(
   "rain | temp" = clust_var_season_k_temp
 )
 
-# out_dir <- "plots/02_app/evgam/001_cluster_solutions_by_distance/"
 out_dir <- paste0(save_dir, "001_cluster_solutions_by_distance/")
 dir_create(out_dir)
 

@@ -92,6 +92,7 @@ min_exceedances <- 15
 
 # data
 data <- readr::read_csv(
+  # "data/02_app/ecad_clean.csv.gz"
   "data/02_app/ecad_clean.csv.gz"
 ) |>
   mutate(decade = factor(floor(year(date) / 10) * 10, levels = decades))
@@ -340,10 +341,8 @@ screen_failure_summary
 sink()
 
 # save
-# readr::write_csv(screen_res_df, "data/02_app/screen_res.csv.gz")
 readr::write_csv(screen_res_df, paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
 
-# screen_res_df <- readr::read_csv("data/02_app/screen_res.csv.gz")
 screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
 
 
@@ -748,6 +747,7 @@ saveRDS(
     n_perm_screen,
     "_dqu_",
     dqu,
+    # ".rds"
     ".rds"
   )
 )
@@ -760,6 +760,7 @@ permutation_scan_results <- readRDS(
     n_perm_screen,
     "_dqu_",
     dqu,
+    # ".rds"
     ".rds"
   )
 )
@@ -825,8 +826,6 @@ permutation_scan_plots <- lapply(
 )
 
 # save
-# plot_directory <- "plots/permutation_scan"
-# plot_directory <- paste0("plots/permutation_scan_n_perm_", n_perm_screen)
 plot_directory <- paste0(
   "plots/permutation_scan_n_perm_",
   n_perm_screen,
