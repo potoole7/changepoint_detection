@@ -524,13 +524,12 @@ plot_frob <- \(df, spec_year = NULL) {
 p_frob <- plot_frob(screen_res_df_plt)
 p_frob_25 <- plot_frob(screen_res_df_plt, spec_year = 25)
 
-# Convert all norms to long format
+# Convert the Frobenius and standard infinity norms to long format
 screen_res_long <- screen_res_df_plt |>
   pivot_longer(
     cols = c(
       frob,
-      inf,
-      spec
+      inf2
     ),
     names_to = "norm",
     values_to = "value"
@@ -539,15 +538,13 @@ screen_res_long <- screen_res_df_plt |>
     norm = recode(
       norm,
       frob = "Frobenius",
-      inf = "Maximum",
-      spec = "Spectral"
+      inf2 = "Infinity"
     ),
     norm = factor(
       norm,
       levels = c(
         "Frobenius",
-        "Maximum",
-        "Spectral"
+        "Infinity"
       )
     )
   ) |>
@@ -771,7 +768,28 @@ permutation_scan_results <- readRDS(
 # preprocess every season
 permutation_scan_tidy <- lapply(
   permutation_scan_results,
-  preprocess_permutation_scan
+  \(scan_result) {
+    tidy <- preprocess_permutation_scan(scan_result)
+
+    # The helper calls the maximum absolute row sum "Infinity2".
+    # Select it before relabelling, since "Infinity" can mean max entry
+    # in the helper's output.
+    keep_standard_norms <- \(df) {
+      df |>
+        filter(norm %in% c("Frobenius", "Infinity2")) |>
+        mutate(
+          norm = factor(
+            norm,
+            levels = c("Frobenius", "Infinity2"),
+            labels = c("Frobenius", "Infinity")
+          )
+        )
+    }
+
+    tidy$summary <- keep_standard_norms(tidy$summary)
+    tidy$permutations <- keep_standard_norms(tidy$permutations)
+    tidy
+  }
 )
 
 permutation_summary_df <- bind_rows(
