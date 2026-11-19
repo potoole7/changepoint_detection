@@ -18,6 +18,8 @@ library(ggplot2)
 library(patchwork)
 devtools::load_all("../CeCl")
 
+source("src/00_functions.r")
+
 #### Metadata ####
 
 decades <- seq(1960, 2010, by = 10)
@@ -76,39 +78,39 @@ if (var_dep == "drought_local_rev") {
 # check percentage of dates available across all locations for each season
 station_count <- n_distinct(data$station_name)
 
-date_coverage <- bind_rows(lapply(seasons, \(s) {
-  season_data <- data |>
-    filter(.data$season == s)
-
-  all_season_dates <- season_data |>
-    distinct(.data$date) |>
-    pull(.data$date)
-
-  valid_dates <- season_data |>
-    # Add filters for missing measurements here if required
-    distinct(.data$date, .data$station_name) |>
-    count(.data$date, name = "n_stations") |>
-    filter(.data$n_stations == station_count) |>
-    pull(.data$date)
-
-  tibble(
-    season        = s,
-    n_valid_dates = length(valid_dates),
-    n_dates       = length(all_season_dates),
-    perc          = n_valid_dates / n_dates
-  )
-}))
-
-date_coverage # 94% - 80%: Fine!
-
-# only keep dates available at every station (by season)
-valid_dates <- data %>%
-  distinct(season, date, station_name) %>%
-  group_by(season) %>%
-  mutate(n_stations_in_season = n_distinct(station_name)) %>%
-  group_by(season, date) %>%
-  filter(n_distinct(station_name) == first(n_stations_in_season)) %>%
-  distinct(season, date)
+# date_coverage <- bind_rows(lapply(seasons, \(s) {
+#   season_data <- data |>
+#     filter(.data$season == s)
+#
+#   all_season_dates <- season_data |>
+#     distinct(.data$date) |>
+#     pull(.data$date)
+#
+#   valid_dates <- season_data |>
+#     # Add filters for missing measurements here if required
+#     distinct(.data$date, .data$station_name) |>
+#     count(.data$date, name = "n_stations") |>
+#     filter(.data$n_stations == station_count) |>
+#     pull(.data$date)
+#
+#   tibble(
+#     season        = s,
+#     n_valid_dates = length(valid_dates),
+#     n_dates       = length(all_season_dates),
+#     perc          = n_valid_dates / n_dates
+#   )
+# }))
+#
+# date_coverage # 94% - 80%: Fine!
+#
+# # only keep dates available at every station (by season)
+# valid_dates <- data %>%
+#   distinct(season, date, station_name) %>%
+#   group_by(season) %>%
+#   mutate(n_stations_in_season = n_distinct(station_name)) %>%
+#   group_by(season, date) %>%
+#   filter(n_distinct(station_name) == first(n_stations_in_season)) %>%
+#   distinct(season, date)
 
 data <- data %>%
   semi_join(valid_dates, by = c("season", "date"))
