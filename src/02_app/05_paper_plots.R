@@ -1,6 +1,4 @@
-#### Paper plots ####
-
-# Plots for Application section of paper
+#### Plots for Application section of paper ####
 
 # TODO Plot dissimilarity matrices (and differenced ones)
 # TODO Include changepoint for Autumn also! So would just show Spring on it's own
@@ -65,7 +63,7 @@ temp_var <- "temp_max"
 seasons <- c("Winter", "Spring", "Summer", "Autumn")
 
 # chi_q <- 0.95
-spec_years <- 1960:2020
+spec_years <- 1960:2024
 
 # divergent colour scheme (for difference plots)
 # TODO Needed?
@@ -494,7 +492,12 @@ p_scatter <- data_intro |>
   ggplot(aes(x = drought_local, y = temp, colour = season)) +
   geom_point() +
   facet_wrap(~name) +
-  labs(y = "Temperature", x = "SPI", colour = "Season") +
+  labs(
+    y = "Temperature",
+    # x = "SPI",
+    x = expression(D),
+    colour = "Season"
+  ) +
   cecl_theme(legend.position = "right") +
   # cecl_theme(legend.position = "bottom") +
   guides(colour = guide_legend(override.aes = list(size = 6)))
@@ -504,10 +507,15 @@ p_scatter_laplace <- data_intro_laplace |>
   ggplot(aes(x = drought_local, y = temp, colour = season)) +
   geom_point() +
   facet_wrap(~name) +
-  labs(y = "Temperature", x = "SPI", colour = "Season") +
-  cecl_theme(legend.position = "right") +
+  labs(
+    y = "Temperature",
+    # x = "SPI",
+    x = expression(D),
+    colour = "Season"
+  ) +
   # cecl_theme(legend.position = "bottom") +
-  guides(colour = guide_legend(override.aes = list(size = 6)))
+  guides(colour = guide_legend(override.aes = list(size = 6))) +
+  cecl_theme(legend.position = "right")
 p_scatter_laplace
 
 
@@ -901,12 +909,13 @@ plot_all_norms <- function(df, spec_year = NULL) {
       shape = 4,
       size = 5
     ) +
-    facet_wrap(~norm, scales = "free_y", nrow = 2) +
+    # facet_wrap(~norm, scales = "free_y", nrow = 2) +
+    facet_wrap(~norm, scales = "free_y", nrow = 1) +
     scale_x_continuous(breaks = year_breaks) +
     scale_colour_brewer(palette = "Dark2") +
     labs(
       x = "Season year",
-      y = "Screening statistic",
+      y = "Test statistic",
       colour = "Season"
     ) +
     cecl_theme() +
@@ -923,7 +932,7 @@ p_all_norms_25
 
 # ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
 # ggsave("latex/plots/screen.png", p_all_norms_25, width = 12, height = 8)
-ggsave(paste0("latex/plots/screen_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
+ggsave(paste0("latex/plots/screen_dqu_", dqu, ".png"), p_all_norms_25, width = 10, height = 6)
 
 
 #### Changepoint plot ####
@@ -1145,17 +1154,17 @@ data_laplace_cp <- data_laplace |>
     ind = paste0(season, " - ", group),
     ind = case_when(
       ind == "Winter - 1" ~ "Winter - 1960-1998",
-      ind == "Winter - 2" ~ "Winter - 1999-2020",
+      ind == "Winter - 2" ~ "Winter - 1999-2024",
       ind == "Summer - 1" ~ "Summer - 1960-1990",
-      ind == "Summer - 2" ~ "Summer - 1991-2020",
+      ind == "Summer - 2" ~ "Summer - 1991-2024",
       TRUE ~ season
     ),
     ind = factor(
       ind,
       levels = c(
-        "Winter - 1960-1998", "Winter - 1999-2020",
+        "Winter - 1960-1998", "Winter - 1999-2024",
         "Spring",
-        "Summer - 1960-1990", "Summer - 1991-2020",
+        "Summer - 1960-1990", "Summer - 1991-2024",
         "Autumn"
       )
     )
@@ -1226,9 +1235,9 @@ dist_cp <- out[[2]]
 #  return(case_when(
 #     # season %in% c("Spring", "Autumn") ~ NA,
 #     season == "Summer" & group == 1   ~ "1960-1990",
-#     season == "Summer" & group == 2   ~ "1991-2020",
+#     season == "Summer" & group == 2   ~ "1991-2024",
 #     season == "Winter" & group == 1   ~ "1960-1998",
-#     season == "Winter" & group == 2   ~ "1999-2020",
+#     season == "Winter" & group == 2   ~ "1999-2024",
 #     TRUE                              ~ NA
 #   ))
 # }
@@ -1269,9 +1278,9 @@ twgss_plot <- twgss_vals |>
     ind = factor(
       ind,
       levels = c(
-        "Winter - 1960-1998", "Winter - 1999-2020",
+        "Winter - 1960-1998", "Winter - 1999-2024",
         "Spring",
-        "Summer - 1960-1990", "Summer - 1991-2020",
+        "Summer - 1960-1990", "Summer - 1991-2024",
         "Autumn"
       )
     )
@@ -1493,20 +1502,20 @@ data_laplace_cp_autumn <- data_laplace |>
     ind = paste0(season, " - ", group),
     ind = case_when(
       # ind == "Winter - 1" ~ "Winter - 1960-1998",
-      # ind == "Winter - 2" ~ "Winter - 1999-2020",
+      # ind == "Winter - 2" ~ "Winter - 1999-2024",
       # ind == "Summer - 1" ~ "Summer - 1960-1990",
-      # ind == "Summer - 2" ~ "Summer - 1991-2020",
+      # ind == "Summer - 2" ~ "Summer - 1991-2024",
       ind == "Autumn - 1" ~ "Autumn - 1960-1986",
-      ind == "Autumn - 2" ~ "Autumn - 1987-2020",
+      ind == "Autumn - 2" ~ "Autumn - 1987-2024",
       TRUE ~ season
     ),
     ind = factor(
       ind,
       levels = c(
-        # "Winter - 1960-1998", "Winter - 1999-2020",
+        # "Winter - 1960-1998", "Winter - 1999-2024",
         # "Spring",
-        # "Summer - 1960-1990", "Summer - 1991-2020",
-        "Autumn - 1960-1986", "Autumn - 1987-2020"
+        # "Summer - 1960-1990", "Summer - 1991-2024",
+        "Autumn - 1960-1986", "Autumn - 1987-2024"
       )
     )
   )
@@ -1528,13 +1537,13 @@ twgss_plot_autumn <- twgss_vals_autumn |>
     ind = factor(
       ind,
       # levels = c(
-      #   "Winter - 1960-1998", "Winter - 1999-2020",
+      #   "Winter - 1960-1998", "Winter - 1999-2024",
       #   "Spring",
-      #   "Summer - 1960-1990", "Summer - 1991-2020",
+      #   "Summer - 1960-1990", "Summer - 1991-2024",
       #   "Autumn"
       # )
       levels = c(
-        "Autumn - 1960-1986", "Autumn - 1987-2020"
+        "Autumn - 1960-1986", "Autumn - 1987-2024"
       )
     )
   ) |>
@@ -1563,9 +1572,9 @@ twgss_plot_all <- twgss_vals |>
     ind = factor(
       ind,
       levels = c(
-        "Winter - 1960-1998", "Winter - 1999-2020",
-        "Summer - 1960-1990", "Summer - 1991-2020",
-        "Autumn - 1960-1986", "Autumn - 1987-2020",
+        "Winter - 1960-1998", "Winter - 1999-2024",
+        "Summer - 1960-1990", "Summer - 1991-2024",
+        "Autumn - 1960-1986", "Autumn - 1987-2024",
         "Spring"
       )
     )
@@ -1834,6 +1843,32 @@ ggsave(
 k_vals <- c(2, 4)
 # map_plots_join_k <- lapply(k_vals, map_plot, dist_cp = dist_cp, marg_laplace_cp = marg_laplace_cp)
 map_plots_join_k <- lapply(k_vals, map_plot, dist_cp = dist_cp_all, marg_laplace_cp = marg_laplace_cp_all, nrow = 3)
+
+# fix bug where Summer cluster has margins text when it shouldn't have (and one should but doesn't!)
+# Same with Autumn for y-axis on first plot, which should be included!
+map_plots_join_k <- lapply(map_plots_join_k, \(x) {
+  y <- x
+  y$map_plots$`Summer - 1960-1990` <- y$map_plots$`Summer - 1960-1990` +
+    theme(
+      axis.text.y = element_text(size = 12), axis.ticks.y = element_line()
+    )
+  y$map_plots$`Summer - 1991-2024` <- y$map_plots$`Summer - 1991-2024` +
+    theme(
+      axis.text = element_blank(), axis.ticks = element_blank()
+    )
+  y$map_plots$`Autumn - 1960-1986` <- y$map_plots$`Autumn - 1960-1986` +
+    theme(
+      axis.text.y = element_text(size = 12), axis.ticks.y = element_line()
+    )
+
+  y$map_plots_join <- wrap_plots(y$map_plots,  nrow = 3)
+
+  y
+})
+
+# check
+# map_plots_join_k[[1]]$map_plots_join
+
 lapply(seq_along(map_plots_join_k), \(i) {
   ggsave(
     plot = map_plots_join_k[[i]]$map_plots_join,
@@ -1851,6 +1886,36 @@ ggsave(
   width = 12, height = 8
 )
 
+# also combine plots for k = 2, 3 and 4 for Spring!
+p_spring_2_3_4 <- (
+  map_plots_join_k_spring[[1]]$map_plots$Spring +
+  labs(title = "") +
+  theme(
+    axis.text.x = element_text(size = 12), axis.ticks.x = element_line()
+  )
+) +
+  (
+    map_plot_spring +
+      labs(title = "") +
+      theme(
+        axis.text.x = element_text(size = 12), axis.ticks.x = element_line(),
+        axis.text.y = element_blank(), axis.ticks.y = element_blank()
+      )
+  ) +
+  (
+    map_plots_join_k_spring[[2]]$map_plots$Spring +
+      labs(title = "") +
+      theme(
+        axis.text.x = element_text(size = 12), axis.ticks.x = element_line(),
+        axis.text.y = element_blank(), axis.ticks.y = element_blank()
+      )
+  )
+
+ggsave(
+  plot = p_spring_2_3_4,
+  paste0("latex/plots/clust_map_dqu_", dqu, "_k_2_3_4_spring.png"),
+  width = 12, height = 8
+)
 
 
 #### Calculate distance to coast, elevation etc ####
@@ -2024,11 +2089,11 @@ chi_df <- bind_rows(lapply(seq_len(nrow(chi_settings_df)), \(i) {
 quant_chi_df <- left_join(quant_df, chi_df) |>
   mutate(season = case_when(
     season == "Winter" & cp == 1 ~ "Winter - 1960-1998",
-    season == "Winter" & cp == 2 ~ "Winter - 1999-2020",
+    season == "Winter" & cp == 2 ~ "Winter - 1999-2024",
     season == "Summer" & cp == 1 ~ "Summer - 1960-1990",
-    season == "Summer" & cp == 2 ~ "Summer - 1991-2020",
+    season == "Summer" & cp == 2 ~ "Summer - 1991-2024",
     season == "Autumn" & cp == 1 ~ "Autumn - 1960-1986",
-    season == "Autumn" & cp == 2 ~ "Autumn - 1987-2020",
+    season == "Autumn" & cp == 2 ~ "Autumn - 1987-2024",
     TRUE ~ season
   ))
 
