@@ -40,7 +40,7 @@ global_dir <- "data/01_sim/changepoints/global_first/"
 # global_dir <- "data/01_sim/changepoints/global_third/"
 
 # number of times to repeat simulations
-nreps <- 100
+nreps <- 200
 
 # variables
 dep_var <- c("drought_local")
@@ -186,7 +186,8 @@ p_trajectories <- ggplot(
   ) +
   coord_cartesian(ylim = c(0.10, 0.65)) +
   labs(
-    x = "Season-year",
+    # x = "Season-year",
+    x = "year",
     # y = expression(paste("t copula correlation ", rho[s,t])),
     y = expression(rho[s, t]),
     colour = "Baseline regime"
