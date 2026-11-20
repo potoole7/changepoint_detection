@@ -92,6 +92,47 @@ cond_prob <- 0.8 # most stable based on looking at clustering plots
 # cond_prob <- 0.9 # try higher, CE diagnostics aren't good here!
 # cond_prob <- 0.95
 
+# Minimum observed precipitation days per week for the average method
+# Read arguments supplied after the script name (no args defaults to mean 4)
+args <- commandArgs(trailingOnly = TRUE)
+
+usage <- paste(
+  "Usage: Rscript src/02_app/03_fit_ce.R",
+  "[mean [min_rain_days] | sum]"
+)
+
+# The first argument selects the rainfall method (defaults to mean)
+method <- if (length(args) >= 1L) args[[1]] else "mean"
+
+# Accept second argument (min_rain_days) if first argument is "mean"
+if (
+  !method %in% c("mean", "sum") ||
+  length(args) > 2L ||
+  (method == "sum" && length(args) > 1L)
+) {
+  stop(usage, call. = FALSE)
+}
+
+# Have empty output_suffix for original sum method
+min_rain_days <- NA_integer_
+output_suffix <- ""
+
+if (method == "mean") {
+  # pull min_rain_days from command line (default to 4)
+  days_arg <- if (length(args) == 2L) args[[2]] else "4"
+
+  # Validate before converting so fractional values cannot be truncated
+  if (!days_arg %in% as.character(1:7)) {
+    stop("min_rain_days must be an integer from 1 to 7", call. = FALSE)
+  }
+
+  # Minimum observed precipitation days per week for the average method
+  min_rain_days <- as.integer(days_arg)
+
+  # Include the underscore here so sum mode adds nothing to the filename
+  output_suffix <- paste0("_mean_", min_rain_days)
+}
+
 # TODO Make a file that just sources this one and changes these variables!
 # save_dir <- "plots/02_app/"
 # save_dir <- "plots/02_app/evgam/"
@@ -107,7 +148,8 @@ if (!dir.exists(save_dir)) {
 
 # file <- "data/02_app/marg_season_emp.rds"
 # file <- "data/02_app/marg_season_evgam.rds"
-file <- "data/02_app/marg_season_roll_emp.rds"
+# file <- "data/02_app/marg_season_roll_emp.rds"
+file <- paste0("data/02_app/marg_season_roll_emp", output_suffix, ".rds")
 # file <- "data/02_app/marg_season_mgcv.rds"
 # file <- "data/02_app/marg_season_mgcv_gpd.rds"
 # file <- "data/02_app/marg_season_mgcv_spat.rds"
@@ -602,7 +644,8 @@ plot_boot_quant <- \(
 
 # data
 data <- readr::read_csv(
-  "data/02_app/ecad_clean.csv.gz"
+  # "data/02_app/ecad_clean.csv.gz"
+  paste0("data/02_app/ecad_clean", output_suffix, ".csv.gz")
 ) |>
   mutate(decade = factor(floor(year(date) / 10) * 10, levels = decades))
 
@@ -835,16 +878,20 @@ names(ce_plots) <- seasons
 
 # save
 # TODO Change to loop, really ugly
-pdf(paste0(save_dir, "ce_diagnostics_winter.pdf"), width = 10, height = 8)
+# pdf(paste0(save_dir, "ce_diagnostics_winter.pdf"), width = 10, height = 8)
+pdf(paste0(save_dir, paste0("ce_diagnostics_winter", output_suffix, ".pdf")), width = 10, height = 8)
 ce_plots$Winter
 dev.off()
-pdf(paste0(save_dir, "ce_diagnostics_spring.pdf"), width = 10, height = 8)
+# pdf(paste0(save_dir, "ce_diagnostics_spring.pdf"), width = 10, height = 8)
+pdf(paste0(save_dir, paste0("ce_diagnostics_spring", output_suffix, ".pdf")), width = 10, height = 8)
 ce_plots$Spring
 dev.off()
-pdf(paste0(save_dir, "ce_diagnostics_summer.pdf"), width = 10, height = 8)
+# pdf(paste0(save_dir, "ce_diagnostics_summer.pdf"), width = 10, height = 8)
+pdf(paste0(save_dir, paste0("ce_diagnostics_summer", output_suffix, ".pdf")), width = 10, height = 8)
 ce_plots$Summer
 dev.off()
-pdf(paste0(save_dir, "ce_diagnostics_autumn.pdf"), width = 10, height = 8)
+# pdf(paste0(save_dir, "ce_diagnostics_autumn.pdf"), width = 10, height = 8)
+pdf(paste0(save_dir, paste0("ce_diagnostics_autumn", output_suffix, ".pdf")), width = 10, height = 8)
 ce_plots$Autumn
 dev.off()
 
@@ -890,7 +937,8 @@ ab_plots_season[[2]]
 # ab_plots_season[[3]]
 
 # pdf("plots/02_app/evgam/04_ab_map.pdf", width = 12, height = 8)
-pdf(paste0(save_dir, "04_ab_map.pdf"), width = 12, height = 8)
+# pdf(paste0(save_dir, "04_ab_map.pdf"), width = 12, height = 8)
+pdf(paste0(save_dir, paste0("04_ab_map", output_suffix, ".pdf")), width = 12, height = 8)
 ab_plots_season[[1]]
 ab_plots_season[[2]]
 ab_plots_season[[3]]
@@ -1006,9 +1054,11 @@ wrap_plots(heatmap_plots[[3]])
 # k = 2 and k = 4 (good separation in heatmap)
 
 # save for k = 3
-ggsave(paste0(save_dir, "04_clust_map.png"), wrap_plots(map_plots[[2]]), width = 12, height = 8)
+# ggsave(paste0(save_dir, "04_clust_map.png"), wrap_plots(map_plots[[2]]), width = 12, height = 8)
+ggsave(paste0(save_dir, paste0("04_clust_map", output_suffix, ".png")), wrap_plots(map_plots[[2]]), width = 12, height = 8)
 
-ggsave(paste0(save_dir, "04_clust_heatmap.png"), wrap_plots(heatmap_plots[[2]]), width = 16, height = 7)
+# ggsave(paste0(save_dir, "04_clust_heatmap.png"), wrap_plots(heatmap_plots[[2]]), width = 16, height = 7)
+ggsave(paste0(save_dir, paste0("04_clust_heatmap", output_suffix, ".png")), wrap_plots(heatmap_plots[[2]]), width = 16, height = 7)
 
 
 #### Cluster for individual dissimilarity matrices and plot ####
@@ -1143,7 +1193,8 @@ make_season_page <- \(season, k, type = c("map", "heatmap"), title = NULL, var =
 # debugonce(plot_one_map)
 # debugonce(plot_one_heatmap)
 for (k in k_vec) {
-  pdf(glue("{out_dir}/cluster_maps_k{k}.pdf"), width = 14, height = 5)
+  # pdf(glue("{out_dir}/cluster_maps_k{k}.pdf"), width = 14, height = 5)
+  pdf(glue("{out_dir}/cluster_maps_k{k}{output_suffix}.pdf"), width = 14, height = 5)
 
   for (season in seasons) {
     print(k)
@@ -1153,7 +1204,8 @@ for (k in k_vec) {
 
   dev.off()
 
-  pdf(glue("{out_dir}/cluster_heatmaps_k{k}.pdf"), width = 18, height = 8)
+  # pdf(glue("{out_dir}/cluster_heatmaps_k{k}.pdf"), width = 18, height = 8)
+  pdf(glue("{out_dir}/cluster_heatmaps_k{k}{output_suffix}.pdf"), width = 18, height = 8)
 
   for (season in seasons) {
     print(make_season_page(season, k, type = "heatmap", var = dep_vars[[1]]))
@@ -1317,7 +1369,8 @@ clust_dqu_plots_total <- lapply(dqu_vals, \(dqu) {
 })
 
 pdf(
-  paste0(save_dir, "cluster_maps_dqu_total.pdf"),
+  # paste0(save_dir, "cluster_maps_dqu_total.pdf"),
+  paste0(save_dir, paste0("cluster_maps_dqu_total", output_suffix, ".pdf")),
   width = 12,
   height = 10
 )
@@ -1335,7 +1388,8 @@ dev.off()
 
 
 pdf(
-  paste0(save_dir, "heatmaps_dqu_total.pdf"),
+  # paste0(save_dir, "heatmaps_dqu_total.pdf"),
+  paste0(save_dir, paste0("heatmaps_dqu_total", output_suffix, ".pdf")),
   width = 12,
   height = 10
 )
@@ -1359,7 +1413,8 @@ clust_dqu_plots_var_dep <- lapply(dqu_vals, \(dqu) {
   clust_plot_dqu(dist_mat = dep_vars, dqu = dqu)
 })
 # pdf(paste0(save_dir, "cluster_maps_dqu_rain.pdf"), width = 12, height = 10)
-pdf(paste0(save_dir, "cluster_maps_dqu_", dep_vars, ".pdf"), width = 12, height = 10)
+# pdf(paste0(save_dir, "cluster_maps_dqu_", dep_vars, ".pdf"), width = 12, height = 10)
+pdf(paste0(save_dir, "cluster_maps_dqu_", dep_vars, output_suffix, ".pdf"), width = 12, height = 10)
 for (i in seq_along(dqu_vals)) {
   print(
     clust_dqu_plots_var_dep[[i]]$map_plots +
@@ -1375,7 +1430,8 @@ gc()
 clust_dqu_plots_temp <- lapply(dqu_vals, \(dqu) {
   clust_plot_dqu(dist_mat = "temp", dqu = dqu)
 })
-pdf(paste0(save_dir, "cluster_maps_dqu_temp.pdf"), width = 12, height = 10)
+# pdf(paste0(save_dir, "cluster_maps_dqu_temp.pdf"), width = 12, height = 10)
+pdf(paste0(save_dir, paste0("cluster_maps_dqu_temp", output_suffix, ".pdf")), width = 12, height = 10)
 for (i in seq_along(dqu_vals)) {
   print(
     clust_dqu_plots_temp[[i]]$map_plots +
@@ -1390,409 +1446,412 @@ rm(clust_dqu_plots_temp)
 gc()
 
 
-#### Fit & Cluster for each decade ####
-
-# Fit CE model for each variable and season
-dep_var_season_decade_deep <- lapply(dep_vars, \(spec_var) {
-  lapply(marg_season_decade, \(x) {
-    cecl_dep(
-      x,
-      vars = c("temp", spec_var),
-      cond_vars = c("temp", spec_var),
-      # cond_prob = 0.9,
-      cond_prob = cond_prob,
-      nruns = 3,
-      ncores = getOption("mc_cores", 2L)
-    )
-  })
-})
-names(dep_var_season_decade_deep) <- dep_vars
-
-# flatten deep list
-dep_var_season_decade <- purrr::list_flatten(
-  dep_var_season_decade_deep,
-  name_spec = "{outer}_{inner}"
-)
-
-# dataframe of list names for later
-name_df_decade <- tibble(name = names(dep_var_season_decade)) |>
-  tidyr::separate_wider_regex(
-    name,
-    c(
-      var = ".*",
-      "_",
-      season = "[^_]+"
-    )
-  ) |>
-  tidyr::separate_wider_regex(
-    var,
-    c(
-      var = ".*",
-      "_",
-      decade = "[^_]+"
-    )
-  )
-
-# calculate distances
-set.seed(123)
-dist_var_season_decade <- mclapply(seq_along(dep_var_season_decade), \(i) {
-  cecl_dist(
-    dep_var_season_decade[[i]],
-    marg_season_decade[[with(name_df_decade[i, ], paste0(decade, "_", season))]],
-    ncores = getOption("mc_cores", 2L)
-  )
-})
-names(dist_var_season_decade) <- names(dep_var_season_decade)
-
-# Cluster for each variable and season
-clust_var_season_decade_k <- lapply(k_vec, \(k) {
-  print(paste0("k = ", k))
-  ret <- mclapply(seq_along(dep_var_season_decade), \(i) {
-    print(paste0("i = ", i))
-    cecl_clust(
-      dist_var_season_decade[[i]],
-      k        = k,
-      ncores   = getOption("mc_cores", 2L)
-    )
-  })
-  names(ret) <- names(dep_var_season_decade)
-  ret
-})
-
-names(clust_var_season_decade_k) <- k_vec
-
-# flatten deep list
-clust_var_season_decade <- purrr::list_flatten(
-  clust_var_season_decade_k,
-  name_spec = "{inner}_{outer}"
-)
-
-titles <- stringr::str_replace_all(names(clust_var_season_decade), "_", " ")
-map_plots_decade <- mclapply(seq_along(clust_var_season_decade), \(i) {
-  plt_clust_map(
-    pts,
-    areas_ccaa,
-    # clust_var_season_k[[i]][[j]]$pam,
-    clust_var_season_decade[[i]]$pam,
-    plot_medoids = FALSE,
-    pt_size = 6
-  ) +
-    # ggtitle(paste0(name_df$var[j], " - ", name_df$season[j]))
-    ggtitle(titles[[i]])
-})
-
-# Also plot heatmaps
-heatmap_plots_decade <- mclapply(seq_along(clust_var_season_decade), \(i) {
-  ggplot(clust_var_season_decade[[i]], which = "image") +
-    theme(
-      legend.position = "bottom",
-      legend.text = element_text(angle = 45, hjust = 1)
-    ) +
-    ggtitle(titles[[i]])
-})
-
-names(map_plots_decade) <- names(heatmap_plots_decade) <- names(clust_var_season_decade)
-
-# TODO Save and comment
-
-#### Differences per decade ####
-
-name_df_decade_k <- crossing(
-  k = k_vec,
-  name_df_decade
-) |>
-  relocate(k, .after = everything())
-
-# double check everything matches up
-all(
-  with(name_df_decade_k, paste(var, decade, season, k, sep = "_")) ==
-    names(clust_var_season_decade)
-)
-
-# pull clustering solutions for each
-clust_sol_lst <- lapply(clust_var_season_decade, coef)
-
-# join in information form name_df_decade_k
-clust_sol_df <- bind_rows(lapply(seq_along(clust_sol_lst), \(i) {
-  cbind(clust_sol_lst[[i]], name_df_decade_k[i, , drop = FALSE])
-}))
-
-# See if clustering has changed since 1960 and since previous decade
-clust_sol_df_diff <- clust_sol_df %>%
-  arrange(var, season, k, name, decade) %>%
-  group_by(var, season, k, name) %>%
-  mutate(
-    cluster_1960 = cluster[decade == 1960][1],
-    cluster_prev = lag(cluster),
-    changed_since_1960 = (cluster != cluster_1960),
-    changed_since_prev = (cluster != cluster_prev)
-  ) %>%
-  ungroup() |>
-  mutate(changed_since_prev = ifelse(
-    is.na(changed_since_prev), FALSE, changed_since_prev
-  ))
-
-# function to plot with
-plot_diff_map <- \(x, pts, areas, decade, season, var, k) {
-  false_pt_size <- ifelse(decade == 1960, 6, 4)
-
-  p <- left_join(pts, x) |>
-    filter(
-      # decade == 1970,
-      # season == "Winter",
-      # var == "rain",
-      # k == 3
-      decade == !!decade,
-      season == !!season,
-      var == !!var,
-      k == !!k
-    ) |>
-    ggplot() +
-    geom_sf(
-      data = areas,
-      fill = NA,
-      colour = "black"
-    ) +
-    coord_sf(expand = FALSE) +
-    geom_sf(
-      aes(
-        fill = factor(cluster),
-        shape = changed_since_1960,
-        size = changed_since_prev
-      ),
-      alpha = 0.8,
-      stroke = 1,
-      colour = "black"
-    ) +
-    scale_fill_brewer(
-      palette = "Set2",
-      name = "Cluster"
-    ) +
-    scale_shape_manual(
-      values = c(
-        `FALSE` = 21,
-        `TRUE` = 24
-      ),
-      labels = c(
-        `FALSE` = "Same",
-        `TRUE` = "Different"
-      ),
-      name = "vs 1960"
-    ) +
-    scale_size_manual(
-      values = c(
-        # `FALSE` = 4,
-        `FALSE` = false_pt_size,
-        `TRUE` = 7
-      ),
-      labels = c(
-        `FALSE` = "No",
-        `TRUE` = "Yes"
-      ),
-      name = "vs last decade"
-    ) +
-    guides(
-      fill = guide_legend(
-        order = 1,
-        override.aes = list(
-          shape = 21,
-          size = 5
-        )
-      ),
-      shape = guide_legend(order = 2),
-      size = guide_legend(order = 3)
-    ) +
-    guides(fill = "none") +
-    cecl_theme()
-
-  if (decade == 1960) {
-    p <- p + guides(shape = "none", size = "none")
-  }
-  p
-}
-
-
-# loop over decades, plotting and saving individually for each season + k vals
-# NOTE: Too memory intensive to run with mclapply!
-diff_map_plots <- lapply(k_vec, \(k_i) {
-  gc()
-  lapply(decades, \(decade_i) {
-    # lapply(c(1960, 1970), \(decade_i) {
-    gc()
-    season_plots <- lapply(seasons, \(season_i) {
-      gc()
-      p <- plot_diff_map(
-        x = clust_sol_df_diff,
-        pts = pts,
-        areas = areas_ccaa,
-        decade = decade_i,
-        season = season_i,
-        var = "rain",
-        k = k_i
-      ) +
-        ggtitle(paste0("rain - ", season_i))
-      if (season_i != "Winter") {
-        p <- p + guides(shape = "none", size = "none")
-      }
-      p
-    })
-
-
-    wrap_plots(season_plots, nrow = 1) +
-      plot_annotation(
-        title = paste0("k = ", k_i, ", decade = ", decade_i),
-        theme = theme(plot.title = element_text(size = 16, hjust = 0.5))
-      )
-  })
-})
-
-out_dir <- "plots/02_app/01_clust_diff_maps"
-fs::dir_create(out_dir)
-
-walk2(
-  diff_map_plots,
-  k_vec,
-  \(plots_for_k, k_i) {
-    walk2(
-      plots_for_k,
-      decades,
-      \(p, decade_i) {
-        ggsave(
-          filename = glue::glue(
-            "{out_dir}/diff_map_rain_k{k_i}_{decade_i}.png"
-          ),
-          plot = p,
-          width = 12,
-          height = 4,
-          dpi = 300
-        )
-      }
-    )
-  }
-)
-
-# Now plot differences in dist matrices
-
-# output folder
-out_dir <- "plots/02_app/02_divergence_diff_heatmaps"
-out_dir_1960 <- "plots/02_app/021_div_since_1960"
-out_dir_prev <- "plots/02_app/022_div_since_previous"
-
-fs::dir_create(out_dir_1960)
-fs::dir_create(out_dir_prev)
-
-# helper to get object names
-make_dist_name <- \(var, decade, season) {
-  paste(var, decade, season, sep = "_")
-}
-
-# function to plot difference from 1960
-plot_divergence_diff <- \(dist_list, var, decade, season, k, base_year = 1960) {
-  current_name <- make_dist_name(var, decade, season)
-  base_name <- make_dist_name(var, base_year, season)
-
-  current_obj <- dist_list[[current_name]]
-  base_obj <- dist_list[[base_name]]
-
-  diff_obj <- current_obj
-  diff_obj$dist_mat <- current_obj$dist_mat - base_obj$dist_mat
-
-  clust_obj <- cecl_clust(
-    diff_obj,
-    k = k
-  )
-
-  # p <- ggplot(
-  #   clust_obj,
-  #   which = "image"
-  # )
-  #
-  # rng <- max(abs(p$data$Freq), na.rm = TRUE)
-  #
-  rng <- max(abs(diff_obj$dist_mat), na.rm = TRUE)
-
-  ggplot(
-    clust_obj,
-    which = "image",
-    show_xlab = TRUE,
-    show_ylab = TRUE
-  ) +
-    ggtitle(paste0(var, " - ", season)) +
-    scale_fill_gradient2(
-      low = "blue3",
-      mid = "white",
-      high = "red3",
-      midpoint = 0,
-      limits = c(-rng, rng),
-      na.value = "grey80"
-    ) +
-    theme(axis.text.x = element_blank())
-}
-
-plot_divergence_diff(dist_var_season_decade, "rain", 2000, "Winter", 3, 1960)
-
-previous_decade <- \(decade) decade - 10
-
-div_plots_since_1960 <- lapply(k_vec, \(k_i) {
-  lapply(decades, \(decade_i) {
-    season_plots <- lapply(seasons, \(season_i) {
-      plot_divergence_diff(
-        dist_list = dist_var_season_decade,
-        var = "rain",
-        decade = decade_i,
-        season = season_i,
-        k = k_i,
-        base_year = 1960
-      )
-    })
-
-    p <- wrap_plots(season_plots, nrow = 1) +
-      plot_annotation(
-        title = paste0("Change since 1960: k = ", k_i, ", decade = ", decade_i),
-        theme = theme(plot.title = element_text(size = 16, hjust = 0.5))
-      )
-
-    ggsave(
-      filename = glue("{out_dir_1960}/divergence_since_1960_rain_k{k_i}_{decade_i}.png"),
-      plot = p,
-      width = 14,
-      height = 5,
-      dpi = 300
-    )
-
-    p
-  })
-})
-
-div_plots_since_prev <- lapply(k_vec, \(k_i) {
-  lapply(decades[decades != 1960], \(decade_i) {
-    base_i <- decade_i - 10
-
-    season_plots <- lapply(seasons, \(season_i) {
-      plot_divergence_diff(
-        dist_list = dist_var_season_decade,
-        var = "rain",
-        decade = decade_i,
-        season = season_i,
-        k = k_i,
-        base_year = base_i
-      )
-    })
-
-    p <- wrap_plots(season_plots, nrow = 1) +
-      plot_annotation(
-        title = paste0("Change since ", base_i, ": k = ", k_i, ", decade = ", decade_i),
-        theme = theme(plot.title = element_text(size = 16, hjust = 0.5))
-      )
-
-    ggsave(
-      filename = glue("{out_dir_prev}/divergence_since_previous_rain_k{k_i}_{base_i}_to_{decade_i}.png"),
-      plot = p,
-      width = 14,
-      height = 5,
-      dpi = 300
-    )
-
-    p
-  })
-})
+# #### Fit & Cluster for each decade ####
+#
+# # Fit CE model for each variable and season
+# dep_var_season_decade_deep <- lapply(dep_vars, \(spec_var) {
+#   lapply(marg_season_decade, \(x) {
+#     cecl_dep(
+#       x,
+#       vars = c("temp", spec_var),
+#       cond_vars = c("temp", spec_var),
+#       # cond_prob = 0.9,
+#       cond_prob = cond_prob,
+#       nruns = 3,
+#       ncores = getOption("mc_cores", 2L)
+#     )
+#   })
+# })
+# names(dep_var_season_decade_deep) <- dep_vars
+#
+# # flatten deep list
+# dep_var_season_decade <- purrr::list_flatten(
+#   dep_var_season_decade_deep,
+#   name_spec = "{outer}_{inner}"
+# )
+#
+# # dataframe of list names for later
+# name_df_decade <- tibble(name = names(dep_var_season_decade)) |>
+#   tidyr::separate_wider_regex(
+#     name,
+#     c(
+#       var = ".*",
+#       "_",
+#       season = "[^_]+"
+#     )
+#   ) |>
+#   tidyr::separate_wider_regex(
+#     var,
+#     c(
+#       var = ".*",
+#       "_",
+#       decade = "[^_]+"
+#     )
+#   )
+#
+# # calculate distances
+# set.seed(123)
+# dist_var_season_decade <- mclapply(seq_along(dep_var_season_decade), \(i) {
+#   cecl_dist(
+#     dep_var_season_decade[[i]],
+#     marg_season_decade[[with(name_df_decade[i, ], paste0(decade, "_", season))]],
+#     ncores = getOption("mc_cores", 2L)
+#   )
+# })
+# names(dist_var_season_decade) <- names(dep_var_season_decade)
+#
+# # Cluster for each variable and season
+# clust_var_season_decade_k <- lapply(k_vec, \(k) {
+#   print(paste0("k = ", k))
+#   ret <- mclapply(seq_along(dep_var_season_decade), \(i) {
+#     print(paste0("i = ", i))
+#     cecl_clust(
+#       dist_var_season_decade[[i]],
+#       k        = k,
+#       ncores   = getOption("mc_cores", 2L)
+#     )
+#   })
+#   names(ret) <- names(dep_var_season_decade)
+#   ret
+# })
+#
+# names(clust_var_season_decade_k) <- k_vec
+#
+# # flatten deep list
+# clust_var_season_decade <- purrr::list_flatten(
+#   clust_var_season_decade_k,
+#   name_spec = "{inner}_{outer}"
+# )
+#
+# titles <- stringr::str_replace_all(names(clust_var_season_decade), "_", " ")
+# map_plots_decade <- mclapply(seq_along(clust_var_season_decade), \(i) {
+#   plt_clust_map(
+#     pts,
+#     areas_ccaa,
+#     # clust_var_season_k[[i]][[j]]$pam,
+#     clust_var_season_decade[[i]]$pam,
+#     plot_medoids = FALSE,
+#     pt_size = 6
+#   ) +
+#     # ggtitle(paste0(name_df$var[j], " - ", name_df$season[j]))
+#     ggtitle(titles[[i]])
+# })
+#
+# # Also plot heatmaps
+# heatmap_plots_decade <- mclapply(seq_along(clust_var_season_decade), \(i) {
+#   ggplot(clust_var_season_decade[[i]], which = "image") +
+#     theme(
+#       legend.position = "bottom",
+#       legend.text = element_text(angle = 45, hjust = 1)
+#     ) +
+#     ggtitle(titles[[i]])
+# })
+#
+# names(map_plots_decade) <- names(heatmap_plots_decade) <- names(clust_var_season_decade)
+#
+# # TODO Save and comment
+#
+# #### Differences per decade ####
+#
+# name_df_decade_k <- crossing(
+#   k = k_vec,
+#   name_df_decade
+# ) |>
+#   relocate(k, .after = everything())
+#
+# # double check everything matches up
+# all(
+#   with(name_df_decade_k, paste(var, decade, season, k, sep = "_")) ==
+#     names(clust_var_season_decade)
+# )
+#
+# # pull clustering solutions for each
+# clust_sol_lst <- lapply(clust_var_season_decade, coef)
+#
+# # join in information form name_df_decade_k
+# clust_sol_df <- bind_rows(lapply(seq_along(clust_sol_lst), \(i) {
+#   cbind(clust_sol_lst[[i]], name_df_decade_k[i, , drop = FALSE])
+# }))
+#
+# # See if clustering has changed since 1960 and since previous decade
+# clust_sol_df_diff <- clust_sol_df %>%
+#   arrange(var, season, k, name, decade) %>%
+#   group_by(var, season, k, name) %>%
+#   mutate(
+#     cluster_1960 = cluster[decade == 1960][1],
+#     cluster_prev = lag(cluster),
+#     changed_since_1960 = (cluster != cluster_1960),
+#     changed_since_prev = (cluster != cluster_prev)
+#   ) %>%
+#   ungroup() |>
+#   mutate(changed_since_prev = ifelse(
+#     is.na(changed_since_prev), FALSE, changed_since_prev
+#   ))
+#
+# # function to plot with
+# plot_diff_map <- \(x, pts, areas, decade, season, var, k) {
+#   false_pt_size <- ifelse(decade == 1960, 6, 4)
+#
+#   p <- left_join(pts, x) |>
+#     filter(
+#       # decade == 1970,
+#       # season == "Winter",
+#       # var == "rain",
+#       # k == 3
+#       decade == !!decade,
+#       season == !!season,
+#       var == !!var,
+#       k == !!k
+#     ) |>
+#     ggplot() +
+#     geom_sf(
+#       data = areas,
+#       fill = NA,
+#       colour = "black"
+#     ) +
+#     coord_sf(expand = FALSE) +
+#     geom_sf(
+#       aes(
+#         fill = factor(cluster),
+#         shape = changed_since_1960,
+#         size = changed_since_prev
+#       ),
+#       alpha = 0.8,
+#       stroke = 1,
+#       colour = "black"
+#     ) +
+#     scale_fill_brewer(
+#       palette = "Set2",
+#       name = "Cluster"
+#     ) +
+#     scale_shape_manual(
+#       values = c(
+#         `FALSE` = 21,
+#         `TRUE` = 24
+#       ),
+#       labels = c(
+#         `FALSE` = "Same",
+#         `TRUE` = "Different"
+#       ),
+#       name = "vs 1960"
+#     ) +
+#     scale_size_manual(
+#       values = c(
+#         # `FALSE` = 4,
+#         `FALSE` = false_pt_size,
+#         `TRUE` = 7
+#       ),
+#       labels = c(
+#         `FALSE` = "No",
+#         `TRUE` = "Yes"
+#       ),
+#       name = "vs last decade"
+#     ) +
+#     guides(
+#       fill = guide_legend(
+#         order = 1,
+#         override.aes = list(
+#           shape = 21,
+#           size = 5
+#         )
+#       ),
+#       shape = guide_legend(order = 2),
+#       size = guide_legend(order = 3)
+#     ) +
+#     guides(fill = "none") +
+#     cecl_theme()
+#
+#   if (decade == 1960) {
+#     p <- p + guides(shape = "none", size = "none")
+#   }
+#   p
+# }
+#
+#
+# # loop over decades, plotting and saving individually for each season + k vals
+# # NOTE: Too memory intensive to run with mclapply!
+# diff_map_plots <- lapply(k_vec, \(k_i) {
+#   gc()
+#   lapply(decades, \(decade_i) {
+#     # lapply(c(1960, 1970), \(decade_i) {
+#     gc()
+#     season_plots <- lapply(seasons, \(season_i) {
+#       gc()
+#       p <- plot_diff_map(
+#         x = clust_sol_df_diff,
+#         pts = pts,
+#         areas = areas_ccaa,
+#         decade = decade_i,
+#         season = season_i,
+#         var = "rain",
+#         k = k_i
+#       ) +
+#         ggtitle(paste0("rain - ", season_i))
+#       if (season_i != "Winter") {
+#         p <- p + guides(shape = "none", size = "none")
+#       }
+#       p
+#     })
+#
+#
+#     wrap_plots(season_plots, nrow = 1) +
+#       plot_annotation(
+#         title = paste0("k = ", k_i, ", decade = ", decade_i),
+#         theme = theme(plot.title = element_text(size = 16, hjust = 0.5))
+#       )
+#   })
+# })
+#
+# out_dir <- "plots/02_app/01_clust_diff_maps"
+# fs::dir_create(out_dir)
+#
+# walk2(
+#   diff_map_plots,
+#   k_vec,
+#   \(plots_for_k, k_i) {
+#     walk2(
+#       plots_for_k,
+#       decades,
+#       \(p, decade_i) {
+#         ggsave(
+#           filename = glue::glue(
+#             # "{out_dir}/diff_map_rain_k{k_i}_{decade_i}.png"
+#             "{out_dir}/diff_map_rain_k{k_i}_{decade_i}{output_suffix}.png"
+#           ),
+#           plot = p,
+#           width = 12,
+#           height = 4,
+#           dpi = 300
+#         )
+#       }
+#     )
+#   }
+# )
+#
+# # Now plot differences in dist matrices
+#
+# # output folder
+# out_dir <- "plots/02_app/02_divergence_diff_heatmaps"
+# out_dir_1960 <- "plots/02_app/021_div_since_1960"
+# out_dir_prev <- "plots/02_app/022_div_since_previous"
+#
+# fs::dir_create(out_dir_1960)
+# fs::dir_create(out_dir_prev)
+#
+# # helper to get object names
+# make_dist_name <- \(var, decade, season) {
+#   paste(var, decade, season, sep = "_")
+# }
+#
+# # function to plot difference from 1960
+# plot_divergence_diff <- \(dist_list, var, decade, season, k, base_year = 1960) {
+#   current_name <- make_dist_name(var, decade, season)
+#   base_name <- make_dist_name(var, base_year, season)
+#
+#   current_obj <- dist_list[[current_name]]
+#   base_obj <- dist_list[[base_name]]
+#
+#   diff_obj <- current_obj
+#   diff_obj$dist_mat <- current_obj$dist_mat - base_obj$dist_mat
+#
+#   clust_obj <- cecl_clust(
+#     diff_obj,
+#     k = k
+#   )
+#
+#   # p <- ggplot(
+#   #   clust_obj,
+#   #   which = "image"
+#   # )
+#   #
+#   # rng <- max(abs(p$data$Freq), na.rm = TRUE)
+#   #
+#   rng <- max(abs(diff_obj$dist_mat), na.rm = TRUE)
+#
+#   ggplot(
+#     clust_obj,
+#     which = "image",
+#     show_xlab = TRUE,
+#     show_ylab = TRUE
+#   ) +
+#     ggtitle(paste0(var, " - ", season)) +
+#     scale_fill_gradient2(
+#       low = "blue3",
+#       mid = "white",
+#       high = "red3",
+#       midpoint = 0,
+#       limits = c(-rng, rng),
+#       na.value = "grey80"
+#     ) +
+#     theme(axis.text.x = element_blank())
+# }
+#
+# plot_divergence_diff(dist_var_season_decade, "rain", 2000, "Winter", 3, 1960)
+#
+# previous_decade <- \(decade) decade - 10
+#
+# div_plots_since_1960 <- lapply(k_vec, \(k_i) {
+#   lapply(decades, \(decade_i) {
+#     season_plots <- lapply(seasons, \(season_i) {
+#       plot_divergence_diff(
+#         dist_list = dist_var_season_decade,
+#         var = "rain",
+#         decade = decade_i,
+#         season = season_i,
+#         k = k_i,
+#         base_year = 1960
+#       )
+#     })
+#
+#     p <- wrap_plots(season_plots, nrow = 1) +
+#       plot_annotation(
+#         title = paste0("Change since 1960: k = ", k_i, ", decade = ", decade_i),
+#         theme = theme(plot.title = element_text(size = 16, hjust = 0.5))
+#       )
+#
+#     ggsave(
+#       # filename = glue("{out_dir_1960}/divergence_since_1960_rain_k{k_i}_{decade_i}.png"),
+#       filename = glue("{out_dir_1960}/divergence_since_1960_rain_k{k_i}_{decade_i}{output_suffix}.png"),
+#       plot = p,
+#       width = 14,
+#       height = 5,
+#       dpi = 300
+#     )
+#
+#     p
+#   })
+# })
+#
+# div_plots_since_prev <- lapply(k_vec, \(k_i) {
+#   lapply(decades[decades != 1960], \(decade_i) {
+#     base_i <- decade_i - 10
+#
+#     season_plots <- lapply(seasons, \(season_i) {
+#       plot_divergence_diff(
+#         dist_list = dist_var_season_decade,
+#         var = "rain",
+#         decade = decade_i,
+#         season = season_i,
+#         k = k_i,
+#         base_year = base_i
+#       )
+#     })
+#
+#     p <- wrap_plots(season_plots, nrow = 1) +
+#       plot_annotation(
+#         title = paste0("Change since ", base_i, ": k = ", k_i, ", decade = ", decade_i),
+#         theme = theme(plot.title = element_text(size = 16, hjust = 0.5))
+#       )
+#
+#     ggsave(
+#       # filename = glue("{out_dir_prev}/divergence_since_previous_rain_k{k_i}_{base_i}_to_{decade_i}.png"),
+#       filename = glue("{out_dir_prev}/divergence_since_previous_rain_k{k_i}_{base_i}_to_{decade_i}{output_suffix}.png"),
+#       plot = p,
+#       width = 14,
+#       height = 5,
+#       dpi = 300
+#     )
+#
+#     p
+#   })
+# })

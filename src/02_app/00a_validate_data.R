@@ -24,13 +24,55 @@ Sys.getenv("AEMET_API_KEY")
 aemet_api_key(Sys.getenv("AEMET_API_KEY"))
 Sys.getenv("AEMET_API_KEY")
 
+# Minimum observed precipitation days per week for the average method
+# Read arguments supplied after the script name (no args defaults to mean 4)
+args <- commandArgs(trailingOnly = TRUE)
+
+usage <- paste(
+  "Usage: Rscript src/02_app/00a_validate_data.R",
+  "[mean [min_rain_days] | sum]"
+)
+
+# The first argument selects the rainfall method (defaults to mean)
+method <- if (length(args) >= 1L) args[[1]] else "mean"
+
+# Accept second argument (min_rain_days) if first argument is "mean"
+if (
+  !method %in% c("mean", "sum") ||
+  length(args) > 2L ||
+  (method == "sum" && length(args) > 1L)
+) {
+  stop(usage, call. = FALSE)
+}
+
+# Have empty output_suffix for original sum method
+min_rain_days <- NA_integer_
+output_suffix <- ""
+
+if (method == "mean") {
+  # pull min_rain_days from command line (default to 4)
+  days_arg <- if (length(args) == 2L) args[[2]] else "4"
+
+  # Validate before converting so fractional values cannot be truncated
+  if (!days_arg %in% as.character(1:7)) {
+    stop("min_rain_days must be an integer from 1 to 7", call. = FALSE)
+  }
+
+  # Minimum observed precipitation days per week for the average method
+  min_rain_days <- as.integer(days_arg)
+
+  # Include the underscore here so sum mode adds nothing to the filename
+  output_suffix <- paste0("_mean_", min_rain_days)
+}
+
 
 #### Data ####
 
 
 # TODO load daily data
 # TODO Plot time series of days with > 100mm of rain
-data <- readr::read_csv("data/02_app/ecad_clean_daily.csv.gz")
+# data <- readr::read_csv("data/02_app/ecad_clean_daily.csv.gz")
+data <- readr::read_csv(paste0("data/02_app/ecad_clean_daily", output_suffix, ".csv.gz"))
 
 #### Calculate monthly data ####
 

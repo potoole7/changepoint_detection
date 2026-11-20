@@ -8,7 +8,7 @@
 
 # TODO Write why we prefer non-airport/urban areas
 # - airports and urban areas are more susceptible to increased building
-# congestion over itme.
+# congestion over time
 
 # TODO Add Portugal as well maybe??
 
@@ -112,8 +112,51 @@ areas_ccaa <- areas %>%
 
 # dates over which to pull data
 start_date <- as.Date("1960-01-01")
+winter_start <- as.Date("1959-12-01")
+# Load earlier precipitation for the first 13-week SPI window
+spi_start <- floor_date(winter_start, "week") - weeks(12)
 # start_date <- as.Date("1950-01-01")
 end_date <- as.Date("2024-12-31")
+
+# Read arguments supplied after the script name (no args defaults to mean 4)
+args <- commandArgs(trailingOnly = TRUE)
+
+usage <- paste(
+  "Usage: Rscript src/02_app/00_data.R",
+  "[mean [min_rain_days] | sum]"
+)
+
+# The first argument selects the rainfall method (defaults to mean)
+method <- if (length(args) >= 1L) args[[1]] else "mean"
+
+# Accept second argument (min_rain_days) if first argument is "mean"
+if (
+  !method %in% c("mean", "sum") ||
+  length(args) > 2L ||
+  (method == "sum" && length(args) > 1L)
+) {
+  stop(usage, call. = FALSE)
+}
+
+# Have empty output_suffix for original sum method
+min_rain_days <- NA_integer_
+output_suffix <- ""
+
+if (method == "mean") {
+  # pull min_rain_days from command line (default to 4)
+  days_arg <- if (length(args) == 2L) args[[2]] else "4"
+
+  # Validate before converting so fractional values cannot be truncated
+  if (!days_arg %in% as.character(1:7)) {
+    stop("min_rain_days must be an integer from 1 to 7", call. = FALSE)
+  }
+
+  # Minimum observed precipitation days per week for the average method
+  min_rain_days <- as.integer(days_arg)
+
+  # Include the underscore here so sum mode adds nothing to the filename
+  output_suffix <- paste0("_mean_", min_rain_days)
+}
 
 # station file
 stations_file <- "data/02_app/ECA_blend_tx/stations.txt"
@@ -170,8 +213,7 @@ data_lst <- mapply(
   load_data,
   files_es,
   c("tx", "rr", "fg"),
-  # min_date = start_date,
-  min_date = start_date - years(1), # need year before for Winter data
+  min_date = spi_start,
   max_date = end_date,
   SIMPLIFY = FALSE
 )
@@ -193,7 +235,7 @@ n_weeks <- length(seq.Date(start_date, end_date, by = "week"))
 
 # filter so that only stations with >80% of records are kept
 station_coverage <- ecad_data[
-  ,
+  date >= start_date & date <= end_date,
   .(
     # n = .N,
     n_valid = sum(!is.na(temp)) # ,
@@ -247,7 +289,25 @@ ecad_weekly <- ecad_filtered[
     temp_max   = as.numeric(max(temp, na.rm = TRUE)),
     # use high quantile rather than max to better reflect how hot a week is
     temp       = quantile(temp, probs = 0.9, na.rm = TRUE),
-    rain       = sum(rain, na.rm = TRUE), # TODO Ignores missing rain !!!!
+    # # rain       = sum(rain, na.rm = TRUE), # Original: sums observed days only
+    # # Estimate the seven-day total from the observed-day mean
+    # rain       = if (sum(!is.na(rain)) >= min_rain_days) {
+    #   7 * mean(rain, na.rm = TRUE)
+    # } else {
+    #   NA_real_
+    # },
+    # Estimate the seven-day total from the observed-day mean
+    rain = if (method == "mean") {
+      if (sum(!is.na(rain)) >= min_rain_days) {
+        7 * mean(rain, na.rm = TRUE)
+      } else {
+        NA_real_
+      }
+    # calculate the seven-day total 
+    } else if (method == "sum") {
+      # NOTE: this will return 0 if all days are missing, which is not ideal
+      sum(rain, na.rm = TRUE) 
+    },
     wind_speed = mean(wind_speed, na.rm = TRUE)
   ),
   by = .(
@@ -319,7 +379,11 @@ ecad_weekly[is.infinite(temp), temp := NA_real_]
 # start_date_temp <- as.Date("1950-01-01")
 # start_date_temp <- as.Date("1960-01-01")
 start_date_temp <- start_date
-all_weeks <- seq.Date(start_date_temp, end_date, by = "week")
+all_weeks <- seq.Date(
+  ceiling_date(start_date_temp, "week", change_on_boundary = FALSE),
+  floor_date(end_date, "week"),
+  by = "week"
+)
 n_weeks <- length(all_weeks)
 complete_stations <- ecad_weekly[date >= start_date_temp][
   ,
@@ -464,7 +528,7 @@ ecad_weekly_complete <- ecad_weekly[
 # make sure every station has every week
 station_grid <- CJ(
   station_id = unique(ecad_weekly_complete$station_id),
-  date = all_weeks
+  date = seq.Date(spi_start, floor_date(end_date, "week"), by = "week")
 )
 
 ecad_weekly_complete <- station_grid[
@@ -609,12 +673,16 @@ ecad_selected <- ecad_selected |>
       TRUE ~ "Autumn"
     ),
     season_year = case_when(
-      season == "Winter" & month %in% c(1, 2) ~ year(date) - 1L,
+      season == "Winter" & month == 12L ~ year(date) + 1L,
       TRUE ~ year(date)
     )
   )
 
 #### Save ####
+
+# Keep December 1959 for winter 1960 and exclude the SPI warm-up weeks
+ecad_selected <- ecad_selected |>
+  filter(date >= start_date | (season == "Winter" & season_year == 1960L))
 
 # final changes
 ecad_selected <- ecad_selected |>
@@ -643,7 +711,8 @@ ecad_selected <- ecad_selected |>
 # save
 readr::write_csv(
   ecad_selected,
-  "data/02_app/ecad_clean.csv.gz"
+  # "data/02_app/ecad_clean.csv.gz"
+  paste0("data/02_app/ecad_clean", output_suffix, ".csv.gz")
 )
 
 # Also save daily data (only keeping stations of interest)
@@ -657,7 +726,8 @@ ecad_daily <- semi_join(
   )
 readr::write_csv(
   ecad_daily,
-  "data/02_app/ecad_clean_daily.csv.gz"
+  # "data/02_app/ecad_clean_daily.csv.gz"
+  paste0("data/02_app/ecad_clean_daily", output_suffix, ".csv.gz")
 )
 
 
@@ -826,9 +896,9 @@ weekly_availability_summary <- weekly_availability |>
     prop_missing_temp_weeks =
       mean(n_valid_temp_days == 0),
     n_missing_rain_weeks =
-      sum(n_valid_rain_days == 0),
+      sum(n_valid_rain_days < min_rain_days),
     prop_missing_rain_weeks =
-      mean(n_valid_rain_days == 0)
+      mean(n_valid_rain_days < min_rain_days)
   ) |>
   mutate(
     prop_missing_temp_weeks =
@@ -869,8 +939,9 @@ analysis_missingness <- ecad_selected |>
 
 analysis_missingness
 
-sink("missingness_summary.txt")
-daily_coverage_summary
-weekly_availability_summary
-analysis_missingness
+# sink("missingness_summary.txt")
+sink(paste0("missingness_summary", output_suffix, ".txt"))
+print(daily_coverage_summary)
+print(weekly_availability_summary)
+print(analysis_missingness)
 sink()

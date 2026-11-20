@@ -81,6 +81,10 @@ n_samples <- 500
 # n_perm_screen <- 1000L
 n_perm_screen <- 200L
 n_years_per_block <- 25L # best choice, from screening round
+# years per block to test in screening round
+# n_years_per_block_screen <- c(15L, 20L, 25L, 30L)
+n_years_per_block_screen <- c(25L) # test for just 25 years (length used in test)
+n_years_per_block_screen <- c(20L, 25L, 30L) # remove 15, too few exceedances
 
 # set minimum number of exceedances required for a successful fit, based on dqu
 # min_exceedances <- 20
@@ -88,12 +92,55 @@ n_years_per_block <- 25L # best choice, from screening round
 min_exceedances <- 15
 # }
 
+# Minimum observed precipitation days per week for the average method
+# Read arguments supplied after the script name (no args defaults to mean 4)
+args <- commandArgs(trailingOnly = TRUE)
+
+usage <- paste(
+  "Usage: Rscript src/02_app/04_changepoint_detection.R",
+  "[mean [min_rain_days] | sum]"
+)
+
+# The first argument selects the rainfall method (defaults to mean)
+method <- if (length(args) >= 1L) args[[1]] else "mean"
+
+# Accept second argument (min_rain_days) if first argument is "mean"
+if (
+  !method %in% c("mean", "sum") ||
+  length(args) > 2L ||
+  (method == "sum" && length(args) > 1L)
+) {
+  stop(usage, call. = FALSE)
+}
+
+# Have empty output_suffix for original sum method
+min_rain_days <- NA_integer_
+output_suffix <- ""
+
+if (method == "mean") {
+  # pull min_rain_days from command line (default to 4)
+  days_arg <- if (length(args) == 2L) args[[2]] else "4"
+
+  # Validate before converting so fractional values cannot be truncated
+  if (!days_arg %in% as.character(1:7)) {
+    stop("min_rain_days must be an integer from 1 to 7", call. = FALSE)
+  }
+
+  # Minimum observed precipitation days per week for the average method
+  min_rain_days <- as.integer(days_arg)
+
+  # Include the underscore here so sum mode adds nothing to the filename
+  output_suffix <- paste0("_mean_", min_rain_days)
+}
+
+
 #### Load Data ####
 
 # data
 data <- readr::read_csv(
   # "data/02_app/ecad_clean.csv.gz"
-  "data/02_app/ecad_clean.csv.gz"
+  # "data/02_app/ecad_clean.csv.gz"
+  paste0("data/02_app/ecad_clean", output_suffix, ".csv.gz")
 ) |>
   mutate(decade = factor(floor(year(date) / 10) * 10, levels = decades))
 
@@ -161,7 +208,8 @@ data <- data %>%
   semi_join(valid_dates, by = c("season", "date"))
 
 
-marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
+# marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
+marg_season <- readRDS(paste0("data/02_app/marg_season_roll_emp", output_suffix, ".rds"))
 
 # pull Laplace transformed data from marginal object, and join together
 # data_laplace_season <- lapply(marg_season, \(x) {
@@ -190,6 +238,34 @@ data_laplace_season <- lapply(marg_season, \(x) {
   ))
 })
 
+# keep only dates where all stations have valid data for both variables
+data_laplace_season_orig <- data_laplace_season
+data_laplace_season <- lapply(
+  data_laplace_season, \(season_data) {
+    valid_dates <- season_data |>
+      filter(if_all(c(temp, drought_local), is.finite)) |>
+      group_by(date) |>
+      summarise(n_stations = n_distinct(name), .groups = "drop") |>
+      filter(n_stations == station_count) |>
+      select(date)
+
+    season_data |>
+      semi_join(valid_dates, by = "date")
+
+
+ }
+)
+
+# compare number of rows in original data to after valid date filter
+bind_rows(lapply(seq_along(data_laplace_season), \(i) {
+  c(
+    season = names(data_laplace_season)[[i]],
+    n_rows_orig = nrow(data_laplace_season_orig[[i]]),
+    n_rows_filtered = nrow(data_laplace_season[[i]]),
+    diff = nrow(data_laplace_season_orig[[i]]) - nrow(data_laplace_season[[i]])
+  )
+}))
+
 # confirm alignment by season between all locations
 bind_rows(lapply(seq_along(data_laplace_season), \(i) {
   data_laplace_season[[i]] |>
@@ -200,7 +276,8 @@ bind_rows(lapply(seq_along(data_laplace_season), \(i) {
     n_rows = n(),
     n_dates = n_distinct(date),
     first_date = min(date),
-    last_date = max(date)
+    last_date = max(date),
+    .groups = "drop"
   ) |>
   distinct(season, n_rows, n_dates, first_date, last_date)
 
@@ -295,12 +372,12 @@ laplace_sample <- rlaplace_trunc(
 screen_setup_df <- tidyr::crossing(
   "season" = seasons,
   # 10 years too short (as is 15 actually) !!
-  # n_years_per_block = c(10L, 15L, 20L, 25L)
-  n_years_per_block = c(15L, 20L, 25L, 30L)
+  n_years_per_block = n_years_per_block_screen
 )
 
 # sink("sink_screening_output.txt")
-sink(paste0("sink_screening_output_dqu_", dqu, ".txt"))
+# sink(paste0("sink_screening_output_dqu_", dqu, ".txt"))
+sink(paste0("sink_screening_output_dqu_", dqu, output_suffix, ".txt"))
 
 screen_res_df <- bind_rows(lapply(seq_len(nrow(screen_setup_df)), \(i) {
   print(paste0(round(i / nrow(screen_setup_df) * 100, 2), "% of setups done"))
@@ -341,9 +418,11 @@ screen_failure_summary
 sink()
 
 # save
-readr::write_csv(screen_res_df, paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
+# readr::write_csv(screen_res_df, paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
+readr::write_csv(screen_res_df, paste0("data/02_app/screen_res_dqu_", dqu, output_suffix, ".csv.gz"))
 
-screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
+# screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
+screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, output_suffix, ".csv.gz"))
 
 
 #### Plotting ####
@@ -688,10 +767,14 @@ p_frob_25
 p_all_norms
 p_all_norms_25
 
-ggsave(paste0("plots/02_app/p_frob_dqu_", dqu, ".png"), p_frob, width = 12, height = 8)
-ggsave(paste0("plots/02_app/p_frob_25_dqu_", dqu, ".png"), p_frob_25, width = 12, height = 8)
-ggsave(paste0("plots/02_app/p_all_norms_dqu_", dqu, ".png"), p_all_norms, width = 12, height = 8)
-ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
+# ggsave(paste0("plots/02_app/p_frob_dqu_", dqu, ".png"), p_frob, width = 12, height = 8)
+ggsave(paste0("plots/02_app/p_frob_dqu_", dqu, output_suffix, ".png"), p_frob, width = 12, height = 8)
+# ggsave(paste0("plots/02_app/p_frob_25_dqu_", dqu, ".png"), p_frob_25, width = 12, height = 8)
+ggsave(paste0("plots/02_app/p_frob_25_dqu_", dqu, output_suffix, ".png"), p_frob_25, width = 12, height = 8)
+# ggsave(paste0("plots/02_app/p_all_norms_dqu_", dqu, ".png"), p_all_norms, width = 12, height = 8)
+ggsave(paste0("plots/02_app/p_all_norms_dqu_", dqu, output_suffix, ".png"), p_all_norms, width = 12, height = 8)
+# ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
+ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, output_suffix, ".png"), p_all_norms_25, width = 12, height = 8)
 
 
 #### Permutation tests across full feasible range ####
@@ -704,7 +787,8 @@ ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, 
 sink(paste0(
   "sink_perm_output_nperm_",
   n_perm_screen, "_dqu_",
-  dqu, ".txt"
+  # dqu, ".txt"
+  dqu, output_suffix, ".txt"
 ))
 
 # source("src/00_functions.R")
@@ -745,7 +829,8 @@ saveRDS(
     "_dqu_",
     dqu,
     # ".rds"
-    ".rds"
+    # ".rds"
+    output_suffix, ".rds"
   )
 )
 
@@ -758,7 +843,8 @@ permutation_scan_results <- readRDS(
     "_dqu_",
     dqu,
     # ".rds"
-    ".rds"
+    # ".rds"
+    output_suffix, ".rds"
   )
 )
 
@@ -875,7 +961,8 @@ for (season_name in names(permutation_scan_plots)) {
       plot_directory,
       paste0(
         filename_prefix,
-        "_p_value_profile.png"
+        # "_p_value_profile.png"
+        paste0("_p_value_profile", output_suffix, ".png")
       )
     ),
     plot = season_plots$p_value_profile,
@@ -889,7 +976,8 @@ for (season_name in names(permutation_scan_plots)) {
       plot_directory,
       paste0(
         filename_prefix,
-        "_observed_vs_permuted.png"
+        # "_observed_vs_permuted.png"
+        paste0("_observed_vs_permuted", output_suffix, ".png")
       )
     ),
     plot =
@@ -904,7 +992,8 @@ for (season_name in names(permutation_scan_plots)) {
       plot_directory,
       paste0(
         filename_prefix,
-        "_permutation_histograms.png"
+        # "_permutation_histograms.png"
+        paste0("_permutation_histograms", output_suffix, ".png")
       )
     ),
     plot =

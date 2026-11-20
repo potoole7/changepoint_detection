@@ -18,7 +18,7 @@ library(ggplot2)
 library(patchwork)
 devtools::load_all("../CeCl")
 
-source("src/00_functions.r")
+source("src/00_functions.R")
 
 #### Metadata ####
 
@@ -32,11 +32,53 @@ var_dep <- "drought_local_rev"
 # temp_var <- "temp"
 temp_var <- "temp_max"
 
+# Minimum observed precipitation days per week for the average method
+# Read arguments supplied after the script name (no args defaults to mean 4)
+args <- commandArgs(trailingOnly = TRUE)
+
+usage <- paste(
+  "Usage: Rscript src/02_app/02a_marg_roll_emp.R",
+  "[mean [min_rain_days] | sum]"
+)
+
+# The first argument selects the rainfall method (defaults to mean)
+method <- if (length(args) >= 1L) args[[1]] else "mean"
+
+# Accept second argument (min_rain_days) if first argument is "mean"
+if (
+  !method %in% c("mean", "sum") ||
+  length(args) > 2L ||
+  (method == "sum" && length(args) > 1L)
+) {
+  stop(usage, call. = FALSE)
+}
+
+# Have empty output_suffix for original sum method
+min_rain_days <- NA_integer_
+output_suffix <- ""
+
+if (method == "mean") {
+  # pull min_rain_days from command line (default to 4)
+  days_arg <- if (length(args) == 2L) args[[2]] else "4"
+
+  # Validate before converting so fractional values cannot be truncated
+  if (!days_arg %in% as.character(1:7)) {
+    stop("min_rain_days must be an integer from 1 to 7", call. = FALSE)
+  }
+
+  # Minimum observed precipitation days per week for the average method
+  min_rain_days <- as.integer(days_arg)
+
+  # Include the underscore here so sum mode adds nothing to the filename
+  output_suffix <- paste0("_mean_", min_rain_days)
+}
+
 
 #### Load Data ####
 
 data <- readr::read_csv(
-  "data/02_app/ecad_clean.csv.gz"
+  # "data/02_app/ecad_clean.csv.gz"
+  paste0("data/02_app/ecad_clean", output_suffix, ".csv.gz")
 ) |>
   # look at full years only
   filter(
@@ -112,8 +154,8 @@ station_count <- n_distinct(data$station_name)
 #   filter(n_distinct(station_name) == first(n_stations_in_season)) %>%
 #   distinct(season, date)
 
-data <- data %>%
-  semi_join(valid_dates, by = c("season", "date"))
+# data <- data %>%
+#   semi_join(valid_dates, by = c("season", "date"))
 
 areas <- read_sf("data/02_app/spain_shapefile.geojson") |>
   filter(
@@ -342,19 +384,23 @@ plot_trans_lst <- \(df, season) {
 
 
 # TODO Add other transformations to plot to compare
-pdf("plots/02_app/roll_emp/01_laplace_trans_winter.pdf", width = 12, height = 8)
+# pdf("plots/02_app/roll_emp/01_laplace_trans_winter.pdf", width = 12, height = 8)
+pdf(paste0("plots/02_app/roll_emp/01_laplace_trans_winter", output_suffix, ".pdf"), width = 12, height = 8)
 plot_trans_lst(laplace_season, "Winter")
 dev.off()
 
-pdf("plots/02_app/roll_emp/01_laplace_trans_spring.pdf", width = 12, height = 8)
+# pdf("plots/02_app/roll_emp/01_laplace_trans_spring.pdf", width = 12, height = 8)
+pdf(paste0("plots/02_app/roll_emp/01_laplace_trans_spring", output_suffix, ".pdf"), width = 12, height = 8)
 plot_trans_lst(laplace_season, "Spring")
 dev.off()
 
-pdf("plots/02_app/roll_emp/01_laplace_trans_summer.pdf", width = 12, height = 8)
+# pdf("plots/02_app/roll_emp/01_laplace_trans_summer.pdf", width = 12, height = 8)
+pdf(paste0("plots/02_app/roll_emp/01_laplace_trans_summer", output_suffix, ".pdf"), width = 12, height = 8)
 plot_trans_lst(laplace_season, "Summer")
 dev.off()
 
-pdf("plots/02_app/roll_emp/01_laplace_trans_autumn.pdf", width = 12, height = 8)
+# pdf("plots/02_app/roll_emp/01_laplace_trans_autumn.pdf", width = 12, height = 8)
+pdf(paste0("plots/02_app/roll_emp/01_laplace_trans_autumn", output_suffix, ".pdf"), width = 12, height = 8)
 plot_trans_lst(laplace_season, "Autumn")
 dev.off()
 
@@ -456,7 +502,8 @@ names(marg_season_roll_emp) <- season_names
 
 saveRDS(
   marg_season_roll_emp,
-  file = "data/02_app/marg_season_roll_emp.rds"
+  # file = "data/02_app/marg_season_roll_emp.rds"
+  file = paste0("data/02_app/marg_season_roll_emp", output_suffix, ".rds")
 )
 
 # if (var_dep == "drought_local") {

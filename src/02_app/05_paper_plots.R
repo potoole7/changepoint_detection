@@ -65,6 +65,47 @@ seasons <- c("Winter", "Spring", "Summer", "Autumn")
 # chi_q <- 0.95
 spec_years <- 1960:2024
 
+# Minimum observed precipitation days per week for the average method
+# Read arguments supplied after the script name (no args defaults to mean 4)
+args <- commandArgs(trailingOnly = TRUE)
+
+usage <- paste(
+  "Usage: Rscript src/02_app/05_paper_plots.R",
+  "[mean [min_rain_days] | sum]"
+)
+
+# The first argument selects the rainfall method (defaults to mean)
+method <- if (length(args) >= 1L) args[[1]] else "mean"
+
+# Accept second argument (min_rain_days) if first argument is "mean"
+if (
+  !method %in% c("mean", "sum") ||
+  length(args) > 2L ||
+  (method == "sum" && length(args) > 1L)
+) {
+  stop(usage, call. = FALSE)
+}
+
+# Have empty output_suffix for original sum method
+min_rain_days <- NA_integer_
+output_suffix <- ""
+
+if (method == "mean") {
+  # pull min_rain_days from command line (default to 4)
+  days_arg <- if (length(args) == 2L) args[[2]] else "4"
+
+  # Validate before converting so fractional values cannot be truncated
+  if (!days_arg %in% as.character(1:7)) {
+    stop("min_rain_days must be an integer from 1 to 7", call. = FALSE)
+  }
+
+  # Minimum observed precipitation days per week for the average method
+  min_rain_days <- as.integer(days_arg)
+
+  # Include the underscore here so sum mode adds nothing to the filename
+  output_suffix <- paste0("_mean_", min_rain_days)
+}
+
 # divergent colour scheme (for difference plots)
 # TODO Needed?
 diff_fill_fun <- \(...) {
@@ -91,11 +132,18 @@ dqu <- 0.8
 
 # data
 data <- readr::read_csv(
-  "data/02_app/ecad_clean.csv.gz"
+  # "data/02_app/ecad_clean.csv.gz"
+  paste0("data/02_app/ecad_clean", output_suffix, ".csv.gz")
 ) |>
   # mutate(decade = factor(floor(year(date) / 10) * 10, levels = decades)) |>
   mutate(
-    year = as.numeric(format(as.Date(date), "%Y"))
+    year = as.numeric(format(as.Date(date), "%Y")),
+    # Use the same winter labels for raw and transformed data
+    season_year = if_else(
+      season == "Winter" & month(date) == 12L,
+      year + 1L,
+      year
+    )
   ) |>
   rename(name = station_name) |>
   identity()
@@ -167,7 +215,8 @@ data <- data %>%
 
 # # marginal fits
 # marg_season <- readRDS(file)
-marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
+# marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
+marg_season <- readRDS(paste0("data/02_app/marg_season_roll_emp", output_suffix, ".rds"))
 # if (!is.nkull(names(marg_season))) {
 #   seasons <- names(marg_season)
 # }
@@ -451,7 +500,8 @@ p_loc_names_elev <- plot_locs(
   # legend.position = "bottom"
 )
 p_loc_names_elev
-ggsave(plot = p_loc_names_elev, "plots/02_app/p_loc_names_elev.png", width = 14, height = 10)
+# ggsave(plot = p_loc_names_elev, "plots/02_app/p_loc_names_elev.png", width = 14, height = 10)
+ggsave(plot = p_loc_names_elev, paste0("plots/02_app/p_loc_names_elev", output_suffix, ".png"), width = 14, height = 10)
 
 # pick two locations in South and North of Spain, and compare
 # spec_locs <- c("Malaga", "Bilbao Aeropuerto")
@@ -538,8 +588,10 @@ p_scatter_laplace
 p_intro <- wrap_plots(list(p_loc_names_elev, p_scatter))
 p_intro_laplace <- wrap_plots(list(p_loc_names_elev, p_scatter_laplace))
 
-ggsave(plot = p_intro, "latex/plots/intro.png", width = 12, height = 8)
-ggsave(plot = p_intro_laplace, "latex/plots/intro_laplace.png", width = 12, height = 8)
+# ggsave(plot = p_intro, "latex/plots/intro.png", width = 12, height = 8)
+ggsave(plot = p_intro, paste0("latex/plots/intro", output_suffix, ".png"), width = 12, height = 8)
+# ggsave(plot = p_intro_laplace, "latex/plots/intro_laplace.png", width = 12, height = 8)
+ggsave(plot = p_intro_laplace, paste0("latex/plots/intro_laplace", output_suffix, ".png"), width = 12, height = 8)
 
 # Also of interest is means and 90th quantiles for drought and temperature
 data_intro |>
@@ -557,7 +609,8 @@ data_intro |>
 
 #### Screening plot ####
 
-screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
+# screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, ".csv.gz"))
+screen_res_df <- readr::read_csv(paste0("data/02_app/screen_res_dqu_", dqu, output_suffix, ".csv.gz"))
 
 screen_res_df_plt <- screen_res_df |>
   arrange(
@@ -932,7 +985,8 @@ p_all_norms_25
 
 # ggsave(paste0("plots/02_app/p_all_norms_25_dqu_", dqu, ".png"), p_all_norms_25, width = 12, height = 8)
 # ggsave("latex/plots/screen.png", p_all_norms_25, width = 12, height = 8)
-ggsave(paste0("latex/plots/screen_dqu_", dqu, ".png"), p_all_norms_25, width = 10, height = 6)
+# ggsave(paste0("latex/plots/screen_dqu_", dqu, ".png"), p_all_norms_25, width = 10, height = 6)
+ggsave(paste0("latex/plots/screen_dqu_", dqu, output_suffix, ".png"), p_all_norms_25, width = 10, height = 6)
 
 
 #### Changepoint plot ####
@@ -946,7 +1000,8 @@ permutation_scan_results <- readRDS(
     n_perm,
     "_dqu_",
     dqu,
-    ".rds"
+    # ".rds"
+    output_suffix, ".rds"
   )
 )
 
@@ -1093,13 +1148,15 @@ p_change <- data_p |>
 p_change
 
 # ggsave("latex/plots/change.png", p_change, width = 12, height = 8)
-ggsave(paste0("latex/plots/change_dqu_", dqu, ".png"), p_change, width = 12, height = 8)
+# ggsave(paste0("latex/plots/change_dqu_", dqu, ".png"), p_change, width = 12, height = 8)
+ggsave(paste0("latex/plots/change_dqu_", dqu, output_suffix, ".png"), p_change, width = 12, height = 8)
 
 
 #### Cluster maps before/after changepoint ####
 
 # load marginal models
-marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
+# marg_season <- readRDS("data/02_app/marg_season_roll_emp.rds")
+marg_season <- readRDS(paste0("data/02_app/marg_season_roll_emp", output_suffix, ".rds"))
 
 # join dates to transformed data
 data_laplace_season <- lapply(marg_season, \(x) {
@@ -1295,7 +1352,8 @@ twgss_plot <- twgss_vals |>
 
 twgss_plot
 
-ggsave(plot = twgss_plot, paste0("latex/plots/twgss_dqu_", dqu, ".png"), width = 12, height = 8)
+# ggsave(plot = twgss_plot, paste0("latex/plots/twgss_dqu_", dqu, ".png"), width = 12, height = 8)
+ggsave(plot = twgss_plot, paste0("latex/plots/twgss_dqu_", dqu, output_suffix, ".png"), width = 12, height = 8)
 
 # TODO Fit for k = 2 and k = 4 as well, even just so as to save
 k <- 3 # Do for now, but might need to test for others later ...
@@ -1472,12 +1530,14 @@ clust_cp_aligned <- map_out$clust_cp_aligned
 map_plots_join_all <- map_out$map_plots_join
 
 # ggsave(plot = map_plots_join, "latex/plots/clust_map.png", width = 12, height = 8)
-ggsave(plot = map_plots_join_all, paste0("latex/plots/clust_map_dqu_", dqu, ".png"), width = 12, height = 8)
+# ggsave(plot = map_plots_join_all, paste0("latex/plots/clust_map_dqu_", dqu, ".png"), width = 12, height = 8)
+ggsave(plot = map_plots_join_all, paste0("latex/plots/clust_map_dqu_", dqu, output_suffix, ".png"), width = 12, height = 8)
 
 # also just have plot for Spring
 map_plot_spring <- map_out$map_plots$Spring
 
-ggsave(plot = map_plot_spring, paste0("latex/plots/clust_map_dqu_", dqu, "_spring.png"), width = 12, height = 8)
+# ggsave(plot = map_plot_spring, paste0("latex/plots/clust_map_dqu_", dqu, "_spring.png"), width = 12, height = 8)
+ggsave(plot = map_plot_spring, paste0("latex/plots/clust_map_dqu_", dqu, paste0("_spring", output_suffix, ".png")), width = 12, height = 8)
 
 #### Changepoints for Autumn, Summer and Winter (i.e. taking sig = 10% lev) ####
 
@@ -1557,7 +1617,8 @@ twgss_plot_autumn <- twgss_vals_autumn |>
 
 twgss_plot_autumn
 
-ggsave(plot = twgss_plot_autumn, paste0("latex/plots/twgss_dqu_", dqu, "_autumn.png"), width = 12, height = 8)
+# ggsave(plot = twgss_plot_autumn, paste0("latex/plots/twgss_dqu_", dqu, "_autumn.png"), width = 12, height = 8)
+ggsave(plot = twgss_plot_autumn, paste0("latex/plots/twgss_dqu_", dqu, paste0("_autumn", output_suffix, ".png")), width = 12, height = 8)
 
 k <- 3
 
@@ -1589,7 +1650,8 @@ twgss_plot_all <- twgss_vals |>
   cecl_theme()
 twgss_plot_all
 
-ggsave(plot = twgss_plot_all, paste0("latex/plots/twgss_dqu_", dqu, "_all.png"), width = 12, height = 8)
+# ggsave(plot = twgss_plot_all, paste0("latex/plots/twgss_dqu_", dqu, "_all.png"), width = 12, height = 8)
+ggsave(plot = twgss_plot_all, paste0("latex/plots/twgss_dqu_", dqu, paste0("_all", output_suffix, ".png")), width = 12, height = 8)
 
 # also plot
 
@@ -1609,7 +1671,8 @@ map_plots_join_autumn <- map_out_autumn$map_plots_join
 
 ggsave(
   plot = map_plots_join_autumn,
-  paste0("latex/plots/clust_map_dqu_", dqu, "_autumn.png"),
+  # paste0("latex/plots/clust_map_dqu_", dqu, "_autumn.png"),
+  paste0("latex/plots/clust_map_dqu_", dqu, paste0("_autumn", output_suffix, ".png")),
   width = 12, height = 8
 )
 
@@ -1639,7 +1702,8 @@ map_plots_join_all <- map_out_all$map_plots_join
 
 ggsave(
   plot = map_plots_join_all,
-  paste0("latex/plots/clust_map_dqu_", dqu, "_inc_autumn.png"),
+  # paste0("latex/plots/clust_map_dqu_", dqu, "_inc_autumn.png"),
+  paste0("latex/plots/clust_map_dqu_", dqu, paste0("_inc_autumn", output_suffix, ".png")),
   width = 12, height = 10
 )
 
@@ -1691,10 +1755,12 @@ dist_plts <- lapply(seasons, \(season) {
 names(dist_plts) <- seasons
 
 # save clust_cp_plt_all
-saveRDS(clust_cp_plt_all, paste0("data/02_app/clust_cp_plt_all_dqu_", dqu, ".rds"))
+# saveRDS(clust_cp_plt_all, paste0("data/02_app/clust_cp_plt_all_dqu_", dqu, ".rds"))
+saveRDS(clust_cp_plt_all, paste0("data/02_app/clust_cp_plt_all_dqu_", dqu, output_suffix, ".rds"))
 
 # save as pdf
-pdf(paste0("latex/plots/dist_dqu_", dqu, ".pdf"), width = 16, height = 8)
+# pdf(paste0("latex/plots/dist_dqu_", dqu, ".pdf"), width = 16, height = 8)
+pdf(paste0("latex/plots/dist_dqu_", dqu, output_suffix, ".pdf"), width = 16, height = 8)
 lapply(seq_along(dist_plts), \(i) {
   dist_plts[[i]] + plot_annotation(title = names(dist_plts)[[i]])
 })
@@ -1704,7 +1770,8 @@ dev.off()
 lapply(seq_along(dist_plts), \(i) {
   ggsave(
     plot = dist_plts[[i]],
-    paste0("latex/plots/dist_dqu_", dqu, "_", seasons[[i]], ".png"),
+    # paste0("latex/plots/dist_dqu_", dqu, "_", seasons[[i]], ".png"),
+    paste0("latex/plots/dist_dqu_", dqu, "_", seasons[[i]], output_suffix, ".png"),
     width = 16, height = 8
   )
 })
@@ -1779,7 +1846,8 @@ dist_plts <- plt_dist_diff(dist_cp_plt)
 lapply(seq_along(dist_plts), \(i) {
   ggsave(
     plot = dist_plts[[i]],
-    paste0("latex/plots/dist_diff_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
+    # paste0("latex/plots/dist_diff_dqu_", dqu, "_", seasons_diff[[i]], ".png"),
+    paste0("latex/plots/dist_diff_dqu_", dqu, "_", seasons_diff[[i]], output_suffix, ".png"),
     width = 12, height = 8
   )
 })
@@ -1792,7 +1860,8 @@ lapply(seq_along(dist_plts), \(i) {
 # })
 
 # save as pdf
-pdf(paste0("latex/plots/dist_diff_dqu_", dqu, ".pdf"), width = 12, height = 8)
+# pdf(paste0("latex/plots/dist_diff_dqu_", dqu, ".pdf"), width = 12, height = 8)
+pdf(paste0("latex/plots/dist_diff_dqu_", dqu, output_suffix, ".pdf"), width = 12, height = 8)
 dist_plts
 dev.off()
 # pdf(paste0("latex/plots/dist_diff_abs_dqu_", dqu, ".pdf"), width = 12, height = 8)
@@ -1827,7 +1896,8 @@ dist_plt_all <- wrap_plots(lapply(seq_along(dist_plts), \(i) {
 # TODO Ensure that names along y-axis aren't clipped!
 ggsave(
   plot = dist_plt_all,
-  paste0("latex/plots/dist_diff_all_dqu_", dqu, ".png"),
+  # paste0("latex/plots/dist_diff_all_dqu_", dqu, ".png"),
+  paste0("latex/plots/dist_diff_all_dqu_", dqu, output_suffix, ".png"),
   width = 16, height = 9
 )
 
@@ -1872,7 +1942,8 @@ map_plots_join_k <- lapply(map_plots_join_k, \(x) {
 lapply(seq_along(map_plots_join_k), \(i) {
   ggsave(
     plot = map_plots_join_k[[i]]$map_plots_join,
-    paste0("latex/plots/clust_map_dqu_", dqu, "_k", k_vals[[i]], ".png"),
+    # paste0("latex/plots/clust_map_dqu_", dqu, "_k", k_vals[[i]], ".png"),
+    paste0("latex/plots/clust_map_dqu_", dqu, "_k", k_vals[[i]], output_suffix, ".png"),
     width = 12, height = 10
   )
 })
@@ -1882,7 +1953,8 @@ map_plots_join_k_spring <- lapply(k_vals, map_plot, dist_cp = dist_cp["Spring"],
 
 ggsave(
   plot = wrap_plots(lapply(map_plots_join_k_spring, \(x) x$map_plots$Spring + labs(title = ""))),
-  paste0("latex/plots/clust_map_dqu_", dqu, "_k_2_4_spring.png"),
+  # paste0("latex/plots/clust_map_dqu_", dqu, "_k_2_4_spring.png"),
+  paste0("latex/plots/clust_map_dqu_", dqu, paste0("_k_2_4_spring", output_suffix, ".png")),
   width = 12, height = 8
 )
 
@@ -1913,7 +1985,8 @@ p_spring_2_3_4 <- (
 
 ggsave(
   plot = p_spring_2_3_4,
-  paste0("latex/plots/clust_map_dqu_", dqu, "_k_2_3_4_spring.png"),
+  # paste0("latex/plots/clust_map_dqu_", dqu, "_k_2_3_4_spring.png"),
+  paste0("latex/plots/clust_map_dqu_", dqu, paste0("_k_2_3_4_spring", output_suffix, ".png")),
   width = 12, height = 8
 )
 
@@ -2355,7 +2428,8 @@ names(cluster_covariate_plots) <- levels(clust_covariates_long$variable)
 cluster_covariate_plots$quant_drought # nicest separation between clusters
 
 # save plot as pdf for easy viewing
-pdf("plots/02_app/covariate_vs_clust_cp.pdf", width = 8, height = 6)
+# pdf("plots/02_app/covariate_vs_clust_cp.pdf", width = 8, height = 6)
+pdf(paste0("plots/02_app/covariate_vs_clust_cp", output_suffix, ".pdf"), width = 8, height = 6)
 cluster_covariate_plots
 dev.off()
 
@@ -2635,7 +2709,8 @@ names(cluster_transition_change_plots) <- levels(
 )
 
 # save
-pdf("plots/02_app/covariate_vs_cluster_switching.pdf", width = 8, height = 6)
+# pdf("plots/02_app/covariate_vs_cluster_switching.pdf", width = 8, height = 6)
+pdf(paste0("plots/02_app/covariate_vs_cluster_switching", output_suffix, ".pdf"), width = 8, height = 6)
 cluster_switching_plots
 dev.off()
 

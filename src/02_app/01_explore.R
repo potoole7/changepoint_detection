@@ -119,6 +119,47 @@ plot_pdf <- \(x, x_diff, areas, var, col_lab = NULL) {
 
 #### Metadata ####
 
+# Minimum observed precipitation days per week for the average method
+# Read arguments supplied after the script name (no args defaults to mean 4)
+args <- commandArgs(trailingOnly = TRUE)
+
+usage <- paste(
+  "Usage: Rscript src/02_app/01_explore.R",
+  "[mean [min_rain_days] | sum]"
+)
+
+# The first argument selects the rainfall method (defaults to mean)
+method <- if (length(args) >= 1L) args[[1]] else "mean"
+
+# Accept second argument (min_rain_days) if first argument is "mean"
+if (
+  !method %in% c("mean", "sum") ||
+  length(args) > 2L ||
+  (method == "sum" && length(args) > 1L)
+) {
+  stop(usage, call. = FALSE)
+}
+
+# Have empty output_suffix for original sum method
+min_rain_days <- NA_integer_
+output_suffix <- ""
+
+if (method == "mean") {
+  # pull min_rain_days from command line (default to 4)
+  days_arg <- if (length(args) == 2L) args[[2]] else "4"
+
+  # Validate before converting so fractional values cannot be truncated
+  if (!days_arg %in% as.character(1:7)) {
+    stop("min_rain_days must be an integer from 1 to 7", call. = FALSE)
+  }
+
+  # Minimum observed precipitation days per week for the average method
+  min_rain_days <- as.integer(days_arg)
+
+  # Include the underscore here so sum mode adds nothing to the filename
+  output_suffix <- paste0("_mean_", min_rain_days)
+}
+
 q <- 0.99 # plot 99th quantile to explore extremes (max is quite noisy)
 chi_q <- 0.95 # ???
 
@@ -134,7 +175,8 @@ diff_fill_fun <- \(...) {
 #### Load Data ####
 
 # load ECAD data
-data <- readr::read_csv("data/02_app/ecad_clean.csv.gz")
+# data <- readr::read_csv("data/02_app/ecad_clean.csv.gz")
+data <- readr::read_csv(paste0("data/02_app/ecad_clean", output_suffix, ".csv.gz"))
 
 # load map of continental Spain to use as background in plots
 # areas <- mapSpain::esp_get_munic_siane(moveCAN = TRUE) |>
@@ -163,7 +205,8 @@ data_sf <- st_as_sf(
 
 readr::write_csv(
   data,
-  "data/02_app/ecad_clean_full.csv.gz"
+  # "data/02_app/ecad_clean_full.csv.gz"
+  paste0("data/02_app/ecad_clean_full", output_suffix, ".csv.gz")
 )
 
 
@@ -188,11 +231,13 @@ data_mean_diff <- calc_diff(
 )
 
 # create PDFs of saved plots for both Seasons, as well as across the whole Year
-pdf("plots/02_app/01_temp_means.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01_temp_means.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01_temp_means", output_suffix, ".pdf"), width = 10, height = 8)
 plot_pdf(data_mean, data_mean_diff, areas_ccaa, "temp", "°C")
 dev.off()
 
-pdf("plots/02_app/01_rain_means.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01_rain_means.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01_rain_means", output_suffix, ".pdf"), width = 10, height = 8)
 plot_pdf(data_mean, data_mean_diff, areas_ccaa, "rain", "mm")
 dev.off()
 
@@ -204,7 +249,8 @@ dev.off()
 # plot_pdf(data_mean, data_mean_diff, areas_ccaa, "drought_global", "Global Drought Index")
 # dev.off()
 
-pdf("plots/02_app/01_ws_means.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01_ws_means.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01_ws_means", output_suffix, ".pdf"), width = 10, height = 8)
 plot_pdf(data_mean, data_mean_diff, areas_ccaa, "wind_speed", "m/s")
 dev.off()
 
@@ -228,11 +274,13 @@ data_q_diff <- calc_diff(
 )
 
 # create PDFs of saved plots for both Seasons, as well as across the whole Year
-pdf("plots/02_app/01a_temp_q.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01a_temp_q.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01a_temp_q", output_suffix, ".pdf"), width = 10, height = 8)
 plot_pdf(data_q, data_q_diff, areas_ccaa, "temp", "°C")
 dev.off()
 
-pdf("plots/02_app/01a_rain_q.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01a_rain_q.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01a_rain_q", output_suffix, ".pdf"), width = 10, height = 8)
 plot_pdf(data_q, data_q_diff, areas_ccaa, "rain", "mm")
 dev.off()
 
@@ -244,7 +292,8 @@ dev.off()
 # plot_pdf(data_q, data_q_diff, areas_ccaa, "drought_global", "Global Drought Index")
 # dev.off()
 
-pdf("plots/02_app/01a_ws_q.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01a_ws_q.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01a_ws_q", output_suffix, ".pdf"), width = 10, height = 8)
 plot_pdf(data_q, data_q_diff, areas_ccaa, "wind_speed", "m/s")
 dev.off()
 
@@ -384,7 +433,8 @@ names(plot_list) <- with(
 # lapply(plot_list[grepl("temp", names(plot_list))], `[[`, "plot")
 # dev.off()
 
-pdf("plots/02_app/01b_chi_maps_temp_drought_local.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01b_chi_maps_temp_drought_local.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01b_chi_maps_temp_drought_local", output_suffix, ".pdf"), width = 10, height = 8)
 lapply(plot_list[grepl("drought_local", names(plot_list))], `[[`, "plot")
 dev.off()
 
@@ -430,7 +480,8 @@ plot_list_diff <- lapply(plot_list_diff, \(x) {
 # lapply(plot_list_diff[grepl("temp", names(plot_list_diff))], `[[`, "plot")
 # dev.off()
 
-pdf("plots/02_app/01c_chi_maps_diff_temp_drought_local.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01c_chi_maps_diff_temp_drought_local.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01c_chi_maps_diff_temp_drought_local", output_suffix, ".pdf"), width = 10, height = 8)
 lapply(plot_list_diff[grepl("drought_local", names(plot_list_diff))], `[[`, "plot")
 dev.off()
 
@@ -438,7 +489,8 @@ dev.off()
 # lapply(plot_list_diff[grepl("drought_global", names(plot_list_diff))], `[[`, "plot")
 # dev.off()
 
-pdf("plots/02_app/01c_chi_maps_diff_rain_ws.pdf", width = 10, height = 8)
+# pdf("plots/02_app/01c_chi_maps_diff_rain_ws.pdf", width = 10, height = 8)
+pdf(paste0("plots/02_app/01c_chi_maps_diff_rain_ws", output_suffix, ".pdf"), width = 10, height = 8)
 lapply(plot_list_diff[grepl("wind_speed", names(plot_list_diff))], `[[`, "plot")
 dev.off()
 
@@ -512,7 +564,8 @@ roll_ext_station <- \(data_spec,
 }
 
 pdf(
-  "plots/02_app/02_rolling_extremogram_temp.pdf",
+  # "plots/02_app/02_rolling_extremogram_temp.pdf",
+  paste0("plots/02_app/02_rolling_extremogram_temp", output_suffix, ".pdf"),
   width = 12,
   height = 8
 )
@@ -577,7 +630,8 @@ dev.off()
 
 # TODO functionalise
 pdf(
-  "plots/02_app/02_rolling_extremogram_rain.pdf",
+  # "plots/02_app/02_rolling_extremogram_rain.pdf",
+  paste0("plots/02_app/02_rolling_extremogram_rain", output_suffix, ".pdf"),
   width = 12,
   height = 8
 )
