@@ -375,6 +375,36 @@ screen_setup_df <- tidyr::crossing(
   n_years_per_block = n_years_per_block_screen
 )
 
+# Count available season-years using the same checks as screen_one_setting
+available_years <- bind_rows(data_laplace_season) |>
+  filter(!is.na(name), !is.na(date), !is.na(season_year)) |>
+  distinct(season, season_year) |>
+  count(season, name = "n_available_years")
+
+screen_setup_df <- screen_setup_df |>
+  left_join(available_years, by = "season") |>
+  mutate(
+    n_available_years = coalesce(n_available_years, 0L),
+    n_required_years = 2L * n_years_per_block
+  )
+
+# Report and skip setups that cannot form two blocks
+skipped_setups <- screen_setup_df |>
+  filter(n_available_years < n_required_years)
+
+if (nrow(skipped_setups) > 0L) {
+  message("Skipping screening setups with too few season-years")
+  print(skipped_setups)
+}
+
+screen_setup_df <- screen_setup_df |>
+  filter(n_available_years >= n_required_years)
+
+if (nrow(screen_setup_df) == 0L) {
+  stop("No feasible screening setups", call. = FALSE)
+}
+
+
 # sink("sink_screening_output.txt")
 # sink(paste0("sink_screening_output_dqu_", dqu, ".txt"))
 sink(paste0("sink_screening_output_dqu_", dqu, output_suffix, ".txt"))
